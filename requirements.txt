@@ -10,4 +10,4 @@ scipy==1.9.3
 scikit-image==0.19.3
 sqlalchemy==1.4.4
 matplotlib==3.6.2
-gevent==22.8.0
+gevent==23.9.0
