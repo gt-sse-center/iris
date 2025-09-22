@@ -12,7 +12,8 @@ Tool for manual image segmentation of satellite imagery (or images in general). 
 
 ## Installation
 
-Clone the repository, navigate to the directory, and install the package and its dependencies. We recommend doing this inside an environment such as conda, with python 3.8 or 3.9.
+Clone the repository, navigate to the directory, and install the package and its dependencies. We recommend doing this inside an environment such as conda,
+with python 3.8 or 3.9 (Python 3.10-3.13 work but not tested in detail).
 
 ```
 # true upstream
