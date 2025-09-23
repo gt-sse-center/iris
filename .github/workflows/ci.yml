@@ -49,7 +49,7 @@ jobs:
         iris demo
 
     - name: Test with pytest
-      if: false
+      if: true
       run: |
         pip install pytest pytest-flask==0.15.1
         pytest
