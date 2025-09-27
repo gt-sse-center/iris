@@ -143,7 +143,7 @@ def register_extensions(app):
 # an IRIS mode (the CLI expects `demo` or `label`). This prevents test
 # runners (pytest) or other tools that pass unrelated args from confusing
 # the app when the module is imported during test runs.
-if len(sys.argv) > 1 and sys.argv[1] in ("demo", "label"):
+if len(sys.argv) > 1 and sys.argv[1] in ("demo", "label", "-h", "--help"):
     args = parse_cmd_line()
 else:
     # Default args used when importing the module in non-CLI contexts
