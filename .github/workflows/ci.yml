@@ -52,4 +52,4 @@ jobs:
       if: true
       run: |
         python -m pip install pytest #pytest-flask==0.15.1
-        python -m pytest
+        python -m pytest -v

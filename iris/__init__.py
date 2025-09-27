@@ -20,11 +20,24 @@ def get_demo_file(example=None):
 
     return demo_file
 
-def parse_cmd_line():
-    # Parse the command line
+def parse_cmd_line(argv=None):
+    """Parse application arguments.
+
+    If argv is None, this reads from sys.argv; if a '--' separator is present
+    the parser will only consider tokens after '--' (convention for separating
+    tool args from app args).
+    """
+    # Only consider tokens after `--` if present
+    tokens = [] if argv is None else argv
+    if '--' in tokens:
+        tokens = tokens[tokens.index('--') + 1:]
+    argv = tokens
+
+    # Parse the application-specific tokens
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode", type=str,
+        choices=["demo", "label"],
         help="Specify the mode you want to start iris, can be either *label* or *demo*."
     )
     parser.add_argument(
@@ -38,7 +51,13 @@ def parse_cmd_line():
     parser.add_argument(
         "-p","--production", action="store_true",
         help="Use production WSGI server")
-    args = parser.parse_args()
+
+    # parse_known_args returns (known_args, unknown_args). Unknown args are
+    # ignored so that external test runners (pytest) flags won't break parsing.
+    args, unknown = parser.parse_known_args(argv)
+    if unknown:
+        # optional: surface ignored tokens for debugging
+        print(f"[iris] Ignoring unknown CLI tokens: {unknown}")
 
     if args.mode == "demo":
         args.project = get_demo_file()
@@ -120,11 +139,18 @@ def register_extensions(app):
     from iris.user import user_app
     app.register_blueprint(user_app, url_prefix="/user")
 
-if len(sys.argv) > 1:
+# Only parse sys.argv for the application if the first CLI token looks like
+# an IRIS mode (the CLI expects `demo` or `label`). This prevents test
+# runners (pytest) or other tools that pass unrelated args from confusing
+# the app when the module is imported during test runs.
+if len(sys.argv) > 1 and sys.argv[1] in ("demo", "label"):
     args = parse_cmd_line()
 else:
+    # Default args used when importing the module in non-CLI contexts
+    # (tests, imports). Keep keys that other functions expect.
     args = {
-        'debug': False
+        'debug': False,
+        'production': False,
     }
     args['project'] = get_demo_file()
 
