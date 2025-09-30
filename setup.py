@@ -22,5 +22,5 @@ setup(
     install_requires=requirements,
 )
 
-#pre-commit black isort ruff
-#pytest pytest-cov codecov
+# pre-commit black isort ruff
+# pytest pytest-cov codecov
