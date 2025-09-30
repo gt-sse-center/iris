@@ -2,9 +2,12 @@ name: Lint
 
 on:
   push:
-    branches: [ main, master, code_testing ]
+    branches:
+      - master
+      - testci
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - master
 
 jobs:
   lint:
