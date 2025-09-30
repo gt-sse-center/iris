@@ -1,0 +1,25 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, master, code_testing ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install pre-commit + tools
+        run: python -m pip install --upgrade pip pre-commit black isort
+      - name: Run isort (check)
+        run: isort --check-only .
+      - name: Run black (diff)
+        run: black --diff .
+      - name: Run pre-commit (ruff + hooks)
+        run: pre-commit run --all-files
