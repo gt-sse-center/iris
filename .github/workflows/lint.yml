@@ -33,4 +33,4 @@ jobs:
       - name: Run pre-commit (ruff + hooks, show diffs)
         continue-on-error: true
         run: pre-commit run --all-files --show-diff-on-failure
-        # someday, to enforce: rm c-o-e: true
+        # someday, to enforce: rm throughout file c-o-e: true
