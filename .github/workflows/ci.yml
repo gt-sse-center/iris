@@ -87,3 +87,7 @@ jobs:
         with:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Cypress run
+        if: false  # expects one of package-lock.json (npm), pnpm-lock.yaml (pnpm) or yarn.lock (yarn)
+        uses: cypress-io/github-action@v6
