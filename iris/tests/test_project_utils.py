@@ -30,7 +30,7 @@ def test_make_absolute_varieties(tmp_path, monkeypatch):
     assert project.make_absolute(rel) == abs_expected
     # nested structures
     assert project.make_absolute({"a": rel}) == {"a": abs_expected}
-    
+
     # Use an absolute path that's valid on the current platform
     #   in particular, Win w/py313+ needs "//already/abs" while others "/already/abs"
     already_abs = os.path.abspath(os.path.join(os.sep, "already", "abs"))
