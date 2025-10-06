@@ -4,7 +4,7 @@
 
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/gt-sse-center/iris/ci.yml?logo=githubA)](https://github.com/gt-sse-center/iris/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/loriab/iris/graph/badge.svg)](https://codecov.io/gh/loriab/iris)
-![Docs Config](https://img.shields.io/badge/Docs-configuration_file-lightblue?link=https%3A%2F%2Fgithub.com%2Fgt-sse-center%2Firis%2Fblob%2Fmaster%2Fdocs%2Fconfig.md)
+[![Docs Config](https://img.shields.io/badge/Docs-configuration_file-lightblue)](https://github.com/gt-sse-center/iris/blob/master/docs/config.md)
 ![python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![License](https://img.shields.io/github/license/gt-sse-center/iris)
 <!--[![Documentation

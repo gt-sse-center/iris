@@ -10,5 +10,5 @@ exclude = [
   "demo/*/*.iris",
 ]
 
-[lint]
+[pylint]
 extend-ignore = ["E203", "W503"]
