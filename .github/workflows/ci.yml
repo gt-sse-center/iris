@@ -49,7 +49,12 @@ jobs:
         iris demo
 
     - name: Test with pytest
-      if: false
+      if: true
       run: |
-        pip install pytest pytest-flask==0.15.1
-        pytest
+        python -m pip install pytest pytest-cov codecov #pytest-flask==0.15.1
+        python -m pytest -v --cov=iris --color=yes --cov-report=term-missing --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml

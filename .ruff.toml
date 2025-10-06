@@ -1,0 +1,14 @@
+#[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+# You can tune which rules are enabled/disabled here. Keep defaults minimal
+# for now; teams can extend this file later.
+exclude = [
+  "docs",
+  "preview",
+  "demo/*/*.iris",
+]
+
+[lint]
+extend-ignore = ["E203", "W503"]
