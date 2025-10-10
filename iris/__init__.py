@@ -10,6 +10,8 @@ import flask
 import numpy as np
 import yaml
 
+__version__ = "1.0.0"
+
 from iris.extensions import db, compress
 from iris.project import project
 

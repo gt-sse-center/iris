@@ -12,21 +12,78 @@ Tool for manual image segmentation of satellite imagery (or images in general). 
 
 ## Installation
 
-Clone the repository, navigate to the directory, and install the package and its dependencies. We recommend doing this inside an environment such as conda,
-with python 3.8 or 3.9 (Python 3.10-3.13 work but not tested in detail).
+### Prerequisites
 
+IRIS requires Python 3.8 or higher. We recommend using [UV](https://docs.astral.sh/uv/) for Python and dependency management.
+
+#### Install UV
+
+**macOS and Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+**Windows:**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Alternative (using pip):**
+```bash
+pip install uv
+```
+
+### Install IRIS
+
+#### Quick Installation (Recommended)
+
+1. **Clone the repository:**
+```bash
 # true upstream
 # git clone git@github.com:ESA-PhiLab/iris.git
 # pseudo-upstream for GT CSSE collaboration
 git clone https://github.com/gt-sse-center/iris
 cd iris
-python setup.py install
 ```
 
-If you are altering the IRIS source code then you may find it easier to install like below, to avoid having to reinstall it every time a change is made
+2. **Run the installation script:**
+```bash
+# This script will install UV (if needed) and set up IRIS
+./install.sh
 ```
-pip install -e ./
+
+#### Manual Installation
+
+1. **Clone the repository:**
+```bash
+git clone git@github.com:ESA-PhiLab/iris.git
+cd iris
+```
+
+2. **Install IRIS using UV:**
+```bash
+# This will automatically create a virtual environment and install all dependencies
+uv pip install -e .
+```
+
+3. **Activate the environment (if needed):**
+```bash
+# UV automatically manages the environment, but you can activate it manually if needed
+source .venv/bin/activate  # On macOS/Linux
+# or
+.venv\Scripts\activate     # On Windows
+```
+
+### Verify Installation
+
+After installation, you can verify everything is working correctly:
+
+```bash
+# Run the installation test
+python verify_installation.py
+
+# Or try the demo directly
+iris demo
 ```
 
 
@@ -54,15 +111,20 @@ It is recommended to use a keyboard and mouse with scrollwheel for IRIS. Current
 
 ### Docker
 
-You can also use Docker to deploy IRIS. First, build an image (run from IRIS's root directory). Then, you can use docker run to launch IRIS. However, please note that port-forwarding is needed (here we use port 80 as an example for a typical http setup, but the port number can be set in your IRIS config file) and the directory to your project also needs to be given as a volume to docker.
+You can also use Docker to deploy IRIS. The Docker image uses the modern pyproject.toml configuration for reliable dependency management.
 
-```
+```bash
+# Build the image
 docker build --tag iris .
+
+# Run with port forwarding and volume mount
 docker run -p 80:80 -v <dataset_path>:/dataset/ --rm -it iris label /dataset/cloud-segmentation.json
 ```
 
+Note: Port forwarding is needed (here we use port 80 as an example, but the port number can be set in your IRIS config file) and the directory to your project needs to be given as a volume to docker.
+
 ### Run on Github Codespaces
-To run in a [Github codespace](https://docs.github.com/en/codespaces/overview) fork this repository, then in the Github UI select `Code/Codespaces/Open in codespace`. Run `pip install -e .` and then `iris demo`. You will see a popup that there is an app on port 5000, click the link to open a new window showing Iris 🎉
+To run in a [Github codespace](https://docs.github.com/en/codespaces/overview) fork this repository, then in the Github UI select `Code/Codespaces/Open in codespace`. Run `pip install -e .` and then `iris demo`. You will see a popup that there is an app on port 5000, click the link to open a new window showing Iris!
 
 
 **Visit the official iris Github page:  https://github.com/ESA-PhiLab/iris**

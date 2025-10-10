@@ -1,6 +1,6 @@
 import pytest
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def app():
     from iris import app as iris_app
     # push application context for tests that require it
