@@ -40,22 +40,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install UV (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Install UV (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-          echo "$env:USERPROFILE\.cargo\bin" >> $env:GITHUB_PATH
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
 
       - name: Install OpenMP (macOS)
         if: runner.os == 'macOS'
         run: brew install libomp
 
+      - name: Verify UV installation
+        run: uv --version
+          
       - name: Create virtual environment
         run: uv venv
 
