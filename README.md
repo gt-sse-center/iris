@@ -14,7 +14,7 @@ Tool for manual image segmentation of satellite imagery (or images in general). 
 
 ### Prerequisites
 
-IRIS requires Python 3.8 or higher. We recommend using [UV](https://docs.astral.sh/uv/) for Python and dependency management.
+IRIS requires Python 3.9 or higher. We recommend using [UV](https://docs.astral.sh/uv/) for Python and dependency management.
 
 #### Install UV
 
@@ -56,7 +56,7 @@ cd iris
 
 1. **Clone the repository:**
 ```bash
-git clone git@github.com:ESA-PhiLab/iris.git
+git clone https://github.com/gt-sse-center/iris
 cd iris
 ```
 
