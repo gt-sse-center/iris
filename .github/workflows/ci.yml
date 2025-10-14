@@ -64,7 +64,7 @@ jobs:
         run: uv pip install -e ".[test]"
 
       - name: Verify installation
-        run: uv run python verify_installation.py
+        run: uv run python environment_scripts/verify_installation.py
 
       - name: Test CLI functionality
         run: uv run iris --help

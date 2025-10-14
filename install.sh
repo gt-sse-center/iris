@@ -81,7 +81,7 @@ uv pip install -e .
 
 echo ""
 echo "Verifying installation..."
-if uv run python verify_installation.py; then
+if uv run python environment_scripts/verify_installation.py; then
     echo ""
     echo "SUCCESS: Installation complete and verified!"
     echo ""

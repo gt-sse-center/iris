@@ -80,7 +80,10 @@ After installation, you can verify everything is working correctly:
 
 ```bash
 # Run the installation test
-python verify_installation.py
+python environment_scripts/verify_installation.py
+
+# Run the test suite
+uv run pytest iris/tests/
 
 # Or try the demo directly
 iris demo
@@ -126,5 +129,29 @@ Note: Port forwarding is needed (here we use port 80 as an example, but the port
 ### Run on Github Codespaces
 To run in a [Github codespace](https://docs.github.com/en/codespaces/overview) fork this repository, then in the Github UI select `Code/Codespaces/Open in codespace`. Run `pip install -e .` and then `iris demo`. You will see a popup that there is an app on port 5000, click the link to open a new window showing Iris!
 
+
+## Development and Testing
+
+### Running Tests
+
+IRIS includes a comprehensive test suite using pytest. The tests are located in `iris/tests/` and include fixtures for Flask app testing and project state management.
+
+```bash
+# Run all tests
+uv run pytest iris/tests/
+
+# Run tests with verbose output
+uv run pytest iris/tests/ -v
+
+# Run specific test file
+uv run pytest iris/tests/test_models_user.py -v
+```
+
+The test suite includes:
+- CLI argument parsing tests
+- User model and authentication tests  
+- Project configuration and utility tests
+- Image processing and band expression validation
+- Deep dictionary merging utilities
 
 **Visit the official iris Github page:  https://github.com/ESA-PhiLab/iris**
