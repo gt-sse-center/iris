@@ -26,7 +26,11 @@ def test_make_absolute_varieties(tmp_path, monkeypatch):
     assert project.make_absolute(rel) == abs_expected
     # nested structures
     assert project.make_absolute({"a": rel}) == {"a": abs_expected}
-    assert project.make_absolute([rel, "/already/abs"]) == [abs_expected, "/already/abs"]
+    
+    # Use an absolute path that's valid on the current platform
+    already_abs = os.path.abspath(os.path.join(os.sep, "already", "abs"))
+    
+    assert project.make_absolute([rel, already_abs]) == [abs_expected, already_abs]
 
 
 def test_set_image_seed_reproducible(project_snapshot):
