@@ -63,12 +63,15 @@ cd iris
 2. **Install IRIS using UV:**
 ```bash
 # This will automatically create a virtual environment and install all dependencies
-uv pip install -e .
+uv sync
 ```
 
-3. **Activate the environment (if needed):**
+3. **Run commands with UV (recommended):**
 ```bash
-# UV automatically manages the environment, but you can activate it manually if needed
+# UV automatically manages the environment - use 'uv run' for commands
+uv run iris demo
+
+# Or activate the environment manually if preferred
 source .venv/bin/activate  # On macOS/Linux
 # or
 .venv\Scripts\activate     # On Windows
@@ -80,13 +83,13 @@ After installation, you can verify everything is working correctly:
 
 ```bash
 # Run the installation test
-python environment_scripts/verify_installation.py
+uv run python environment_scripts/verify_installation.py
 
 # Run the test suite
 uv run pytest iris/tests/
 
 # Or try the demo directly
-iris demo
+uv run iris demo
 ```
 
 
@@ -94,8 +97,8 @@ iris demo
 
 Once installed, you can run the demo version of IRIS
 
-```
-iris demo
+```bash
+uv run iris demo
 ```
 
 If you run IRIS from within a test runner (for example when running pytest) or other tooling that passes its own CLI flags, you can separate IRIS-specific arguments using `--`. Everything after `--` will be treated as IRIS arguments. Example:
@@ -106,8 +109,8 @@ pytest ... -- demo
 
 Having run the demo, you can then create a personalised config file, based on _demo/cloud-segmentation.json_. With your own config file, you can then instantiate your own custom project. <a href="https://github.com/ESA-PhiLab/iris/blob/master/docs/config.md">Here is a guide</a> on how to write your own config file.
 
-```
-iris label <your-config-file>
+```bash
+uv run iris label <your-config-file>
 ```
 
 It is recommended to use a keyboard and mouse with scrollwheel for IRIS. Currently, control via trackpad is limited and awkward.

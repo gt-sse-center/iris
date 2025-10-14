@@ -72,12 +72,9 @@ else
     uv python install 3.9
 fi
 
-# Create virtual environment and install IRIS
-echo "Creating virtual environment..."
-uv venv
-
-echo "Installing IRIS and dependencies..."
-uv pip install -e .
+# Install IRIS using UV sync (creates venv and installs dependencies)
+echo "Installing IRIS and dependencies with UV sync..."
+uv sync
 
 echo ""
 echo "Verifying installation..."

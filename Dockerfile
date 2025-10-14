@@ -16,7 +16,7 @@ ENV PATH="/root/.cargo/bin:$PATH"
 COPY . /app/
 WORKDIR /app
 
-# Install IRIS using UV (which handles all dependencies properly)
-RUN uv pip install --system .
+# Install IRIS using UV with lock file for reproducible builds
+RUN uv sync --frozen
 
 ENTRYPOINT ["iris"]
