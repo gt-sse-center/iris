@@ -19,6 +19,8 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "flask>=2.3.2",
@@ -59,3 +61,22 @@ include = ["iris*"]
 
 [tool.setuptools.package-data]
 iris = ["*.json", "*/templates/*", "*/static/*/*"]
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [
+    "docs",
+    "preview",
+    "demo/*/*.iris",
+]
+
+[tool.ruff.lint]
+extend-ignore = ["E203"] #, "W503"]

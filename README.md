@@ -1,6 +1,18 @@
 # IRIS - Intelligently Reinforced Image Segmentation<sup>1</sup>
 <sup>1</sup>Yes, it is a <a href="https://en.wikipedia.org/wiki/Backronym">backronym</a>.
 
+
+[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/gt-sse-center/iris/ci.yml?logo=githubA)](https://github.com/gt-sse-center/iris/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/loriab/iris/graph/badge.svg)](https://codecov.io/gh/loriab/iris)
+[![Docs Config](https://img.shields.io/badge/Docs-configuration_file-lightblue)](https://github.com/gt-sse-center/iris/blob/master/docs/config.md)
+![python](https://img.shields.io/badge/python-3.9+-blue.svg)
+![License](https://img.shields.io/github/license/gt-sse-center/iris)
+<!--[![Documentation
+Status](https://img.shields.io/github/actions/workflow/status/MolSSI/QCManyBody/ci.yml?label=docs&logo=readthedocs&logoColor=white)](https://molssi.github.io/QCManyBody/)-->
+<!--[![Conda (channel
+only)](https://img.shields.io/conda/vn/conda-forge/qcmanybody?color=blue&logo=anaconda&logoColor=white)](https://anaconda.org/conda-forge/qcmanybody)-->
+
+
 <img src="preview/segmentation.png" />
 
 Tool for manual image segmentation of satellite imagery (or images in general). It was designed to accelerate the creation of machine learning training datasets for Earth Observation. This application is a flask app which can be run locally. Special highlights:
@@ -104,7 +116,7 @@ uv run iris demo
 If you run IRIS from within a test runner (for example when running pytest) or other tooling that passes its own CLI flags, you can separate IRIS-specific arguments using `--`. Everything after `--` will be treated as IRIS arguments. Example:
 
 ```
-pytest ... -- demo
+pytest -v ... -- demo
 ```
 
 Having run the demo, you can then create a personalised config file, based on _demo/cloud-segmentation.json_. With your own config file, you can then instantiate your own custom project. <a href="https://github.com/ESA-PhiLab/iris/blob/master/docs/config.md">Here is a guide</a> on how to write your own config file.
