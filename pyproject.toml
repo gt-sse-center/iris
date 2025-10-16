@@ -62,12 +62,31 @@ include = ["iris*"]
 [tool.setuptools.package-data]
 iris = ["*.json", "*/templates/*", "*/static/*/*"]
 
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [
+    "docs",
+    "preview",
+    "demo/*/*.iris",
+]
+
 # Bandit security linter configuration
 [tool.bandit]
 exclude_dirs = ["tests", "demo"]
 skips = [
     "B101",  # Skip assert_used test (asserts are OK in tests)
 ]
+
+[tool.ruff.lint]
+extend-ignore = ["E203"] #, "W503"]
 
 # Security-focused test configuration
 [tool.bandit.assert_used]
