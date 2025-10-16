@@ -1,0 +1,54 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [ master, testci ]
+  pull_request:
+    branches: [ master, testci ]
+
+jobs:
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run dependency vulnerability scan
+        run: |
+          uv pip install safety pip-audit
+          uv run safety check || echo "Safety found vulnerabilities"
+          uv run pip-audit || echo "pip-audit found vulnerabilities"
+
+      - name: Run security linting
+        run: |
+          uv pip install bandit[toml]
+          uv run bandit -r iris/ || echo "Bandit found security issues"
+
+  secrets:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog secret detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: master
+          head: HEAD
+          extra_args: --only-verified

@@ -81,6 +81,9 @@ def set(user_id):
 
     for k, v in json.loads(flask.request.data).items():
         if k == "admin":
+            # Only existing admins can modify admin privileges
+            if not current_user.admin:
+                return flask.make_response("Only administrators can modify admin privileges!", 403)
             user.admin = bool(v)
         else:
             return flask.make_response(f"Unknown parameter <i>{k}</i>!", 400)
@@ -172,9 +175,13 @@ def register():
     if len(data['password']) > 64:
         return flask.make_response('Password is too long!', 400)
 
+    # Check if this is the first user - if no admin exists, make this user an admin
+    existing_admin = User.query.filter_by(admin=True).first()
+    is_first_admin = existing_admin is None
+
     new_user = User(
         name=data['username'],
-        admin=False,
+        admin=is_first_admin,
     )
     new_user.set_password(data['password'])
     db.session.add(new_user)
@@ -182,7 +189,10 @@ def register():
 
     set_current_user(new_user)
 
-    return flask.make_response(f"{new_user} successfully created!")
+    if is_first_admin:
+        return flask.make_response(f"{new_user} successfully created as the first administrator!")
+    else:
+        return flask.make_response(f"{new_user} successfully created!")
 
 @user_app.route('/login', methods=['POST'])
 def login():
