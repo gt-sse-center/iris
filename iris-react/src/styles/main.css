@@ -1,0 +1,466 @@
+body {
+    font-size: 1em;
+    margin: 15px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+select {
+    display: block;
+    /* font-size: 16px; */
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    color: #000;
+    outline: none;
+    /* line-height: 1.3; */
+    margin: 2px 2px;
+    padding: 8px 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #000;
+    /* box-shadow: 0 1px 0 1px rgba(0,0,0,.04); */
+    border-radius: 4px;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: #fff;
+    cursor: pointer;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+     -moz-user-select: none; /* Old versions of Firefox */
+      -ms-user-select: none; /* Internet Explorer/Edge */
+          user-select: none; /* Non-prefixed version, currently
+                                supported by Chrome, Opera and Firefox */
+}
+select.with-arrow{
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat, repeat;
+    background-position: right .7em top 50%, 0 0;
+    background-size: .65em auto, 100%;
+}
+select::-ms-expand {
+    display: none;
+}
+select:hover {
+    background-color: #dddddd;
+}
+select:focus {
+    border-color: #aaa;
+    box-shadow: 0 0 1px 3px rgba(59, 153, 252, .7);
+    box-shadow: 0 0 0 3px -moz-mac-focusring;
+    color: #222;
+    outline: none;
+}
+select option {
+    font-weight:normal;
+}
+
+button,.button {
+    background-color: #ffffff;
+    outline: none;
+    border: 2px;
+    border-style: solid;
+    border-radius: 4px;
+    border-color: black;
+    color: black;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-weight: bold;
+    margin: 2px 2px;
+    padding: 8px 10px;
+    cursor: pointer;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+     -moz-user-select: none; /* Old versions of Firefox */
+      -ms-user-select: none; /* Internet Explorer/Edge */
+          user-select: none; /* Non-prefixed version, currently
+                                supported by Chrome, Opera and Firefox */
+    transition-property: background-color;
+    transition-duration: 0.5s;
+}
+
+.toolbar {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+}
+
+.toolbutton,.complete-toolbutton,.statusbutton,.complete-statusbutton {
+  background-color: #ffffff;
+  outline: none;
+  border: 2px;
+  border-style: solid;
+  border-radius: 4px;
+  border-color: black;
+  color: black;
+  text-align: center;
+  font-weight: bold;
+  margin: 2px 2px;
+  padding: 0px;
+  cursor: pointer;
+  font-size: 18px;
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+   -khtml-user-select: none; /* Konqueror HTML */
+     -moz-user-select: none; /* Old versions of Firefox */
+      -ms-user-select: none; /* Internet Explorer/Edge */
+          user-select: none; /* Non-prefixed version, currently
+                                supported by Chrome, Opera and Firefox */
+   transition: 0.3s;
+}
+
+.icon_button{
+    line-height: 0;
+    padding: 2px;
+}
+
+img {
+    margin: 0px;
+    padding: 0px;
+}
+
+.complete-toolbutton,.complete-statusbutton{
+    cursor: default;
+}
+
+.toolbar_separator {
+    float: left;
+    background-color: #000;
+    margin: 2px 6px;
+    width: 2px;
+}
+
+.statusbar {
+    display: flex;
+    align-items: stretch;
+    /* list-style-type: none; */
+    /* border: 2px solid black;
+    border-radius: 4px; */
+    width: 98%;
+    margin: 0;
+    padding: 0;
+    /* padding: 4px; */
+    overflow: visible;
+    font-size: 18px;
+}
+
+.statusbutton,.complete-statusbutton {
+  padding: 10px;
+  overflow: visible;
+  z-index: 30;
+}
+
+.statusbar_separator {
+    float: left;
+    background-color: #000;
+    margin: 0px 6px;
+    width: 2px;
+    height: 22px;
+}
+
+button:hover,.button:hover,.toolbutton:hover,.statusbutton:hover{
+    background-color: #dddddd;
+}
+
+.checked:hover{
+    background-color: #dddddd;
+}
+
+.checked {
+    background-color: #ababab;
+}
+
+.vl {
+    background-color: #000;
+    padding: 40px 6px;
+    /* height:30px; */
+    display: inline-block;
+}
+
+.info-box{
+    display: flex;
+    justify-content: center;
+    border: 2px;
+    border-style: solid;
+    border-radius: 4px;
+    border-color: black;
+    background-color: white;
+    text-decoration: none;
+    align-items: center;
+    margin: 2px 2px;
+    padding: 5px 10px;
+    float: left;
+}
+
+.info-box-top{
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.info-box-bottom{
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.slider {
+    /* width: 200px; */
+    font-size: 15px;
+}
+
+.slider-value{
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.slider-widget{
+  -webkit-appearance: none;  /* Override default CSS styles */
+  appearance: none;
+  width: 100%; /* Full-width */
+  height: 12px; /* Specified height */
+  background: #fff; /* Grey background */
+  outline: none; /* Remove outline */
+  border: 1px solid black;
+  /* margin-left: 2px;
+  margin-right: 2px; */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.slider-widget::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 12px; /* Set a specific slider handle width */
+  height: 12px; /* Slider handle height */
+  background: #000; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.slider-widget::-moz-range-thumb {
+  width: 12px; /* Set a specific slider handle width */
+  height: 12px; /* Slider handle height */
+  background: #000; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+
+table {
+  /* width: 100%; */
+  border-collapse: collapse;
+  border-color: #8d8d8d;
+  margin: 2px 2px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+table.striped tr:nth-child(even){
+  background-color: #fdfbe7; /* Cream rows */
+}
+
+td, th {
+  border: 1px solid #000;
+  padding: 8px;
+  border-style: outset;
+  border-color: #9d9d9d;
+  text-align: center;
+  position: relative;
+}
+
+th,td.first {
+    font-weight: bold;
+}
+
+td.upper-left {
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.icon {
+    margin: 2px;
+    width: 24px;
+    height: 24px;
+}
+
+.key{
+    font-style: italic;
+}
+
+.key::before{
+    content: "<";
+}
+.key::after{
+    content: ">";
+}
+
+/* Style the tab */
+.tab {
+  overflow: hidden;
+  border: 1px solid #000;
+}
+
+.tab button,.button {
+  float: left;
+  border: none;
+  border-radius: 0px;
+  outline: none;
+  cursor: pointer;
+  margin: 0px;
+  padding: 14px 16px;
+  font-size: 1em;
+}
+
+/* Style the tab content */
+.tabcontent {
+  display: none;
+  padding: 12px 12px;
+  border: 1px solid #000;
+  border-top: none;
+  overflow: auto;
+}
+
+.tag{
+    background-color: #000000;
+    color: white;
+    opacity: 0.75;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    padding: 4px;
+}
+
+.green{
+    background-color: #11b811;
+}
+.red{
+    background-color: #bb0000;
+}
+.yellow{
+    background-color: #cdcd00;
+}
+
+/* Style the buttons that are used to open and close the accordion panel */
+.accordion {
+ /* background-color: #fff; */
+ color: #000;
+ font-weight: bold;
+ cursor: pointer;
+ padding: 14px 18px;
+ font-size: 16px;
+ /* width: 95%; */
+ text-align: left;
+ border: 2px solid black;
+ /* border-radius: 4px;
+ border-bottom-left-radius: 0px;
+ border-bottom-right-radius: 0px; */
+ outline: none;
+ overflow: hidden;
+ transition: 1s;
+ margin: 2px 0px;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.accordion:hover {
+ background-color: #ccc;
+}
+
+.accordion:after {
+  content: '\002B';
+  color: #000;
+  font-weight: bold;
+  float: right;
+  margin-left: 5px;
+}
+
+.accordion.checked:after {
+  content: "\2212";
+}
+
+/* Style the accordion panel. Note: hidden by default */
+.panel {
+ padding: 18px;
+ background-color: white;
+ display: none;
+ overflow: hidden;
+ border: 2px solid black;
+ border-top: none;
+ margin-top: -2px;
+ font-size: 16px;
+ font-weight: normal;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  overflow: visible;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 150%;
+  left: 50%;
+  margin-left: -60px;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+.progress-bar {
+  background-color: #fff;
+  border: 2px solid black;
+  transition: 2s;
+}
+
+.progress {
+  text-align: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background-color: black;
+  color: white;
+}
+
+.view-canvas {
+    border: 1px solid black;
+    background-color: transparent;
+    cursor: crosshair;
+    position: absolute; left: 0; top: 0;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+.view-description {
+    overflow: auto; /* Enable scroll if needed */
+    color: black;
+    z-index: 20; /* Sit on top */
+    left: 10px;
+    top: 40px;
+    text-align: center;
+    word-wrap: break-word;
+    font-size: 18px;
+    padding: auto;
+}
+
+.view-controls {
+    position: absolute;
+    z-index: 20;
+    visibility: hidden;
+}
