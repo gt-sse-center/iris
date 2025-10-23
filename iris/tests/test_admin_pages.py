@@ -13,9 +13,6 @@ class TestAdminPages:
     def setup_users(self, app):
         """Create test users."""
         with app.app_context():
-            User.query.delete()
-            db.session.commit()
-            
             # Regular user
             regular_user = User(id=1, name="regular_user", admin=False)
             regular_user.set_password("password123")

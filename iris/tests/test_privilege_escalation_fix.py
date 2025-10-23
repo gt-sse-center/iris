@@ -19,9 +19,6 @@ class TestPrivilegeEscalationFix:
 
     def setup_method(self):
         """Set up test users for each test."""
-        # Clear any existing users
-        db.session.query(User).delete()
-        
         # Create a regular user
         self.regular_user = User(
             id=1,
@@ -40,11 +37,6 @@ class TestPrivilegeEscalationFix:
         self.admin_user.set_password("admin123")
         db.session.add(self.admin_user)
         
-        db.session.commit()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        db.session.query(User).delete()
         db.session.commit()
 
     def test_regular_user_cannot_escalate_own_privileges(self, client):
@@ -164,8 +156,8 @@ class TestPrivilegeEscalationFix:
 
     def test_first_user_becomes_admin_when_no_admin_exists(self, client):
         """Test the fallback mechanism that makes the first user admin if no admin exists."""
-        # Clear all users to simulate fresh installation
-        db.session.query(User).delete()
+        # Clear all users to simulate fresh installation (database is already clean from fixture)
+        User.query.delete()
         db.session.commit()
         
         # Register first user - should automatically become admin
@@ -187,8 +179,8 @@ class TestPrivilegeEscalationFix:
 
     def test_second_user_is_not_admin_when_admin_exists(self, client):
         """Test that subsequent users are not automatically made admin."""
-        # Clear all users and create one admin
-        db.session.query(User).delete()
+        # Clear all users and create one admin (database is already clean from fixture)
+        User.query.delete()
         admin = User(name="existing_admin", admin=True)
         admin.set_password("admin123")
         db.session.add(admin)
