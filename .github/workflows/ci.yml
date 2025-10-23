@@ -60,6 +60,19 @@ jobs:
       - name: Create virtual environment
         run: uv venv
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Node.js dependencies
+        working-directory: iris
+        run: npm install
+
+      - name: Build React/TypeScript frontend
+        working-directory: iris
+        run: npm run build
+
       - name: Install dependencies and IRIS
         run: uv pip install -e ".[test]"
 
@@ -88,6 +101,19 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Cypress run
-        if: false  # expects one of package-lock.json (npm), pnpm-lock.yaml (pnpm) or yarn.lock (yarn)
-        uses: cypress-io/github-action@v6
+      - name: TypeScript type checking
+        working-directory: iris
+        run: npx tsc --noEmit
+
+      - name: Verify React build artifacts
+        working-directory: iris
+        shell: bash
+        run: |
+          # Check that React build was successful
+          if [ -f "static/dist/adminApp.js" ]; then
+            echo "✅ React build successful - adminApp.js exists"
+            ls -la static/dist/
+          else
+            echo "❌ React build failed - adminApp.js not found at static/dist/"
+            exit 1
+          fi
