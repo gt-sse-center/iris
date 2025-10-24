@@ -155,8 +155,8 @@ def register_extensions(app):
     app.register_blueprint(main_app)
     from iris.segmentation import segmentation_app
     app.register_blueprint(segmentation_app, url_prefix="/segmentation")
-    from iris.admin import admin_app
-    app.register_blueprint(admin_app, url_prefix="/admin")
+    from iris.admin import register_admin_blueprints
+    register_admin_blueprints(app)
     from iris.help import help_app
     app.register_blueprint(help_app, url_prefix="/help")
     from iris.user import user_app

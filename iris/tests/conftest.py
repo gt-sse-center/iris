@@ -1,20 +1,51 @@
 import pytest
+import tempfile
+import os
+from iris.models import db
 
 @pytest.fixture(scope='session')
 def app():
     from iris import app as iris_app
+    
+    # Create a temporary database for testing
+    test_db_fd, test_db_path = tempfile.mkstemp(suffix='.db')
+    
+    # Configure app for testing
+    iris_app.config['TESTING'] = True
+    iris_app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{test_db_path}'
+    
     # push application context for tests that require it
     ctx = iris_app.app_context()
     ctx.push()
+    
     try:
+        # Create all tables in the test database
+        db.create_all()
         yield iris_app
     finally:
+        # Clean up
+        db.drop_all()
         ctx.pop()
+        os.close(test_db_fd)
+        os.unlink(test_db_path)
 
 
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def clean_db(app):
+    """Clean database before each test to ensure isolation."""
+    with app.app_context():
+        # Clear all data before each test
+        db.session.remove()
+        db.drop_all()
+        db.create_all()
+        yield
+        # Clean up after test
+        db.session.remove()
 
 
 @pytest.fixture

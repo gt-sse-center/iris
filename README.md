@@ -26,7 +26,7 @@ Tool for manual image segmentation of satellite imagery (or images in general). 
 
 ### Prerequisites
 
-IRIS requires Python 3.9 or higher. We recommend using [UV](https://docs.astral.sh/uv/) for Python and dependency management.
+IRIS requires Python 3.9 or higher and Node.js 18+ for the admin interface. We recommend using [UV](https://docs.astral.sh/uv/) for Python and dependency management.
 
 #### Install UV
 
@@ -44,6 +44,24 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ```bash
 pip install uv
 ```
+
+#### Install Node.js
+
+IRIS admin interface requires Node.js 18 or higher for the React frontend.
+
+**Using Node Version Manager (recommended):**
+```bash
+# Install nvm (macOS/Linux)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Install and use Node.js 18
+nvm install 18
+nvm use 18
+```
+
+**Direct installation:**
+- Download from [nodejs.org](https://nodejs.org/)
+- Or use your system package manager (brew, apt, etc.)
 
 ### Install IRIS
 
@@ -64,6 +82,13 @@ cd iris
 ./install.sh
 ```
 
+3. **Build the frontend:**
+```bash
+# Install Node.js dependencies and build React admin interface
+npm install
+npm run build
+```
+
 #### Manual Installation
 
 1. **Clone the repository:**
@@ -78,7 +103,14 @@ cd iris
 uv sync
 ```
 
-3. **Run commands with UV (recommended):**
+3. **Build the frontend:**
+```bash
+# Install Node.js dependencies and build React admin interface
+npm install
+npm run build
+```
+
+4. **Run commands with UV (recommended):**
 ```bash
 # UV automatically manages the environment - use 'uv run' for commands
 uv run iris demo
@@ -96,6 +128,9 @@ After installation, you can verify everything is working correctly:
 ```bash
 # Run the installation test
 uv run python environment_scripts/verify_installation.py
+
+# Verify frontend build
+ls iris/static/dist/adminApp.js  # Should exist
 
 # Run the test suite
 uv run pytest iris/tests/
@@ -127,6 +162,21 @@ uv run iris label <your-config-file>
 
 It is recommended to use a keyboard and mouse with scrollwheel for IRIS. Currently, control via trackpad is limited and awkward.
 
+### Admin Interface
+
+IRIS includes a modern React-based admin interface for managing users, viewing progress, and monitoring annotation quality:
+
+```bash
+# Access the admin interface at http://localhost:5000/admin
+# First user becomes admin automatically
+```
+
+**Admin Features:**
+- **User Management**: View all users, manage admin privileges, track annotation progress
+- **Image Progress**: Monitor which images have been annotated and by whom  
+- **Quality Metrics**: View annotation scores, difficulty ratings, and time spent
+- **Modern UI**: React Single Page Application with fast navigation
+
 ### Docker
 
 You can also use Docker to deploy IRIS. The Docker image uses the modern pyproject.toml configuration for reliable dependency management.
@@ -147,12 +197,33 @@ To run in a [Github codespace](https://docs.github.com/en/codespaces/overview) f
 
 ## Development and Testing
 
+### Frontend Development
+
+IRIS includes a modern React/TypeScript admin interface. For frontend development:
+
+```bash
+# Install dependencies
+npm install
+
+# Build for production
+npm run build
+
+# Development with hot reload (optional)
+npm run dev  # Runs Vite dev server on port 3000
+```
+
+The admin interface features:
+- **Modern React SPA** with client-side routing
+- **TypeScript** for type safety and better development experience  
+- **Hybrid architecture** supporting both React and legacy Flask content
+- **Incremental migration** path from Flask templates to React components
+
 ### Running Tests
 
 IRIS includes a comprehensive test suite using pytest. The tests are located in `iris/tests/` and include fixtures for Flask app testing and project state management.
 
 ```bash
-# Run all tests
+# Run all tests (includes frontend build verification)
 uv run pytest iris/tests/
 
 # Run tests with verbose output
@@ -160,6 +231,9 @@ uv run pytest iris/tests/ -v
 
 # Run specific test file
 uv run pytest iris/tests/test_models_user.py -v
+
+# Frontend-specific checks
+npx tsc --noEmit  # TypeScript type checking
 ```
 
 The test suite includes:
@@ -168,5 +242,6 @@ The test suite includes:
 - Project configuration and utility tests
 - Image processing and band expression validation
 - Deep dictionary merging utilities
+- Frontend build and type checking (in CI)
 
 **Visit the official iris Github page:  https://github.com/ESA-PhiLab/iris**
