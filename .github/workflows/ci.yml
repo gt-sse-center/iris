@@ -101,9 +101,7 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: TypeScript type checking
-        working-directory: iris
-        run: npx tsc --noEmit
+
 
       - name: Verify React build artifacts
         working-directory: iris

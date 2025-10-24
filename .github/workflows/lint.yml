@@ -34,3 +34,16 @@ jobs:
         continue-on-error: true
         run: pre-commit run --all-files --show-diff-on-failure
         # someday, to enforce: rm throughout file c-o-e: true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install Node.js dependencies
+        working-directory: iris
+        run: npm install
+      
+      - name: TypeScript type checking
+        working-directory: iris
+        run: npx tsc --noEmit
