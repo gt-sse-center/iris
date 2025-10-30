@@ -7,6 +7,7 @@ import sys
 import webbrowser
 import shutil
 from pathlib import Path
+from typing import Union
 
 import flask
 import numpy as np
@@ -24,7 +25,7 @@ def get_demo_file(example=None):
 
     return demo_file
 
-def find_config_file(folder_path) -> str | None:
+def find_config_file(folder_path) -> Union[str, None]:
     """Find a suitable config file in the given folder.
     
     Args:
