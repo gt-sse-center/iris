@@ -160,6 +160,28 @@ Having run the demo, you can then create a personalised config file, based on _d
 uv run iris label <your-config-file>
 ```
 
+### Project Management Commands
+
+IRIS provides convenient commands for creating and managing projects:
+
+```bash
+# Create and launch a new project (copies demo structure)
+uv run iris launch <project-name>
+
+# Launch an existing project (finds config file automatically)
+uv run iris launch <existing-project-name>
+
+# Remove a project (with confirmation prompt)
+uv run iris rm <project-name>
+```
+
+The `launch` command will:
+- Create a new project from the demo template if the folder doesn't exist
+- Launch an existing project by finding `cloud-segmentation.json` or any `.json` config file
+- Provide clear error messages if no suitable config is found
+
+The `rm` command safely removes project folders with confirmation and prevents accidental deletion of the demo folder.
+
 It is recommended to use a keyboard and mouse with scrollwheel for IRIS. Currently, control via trackpad is limited and awkward.
 
 ### Admin Interface
