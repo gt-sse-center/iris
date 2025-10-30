@@ -24,26 +24,46 @@ def get_demo_file(example=None):
 
     return demo_file
 
-def find_config_file(folder_path):
-    """Find a suitable config file in the given folder."""
+def find_config_file(folder_path) -> str | None:
+    """Find a suitable config file in the given folder.
+    
+    Args:
+        folder_path: Path to the folder to search in
+        
+    Returns:
+        Absolute path to config file as string, or None if not found.
+        Prefers 'cloud-segmentation.json', falls back to any .json file.
+    """
     folder = Path(folder_path)
     
     # First try cloud-segmentation.json
     cloud_seg_path = folder / "cloud-segmentation.json"
     if cloud_seg_path.exists():
-        return str(cloud_seg_path)
+        return str(cloud_seg_path.resolve())
     
     # If not found, look for any .json file that might be a config
     json_files = list(folder.glob("*.json"))
     if json_files:
-        return str(json_files[0])
+        return str(json_files[0].resolve())
     
     return None
 
-def handle_launch_command(folder_name):
-    """Handle the launch command - create project if needed and launch it."""
+def handle_launch_command(folder_name) -> str:
+    """Handle the launch command - create project if needed and launch it.
+    
+    Args:
+        folder_name: Name of the project folder to launch or create
+        
+    Returns:
+        Absolute path to the config file as string
+        
+    Raises:
+        ValueError: If folder_name is empty or None
+        FileNotFoundError: If demo folder is missing when creating new project
+        RuntimeError: If no suitable config file found or project creation fails
+    """
     if not folder_name:
-        raise Exception("Launch command requires a folder name!")
+        raise ValueError("Launch command requires a folder name!")
     
     folder_path = Path.cwd() / folder_name
     
@@ -51,32 +71,43 @@ def handle_launch_command(folder_name):
         # Folder exists, find config file
         config_file = find_config_file(folder_path)
         if not config_file:
-            raise Exception(f"No suitable config file found in '{folder_name}'. Expected 'cloud-segmentation.json' or another .json config file.")
+            raise RuntimeError(f"No suitable config file found in '{folder_name}'. Expected 'cloud-segmentation.json' or another .json config file.")
         print(f"Launching existing project '{folder_name}' with config: {Path(config_file).name}")
         return config_file
     else:
         # Folder doesn't exist, create it from demo
         demo_path = Path.cwd() / "demo"
         if not demo_path.exists():
-            raise Exception("Demo folder not found! Cannot create new project.")
+            raise FileNotFoundError("Demo folder not found! Cannot create new project.")
         
         print(f"Creating new project '{folder_name}' from demo...")
         shutil.copytree(demo_path, folder_path)
         
         config_file = folder_path / "cloud-segmentation.json"
         if not config_file.exists():
-            raise Exception(f"Failed to create project: cloud-segmentation.json not found in copied demo.")
+            raise RuntimeError(f"Failed to create project: cloud-segmentation.json not found in copied demo.")
         
         print(f"Project '{folder_name}' created successfully!")
-        return str(config_file)
+        return str(config_file.resolve())
 
-def handle_rm_command(folder_name):
-    """Handle the rm command - remove project folder with confirmation."""
+def handle_rm_command(folder_name) -> None:
+    """Handle the rm command - remove project folder with confirmation.
+    
+    Args:
+        folder_name: Name of the project folder to remove
+        
+    Raises:
+        ValueError: If folder_name is empty, None, or is 'demo'
+        
+    Note:
+        This function calls sys.exit(0) after completion for CLI usage.
+        It prompts for user confirmation before deletion.
+    """
     if not folder_name:
-        raise Exception("Remove command requires a folder name!")
+        raise ValueError("Remove command requires a folder name!")
     
     if folder_name == "demo":
-        raise Exception("Cannot remove the demo folder!")
+        raise ValueError("Cannot remove the demo folder!")
     
     folder_path = Path.cwd() / folder_name
     

@@ -37,7 +37,7 @@ class TestLaunchCommand:
         project_dir.mkdir()
         
         monkeypatch.chdir(tmp_path)
-        with pytest.raises(Exception, match="No suitable config file found"):
+        with pytest.raises(RuntimeError, match="No suitable config file found"):
             handle_launch_command("test-project")
 
 
@@ -68,7 +68,7 @@ class TestRmCommand:
     
     def test_rm_demo_folder_blocked(self):
         """Should prevent deletion of demo folder."""
-        with pytest.raises(Exception, match="Cannot remove the demo folder"):
+        with pytest.raises(ValueError, match="Cannot remove the demo folder"):
             handle_rm_command("demo")
 
 
@@ -91,4 +91,30 @@ class TestConfigFileFinding:
         config_file.write_text('{"name": "test"}')
         
         result = find_config_file(str(tmp_path))
-        assert result == str(config_file)
+        assert result == str(config_file.resolve())
+
+
+class TestErrorHandling:
+    """Test specific error types and edge cases."""
+    
+    def test_launch_empty_folder_name_raises_value_error(self):
+        """Should raise ValueError for empty folder name."""
+        with pytest.raises(ValueError, match="Launch command requires a folder name"):
+            handle_launch_command("")
+        
+        with pytest.raises(ValueError, match="Launch command requires a folder name"):
+            handle_launch_command(None)
+    
+    def test_launch_missing_demo_raises_file_not_found(self, tmp_path, monkeypatch):
+        """Should raise FileNotFoundError when demo folder missing."""
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(FileNotFoundError, match="Demo folder not found"):
+            handle_launch_command("new-project")
+    
+    def test_rm_empty_folder_name_raises_value_error(self):
+        """Should raise ValueError for empty folder name."""
+        with pytest.raises(ValueError, match="Remove command requires a folder name"):
+            handle_rm_command("")
+        
+        with pytest.raises(ValueError, match="Remove command requires a folder name"):
+            handle_rm_command(None)
