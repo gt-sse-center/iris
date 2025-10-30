@@ -5,6 +5,8 @@ from os.path import basename, dirname, exists, isabs, join
 import os
 import sys
 import webbrowser
+import shutil
+import glob
 
 import flask
 import numpy as np
@@ -21,6 +23,76 @@ def get_demo_file(example=None):
     )
 
     return demo_file
+
+def find_config_file(folder_path):
+    """Find a suitable config file in the given folder."""
+    # First try cloud-segmentation.json
+    cloud_seg_path = join(folder_path, "cloud-segmentation.json")
+    if exists(cloud_seg_path):
+        return cloud_seg_path
+    
+    # If not found, look for any .json file that might be a config
+    json_files = glob.glob(join(folder_path, "*.json"))
+    if json_files:
+        # Return the first .json file found
+        return json_files[0]
+    
+    return None
+
+def handle_launch_command(folder_name):
+    """Handle the launch command - create project if needed and launch it."""
+    if not folder_name:
+        raise Exception("Launch command requires a folder name!")
+    
+    folder_path = join(os.getcwd(), folder_name)
+    
+    if exists(folder_path):
+        # Folder exists, find config file
+        config_file = find_config_file(folder_path)
+        if not config_file:
+            raise Exception(f"No suitable config file found in '{folder_name}'. Expected 'cloud-segmentation.json' or another .json config file.")
+        print(f"Launching existing project '{folder_name}' with config: {basename(config_file)}")
+        return config_file
+    else:
+        # Folder doesn't exist, create it from demo
+        demo_path = join(os.getcwd(), "demo")
+        if not exists(demo_path):
+            raise Exception("Demo folder not found! Cannot create new project.")
+        
+        print(f"Creating new project '{folder_name}' from demo...")
+        shutil.copytree(demo_path, folder_path)
+        
+        config_file = join(folder_path, "cloud-segmentation.json")
+        if not exists(config_file):
+            raise Exception(f"Failed to create project: cloud-segmentation.json not found in copied demo.")
+        
+        print(f"Project '{folder_name}' created successfully!")
+        return config_file
+
+def handle_rm_command(folder_name):
+    """Handle the rm command - remove project folder with confirmation."""
+    if not folder_name:
+        raise Exception("Remove command requires a folder name!")
+    
+    if folder_name == "demo":
+        raise Exception("Cannot remove the demo folder!")
+    
+    folder_path = join(os.getcwd(), folder_name)
+    
+    if not exists(folder_path):
+        print(f"Folder '{folder_name}' does not exist.")
+        sys.exit(0)
+    
+    # Ask for confirmation
+    response = input(f"Are you sure you want to delete the project folder '{folder_name}'? This cannot be undone. (y/N): ")
+    if response.lower() in ['y', 'yes']:
+        shutil.rmtree(folder_path)
+        print(f"Project folder '{folder_name}' has been deleted.")
+    else:
+        print("Deletion cancelled.")
+    
+    # Exit after rm command
+    sys.exit(0)
 
 def parse_cmd_line(argv=None):
     """Parse application arguments.
@@ -39,12 +111,12 @@ def parse_cmd_line(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode", type=str,
-        choices=["demo", "label"],
-        help="Specify the mode you want to start iris, can be either *label* or *demo*."
+        choices=["demo", "label", "launch", "rm"],
+        help="Specify the mode you want to start iris, can be either *label*, *demo*, *launch*, or *rm*."
     )
     parser.add_argument(
         "project", type=str, nargs='?',
-        help="Path to the project configurations file (yaml or json)."
+        help="Path to the project configurations file (yaml or json) or folder name for launch/rm commands."
     )
     parser.add_argument(
         "-d", "--debug", action="store_true",
@@ -66,6 +138,10 @@ def parse_cmd_line(argv=None):
     elif args.mode == "label":
         if not args.project:
             raise Exception("Label mode require a project file!")
+    elif args.mode == "launch":
+        args.project = handle_launch_command(args.project)
+    elif args.mode == "rm":
+        handle_rm_command(args.project)
     else:
         raise Exception(f"Unknown mode '{args.mode}'!")
 
@@ -94,7 +170,7 @@ def _cli_should_parse(argv):
     # Parse if the first token is a known mode, or if user requests help
     if not argv:
         return False
-    if argv[0] in ("demo", "label"):
+    if argv[0] in ("demo", "label", "launch", "rm"):
         return True
     # if help is requested anywhere on the command line, parse so argparse
     # can show the help message
