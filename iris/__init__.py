@@ -6,7 +6,7 @@ import os
 import sys
 import webbrowser
 import shutil
-import glob
+from pathlib import Path
 
 import flask
 import numpy as np
@@ -26,16 +26,17 @@ def get_demo_file(example=None):
 
 def find_config_file(folder_path):
     """Find a suitable config file in the given folder."""
+    folder = Path(folder_path)
+    
     # First try cloud-segmentation.json
-    cloud_seg_path = join(folder_path, "cloud-segmentation.json")
-    if exists(cloud_seg_path):
-        return cloud_seg_path
+    cloud_seg_path = folder / "cloud-segmentation.json"
+    if cloud_seg_path.exists():
+        return str(cloud_seg_path)
     
     # If not found, look for any .json file that might be a config
-    json_files = glob.glob(join(folder_path, "*.json"))
+    json_files = list(folder.glob("*.json"))
     if json_files:
-        # Return the first .json file found
-        return json_files[0]
+        return str(json_files[0])
     
     return None
 
@@ -44,30 +45,30 @@ def handle_launch_command(folder_name):
     if not folder_name:
         raise Exception("Launch command requires a folder name!")
     
-    folder_path = join(os.getcwd(), folder_name)
+    folder_path = Path.cwd() / folder_name
     
-    if exists(folder_path):
+    if folder_path.exists():
         # Folder exists, find config file
         config_file = find_config_file(folder_path)
         if not config_file:
             raise Exception(f"No suitable config file found in '{folder_name}'. Expected 'cloud-segmentation.json' or another .json config file.")
-        print(f"Launching existing project '{folder_name}' with config: {basename(config_file)}")
+        print(f"Launching existing project '{folder_name}' with config: {Path(config_file).name}")
         return config_file
     else:
         # Folder doesn't exist, create it from demo
-        demo_path = join(os.getcwd(), "demo")
-        if not exists(demo_path):
+        demo_path = Path.cwd() / "demo"
+        if not demo_path.exists():
             raise Exception("Demo folder not found! Cannot create new project.")
         
         print(f"Creating new project '{folder_name}' from demo...")
         shutil.copytree(demo_path, folder_path)
         
-        config_file = join(folder_path, "cloud-segmentation.json")
-        if not exists(config_file):
+        config_file = folder_path / "cloud-segmentation.json"
+        if not config_file.exists():
             raise Exception(f"Failed to create project: cloud-segmentation.json not found in copied demo.")
         
         print(f"Project '{folder_name}' created successfully!")
-        return config_file
+        return str(config_file)
 
 def handle_rm_command(folder_name):
     """Handle the rm command - remove project folder with confirmation."""
@@ -77,9 +78,9 @@ def handle_rm_command(folder_name):
     if folder_name == "demo":
         raise Exception("Cannot remove the demo folder!")
     
-    folder_path = join(os.getcwd(), folder_name)
+    folder_path = Path.cwd() / folder_name
     
-    if not exists(folder_path):
+    if not folder_path.exists():
         print(f"Folder '{folder_name}' does not exist.")
         sys.exit(0)
     
