@@ -165,11 +165,8 @@ uv run iris label <your-config-file>
 IRIS provides convenient commands for creating and managing projects:
 
 ```bash
-# Create and launch a new project (copies demo structure)
+# launch a project (or create it if it doesn't exist yet)
 uv run iris launch <project-name>
-
-# Launch an existing project (finds config file automatically)
-uv run iris launch <existing-project-name>
 
 # Remove a project (with confirmation prompt)
 uv run iris rm <project-name>
