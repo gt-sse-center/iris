@@ -1,10 +1,13 @@
 import argparse
 import json
-from getpass import getpass
-from os.path import basename, dirname, exists, isabs, join
 import os
+import shutil
 import sys
 import webbrowser
+from getpass import getpass
+from os.path import basename, dirname, exists, isabs, join
+from pathlib import Path
+from typing import Union
 
 import flask
 import numpy as np
@@ -12,8 +15,9 @@ import yaml
 
 __version__ = "1.0.0"
 
-from iris.extensions import db, compress
+from iris.extensions import compress, db
 from iris.project import project
+
 
 def get_demo_file(example=None):
     demo_file = join(
@@ -21,6 +25,114 @@ def get_demo_file(example=None):
     )
 
     return demo_file
+
+def find_config_file(folder_path: Union[str, Path]) -> Union[Path, None]:
+    """Find a suitable config file in the given folder.
+
+    Args:
+        folder_path: Path to the folder to search in
+
+    Returns:
+        Absolute path to config file as Path object, or None if not found.
+        Prefers 'cloud-segmentation.json', falls back to any .json file.
+    """
+    folder = Path(folder_path)
+
+    # First try cloud-segmentation.json
+    cloud_seg_path = folder / "cloud-segmentation.json"
+    if cloud_seg_path.exists():
+        return cloud_seg_path.resolve()
+
+    # If not found, look for any .json file that might be a config
+    json_files = list(folder.glob("*.json"))
+    if json_files:
+        return json_files[0].resolve()
+
+    return None
+
+def handle_launch_command(folder_name: str) -> Path:
+    """Handle the launch command - create project if needed and launch it.
+
+    Args:
+        folder_name: Name of the project folder to launch or create
+
+    Returns:
+        Absolute path to the config file as Path object
+
+    Raises:
+        ValueError: If folder_name is empty or None
+        FileNotFoundError: If demo folder is missing when creating new project
+        RuntimeError: If no suitable config file found or project creation fails
+    """
+    if not folder_name:
+        raise ValueError("Launch command requires a folder name!")
+
+    folder_path = Path.cwd() / folder_name
+
+    if folder_path.exists():
+        # Folder exists, find config file
+        config_file = find_config_file(folder_path)
+        if not config_file:
+            raise RuntimeError(
+            f"No suitable config file found in '{folder_name}'. "
+            "Expected 'cloud-segmentation.json' or another .json config file."
+        )
+        print(f"Launching existing project '{folder_name}' with config: {config_file.name}")
+        return config_file
+    else:
+        # Folder doesn't exist, create it from demo
+        demo_path = Path.cwd() / "demo"
+        if not demo_path.exists():
+            raise FileNotFoundError("Demo folder not found! Cannot create new project.")
+
+        print(f"Creating new project '{folder_name}' from demo...")
+        shutil.copytree(demo_path, folder_path)
+
+        config_file = folder_path / "cloud-segmentation.json"
+        if not config_file.exists():
+            raise RuntimeError("Failed to create project: cloud-segmentation.json not found in copied demo.")
+
+        print(f"Project '{folder_name}' created successfully!")
+        return config_file.resolve()
+
+def handle_rm_command(folder_name: str) -> None:
+    """Handle the rm command - remove project folder with confirmation.
+
+    Args:
+        folder_name: Name of the project folder to remove
+
+    Raises:
+        ValueError: If folder_name is empty, None, or is 'demo'
+
+    Note:
+        This function calls sys.exit(0) after completion for CLI usage.
+        It prompts for user confirmation before deletion.
+    """
+    if not folder_name:
+        raise ValueError("Remove command requires a folder name!")
+
+    if folder_name == "demo":
+        raise ValueError("Cannot remove the demo folder!")
+
+    folder_path = Path.cwd() / folder_name
+
+    if not folder_path.exists():
+        print(f"Folder '{folder_name}' does not exist.")
+        sys.exit(0)
+
+    # Ask for confirmation
+    response = input(
+        f"Are you sure you want to delete the project folder '{folder_name}'? "
+        "This cannot be undone. (y/N): "
+    )
+    if response.lower() in ['y', 'yes']:
+        shutil.rmtree(folder_path)
+        print(f"Project folder '{folder_name}' has been deleted.")
+    else:
+        print("Deletion cancelled.")
+
+    # Exit after rm command
+    sys.exit(0)
 
 def parse_cmd_line(argv=None):
     """Parse application arguments.
@@ -39,12 +151,12 @@ def parse_cmd_line(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode", type=str,
-        choices=["demo", "label"],
-        help="Specify the mode you want to start iris, can be either *label* or *demo*."
+        choices=["demo", "label", "launch", "rm"],
+        help="Specify the mode you want to start iris, can be either *label*, *demo*, *launch*, or *rm*."
     )
     parser.add_argument(
         "project", type=str, nargs='?',
-        help="Path to the project configurations file (yaml or json)."
+        help="Path to the project configurations file (yaml or json) or folder name for launch/rm commands."
     )
     parser.add_argument(
         "-d", "--debug", action="store_true",
@@ -66,6 +178,10 @@ def parse_cmd_line(argv=None):
     elif args.mode == "label":
         if not args.project:
             raise Exception("Label mode require a project file!")
+    elif args.mode == "launch":
+        args.project = str(handle_launch_command(args.project))
+    elif args.mode == "rm":
+        handle_rm_command(args.project)
     else:
         raise Exception(f"Unknown mode '{args.mode}'!")
 
@@ -94,7 +210,7 @@ def _cli_should_parse(argv):
     # Parse if the first token is a known mode, or if user requests help
     if not argv:
         return False
-    if argv[0] in ("demo", "label"):
+    if argv[0] in ("demo", "label", "launch", "rm"):
         return True
     # if help is requested anywhere on the command line, parse so argparse
     # can show the help message
@@ -150,7 +266,7 @@ def create_default_admin(app):
         db.session.commit()
 
 def register_extensions(app):
-    
+
     from iris.main import main_app
     app.register_blueprint(main_app)
     from iris.segmentation import segmentation_app
@@ -179,7 +295,7 @@ else:
     args['project'] = get_demo_file()
 
 app = create_app(args['project'], args)
-from iris.models import User, Action
+from iris.models import Action, User
 
 with app.app_context():
     db.create_all()
