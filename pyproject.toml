@@ -71,12 +71,29 @@ line_length = 120
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py38"  # Match project's minimum Python version
 exclude = [
     "docs",
     "preview",
     "demo/*/*.iris",
 ]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings  
+    "F",    # pyflakes
+    "I",    # isort (import sorting)
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "PIE",  # flake8-pie
+    "SIM",  # flake8-simplify
+]
+extend-ignore = ["E203"]  # Black compatibility
+
+[tool.ruff.lint.isort]
+known-first-party = ["iris"]
 
 # Bandit security linter configuration
 [tool.bandit]
@@ -84,9 +101,6 @@ exclude_dirs = ["tests", "demo"]
 skips = [
     "B101",  # Skip assert_used test (asserts are OK in tests)
 ]
-
-[tool.ruff.lint]
-extend-ignore = ["E203"] #, "W503"]
 
 # Security-focused test configuration
 [tool.bandit.assert_used]
@@ -163,4 +177,9 @@ tests = [
     "B701",  # jinja2_autoescape_false
     "B702",  # use_of_mako_templates
     "B703",  # django_mark_safe
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.3",
 ]
