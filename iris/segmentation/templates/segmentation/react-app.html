@@ -1,0 +1,81 @@
+{#
+  React Segmentation SPA Entry Point
+  ==================================
+  
+  This template loads the React Single Page Application for /segmentation/* routes.
+  - Preserves all existing CSS and JavaScript functionality
+  - Loads segmentationApp.js React bundle
+  - React handles page wrapper while existing JS handles segmentation logic
+#}
+
+{% extends "base.html" %}
+{% block title %}segmentation{% endblock %}
+{% block head %}
+    <!-- Load all existing CSS and JavaScript exactly as before -->
+    <link rel="stylesheet" href="{{ url_for('segmentation.static', filename='css/segmentation.css') }}">
+
+    <script type="text/javascript" src="{{ url_for('main.static', filename='javascripts/views.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('segmentation.static', filename='javascripts/segmentation/views.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('segmentation.static', filename='javascripts/segmentation.js') }}"></script>
+    
+    <!-- Pass data to JavaScript exactly as before -->
+    <script type="text/javascript">
+        // GLOBAL VARIABLES - preserved exactly as in original template
+        vars = {
+            'url': vars.url,
+            'next_action': null,
+            'user': null,
+            'mask': null,
+            'user_mask': null,
+            'errors_mask': null,
+            // for performance reasons we draw the mask to a hidden canvas:
+            'hidden_mask': null,
+            'history': {
+                'mask': [],
+                'user_mask': [],
+                'current_epoch': 0,
+                'max_epochs': 30,
+            },
+            'image_id': {{image_id|tojson}},
+            'image_location': {{image_location|tojson}},
+            'current_class': 0,
+            'cursor_canvas': [0, 0],
+            'cursor_image': [0, 0],
+            'drag_start' : [0, 0],
+            'n_user_pixels': {
+                'total': 0,
+            },
+            'show_mask': true,
+            'mask_type': 'final',
+            'confusion_matrix': null,
+            'tool': {
+                "type": 'draw',
+                'size': 6,
+                'sprite': null,
+                'pixels': null,
+                'resizing_mode': false
+            }
+        };
+
+        function next_image(){
+            if (vars.show_dialogue_before_next_image){
+                dialogue_before_next_image();
+            } else {
+                goto_url({{url_for('segmentation.next_image', image_id=image_id)|tojson}});
+            }
+        }
+
+        function prev_image(){
+            goto_url({{url_for('segmentation.previous_image', image_id=image_id)|tojson}});
+        }
+
+        // React will call init_segmentation when ready
+    </script>
+
+    <!-- Load React Segmentation SPA -->
+    <script type="module" src="{{ url_for('static', filename='dist/segmentationApp.js') }}"></script>
+{% endblock %}
+{% block content %}
+    <!-- React SPA mounts here and renders all segmentation content -->
+    <div id="react-segmentation-app"></div>
+{% endblock %}

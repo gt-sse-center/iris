@@ -27,32 +27,18 @@ segmentation_app = flask.Blueprint(
     static_folder='static'
 )
 
-@segmentation_app.route('/', methods=['GET'])
-def index():
-    image_id = flask.request.args.get('image_id', None)
+# Import SPA blueprint
+from .spa import spa_bp
 
-    if image_id is None:
-        image_id = project.get_start_image_id()
+def register_segmentation_blueprints(app):
+    """Register all segmentation blueprints with the Flask app."""
+    # Register original blueprint for API routes (/segmentation/next_image, /segmentation/load_mask, etc.)
+    app.register_blueprint(segmentation_app, url_prefix="/segmentation")
+    # Register SPA blueprint for main route (/segmentation/)
+    app.register_blueprint(spa_bp)
 
-        user_id = flask.session.get('user_id', None)
-        if user_id:
-            # Get the mask that the user worked on the last time
-            last_mask = Action.query \
-                .filter_by(user_id=user_id) \
-                .order_by(Action.last_modification.desc()) \
-                .first()
-
-            if last_mask is not None:
-                image_id = last_mask.image_id
-    elif image_id not in project.image_ids:
-        return flask.make_response('Unknown image id!', 404)
-
-    metadata = project.get_metadata(image_id)
-    return flask.render_template(
-        'segmentation.html',
-        image_id=image_id,
-        image_location=metadata.get("location", [0, 0])
-    )
+# Original index route removed - now handled by SPA blueprint
+# The SPA blueprint (spa.py) handles the main /segmentation/ route
 
 @segmentation_app.route('/next_image', methods=['GET'])
 @requires_auth
@@ -66,7 +52,7 @@ def next_image():
     )
 
     return flask.redirect(
-        flask.url_for('segmentation.index', image_id=image_id)
+        flask.url_for('segmentation_spa.segmentation_spa', image_id=image_id)
     )
 
 @segmentation_app.route('/previous_image', methods=['GET'])
@@ -80,7 +66,7 @@ def previous_image():
     )
 
     return flask.redirect(
-        flask.url_for('segmentation.index', image_id=image_id)
+        flask.url_for('segmentation_spa.segmentation_spa', image_id=image_id)
     )
 
 def get_mask_filenames(image_id, user_id=None):
