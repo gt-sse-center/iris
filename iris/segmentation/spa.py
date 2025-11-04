@@ -47,7 +47,5 @@ def segmentation_spa():
         )
     
     except Exception as e:
-        print(f"🚨 ERROR in segmentation_spa: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return flask.make_response(f"Error: {str(e)}", 500)
+        flask.current_app.logger.exception("Error in segmentation SPA route")
+        return flask.make_response("Internal server error", 500)

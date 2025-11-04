@@ -31,10 +31,19 @@ segmentation_app = flask.Blueprint(
 from .spa import spa_bp
 
 def register_segmentation_blueprints(app):
-    """Register all segmentation blueprints with the Flask app."""
+    """
+    Register all segmentation blueprints with the Flask app.
+    
+    IMPORTANT: Registration order matters!
+    1. segmentation_app: Handles API routes (/segmentation/next_image, /load_mask, etc.)
+    2. spa_bp: Handles main SPA route (/segmentation/) - registered last to take precedence
+    
+    Both blueprints use /segmentation prefix but handle different route patterns.
+    The SPA blueprint's / route overrides the removed segmentation_app.index route.
+    """
     # Register original blueprint for API routes (/segmentation/next_image, /segmentation/load_mask, etc.)
     app.register_blueprint(segmentation_app, url_prefix="/segmentation")
-    # Register SPA blueprint for main route (/segmentation/)
+    # Register SPA blueprint for main route (/segmentation/) - must be last for route precedence
     app.register_blueprint(spa_bp)
 
 # Original index route removed - now handled by SPA blueprint

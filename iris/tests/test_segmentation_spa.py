@@ -370,8 +370,8 @@ def test_segmentation_spa_route_error_handling(mock_project):
         # VERIFICATION: Should return 500 Internal Server Error (not crash)
         assert response.status_code == 500
         
-        # VERIFICATION: Should include error message for debugging
-        assert b'Error: Test error' in response.data
+        # VERIFICATION: Should return generic error message (not expose internal details)
+        assert b'Internal server error' in response.data
 
 
 @patch('iris.segmentation.spa.project')
