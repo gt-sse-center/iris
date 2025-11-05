@@ -7,8 +7,9 @@ export default defineConfig({
     outDir: 'iris/static/dist',
     rollupOptions: {
       input: {
-        // Single admin app entry point
-        adminApp: 'src/admin-app.tsx'
+        // Admin and segmentation app entry points
+        adminApp: 'src/admin-app.tsx',
+        segmentationApp: 'src/segmentation-app.tsx'
       },
       output: {
         entryFileNames: '[name].js',

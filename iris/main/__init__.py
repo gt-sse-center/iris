@@ -20,7 +20,7 @@ main_app = flask.Blueprint(
 @main_app.route('/')
 def index():
     return flask.redirect(
-        flask.url_for('segmentation.index')
+        flask.url_for('segmentation_spa.segmentation_spa')
     )
 
 @main_app.route('/image/<image_id>/<view>')
