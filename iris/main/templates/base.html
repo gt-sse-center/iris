@@ -10,7 +10,8 @@
     <script type="text/javascript" src="{{ url_for('main.static', filename='javascripts/dialogue.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('user.static', filename='javascripts/user.js') }}"></script>
     <script type="text/javascript">
-        let vars = {
+        // Use var to make it globally accessible (window.vars)
+        var vars = {
             'url': {
                 'main': {{url_for('main.index')|tojson}},
                 'segmentation': {{url_for('segmentation_spa.segmentation_spa')|tojson}},

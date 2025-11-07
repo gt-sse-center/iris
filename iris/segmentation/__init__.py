@@ -27,8 +27,9 @@ segmentation_app = flask.Blueprint(
     static_folder='static'
 )
 
-# Import SPA blueprint
+# Import SPA and API blueprints
 from .spa import spa_bp
+from .api import api_bp
 
 def register_segmentation_blueprints(app):
     """
@@ -36,13 +37,16 @@ def register_segmentation_blueprints(app):
     
     IMPORTANT: Registration order matters!
     1. segmentation_app: Handles API routes (/segmentation/next_image, /load_mask, etc.)
-    2. spa_bp: Handles main SPA route (/segmentation/) - registered last to take precedence
+    2. api_bp: Handles JSON API routes (/segmentation/api/*)
+    3. spa_bp: Handles main SPA route (/segmentation/) - registered last to take precedence
     
     Both blueprints use /segmentation prefix but handle different route patterns.
     The SPA blueprint's / route overrides the removed segmentation_app.index route.
     """
     # Register original blueprint for API routes (/segmentation/next_image, /segmentation/load_mask, etc.)
     app.register_blueprint(segmentation_app, url_prefix="/segmentation")
+    # Register JSON API blueprint for React frontend (/segmentation/api/*)
+    app.register_blueprint(api_bp)
     # Register SPA blueprint for main route (/segmentation/) - must be last for route precedence
     app.register_blueprint(spa_bp)
 

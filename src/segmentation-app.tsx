@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import PreferencesModal from './components/PreferencesModal';
 
 // Declare global functions that exist in the legacy JavaScript
 declare global {
@@ -10,6 +11,8 @@ declare global {
 }
 
 const SegmentationApp: React.FC = () => {
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+
   useEffect(() => {
     const isDebugMode = window.location.search.includes('debug=1') || window.location.hostname === 'localhost';
     
@@ -17,37 +20,72 @@ const SegmentationApp: React.FC = () => {
       console.log('🚀 IRIS Segmentation: React SPA initialized');
     }
     
-    // Initialize the existing segmentation functionality
-    // This calls the same init_segmentation function as before
-    if (window.init_segmentation) {
-      window.init_segmentation();
-      if (isDebugMode) console.log('✅ Legacy segmentation initialized');
-    } else {
-      console.warn('⚠️ init_segmentation function not found');
-    }
+    // Wait for legacy JavaScript to load, then initialize
+    const waitForLegacyScripts = setInterval(() => {
+      if (window.init_segmentation) {
+        clearInterval(waitForLegacyScripts);
+        
+        if (isDebugMode) console.log('✅ Legacy scripts loaded, calling init_segmentation()');
+        
+        // Initialize the existing segmentation functionality
+        // This will asynchronously fetch data and eventually call init_views() which creates vars.vm
+        window.init_segmentation();
+      }
+    }, 50);
+    
+    // Timeout waiting for scripts after 5 seconds
+    setTimeout(() => {
+      clearInterval(waitForLegacyScripts);
+      if (!window.init_segmentation) {
+        console.error('❌ Legacy scripts failed to load - init_segmentation not found');
+      }
+    }, 5000);
+
+    // Override the global dialogue_config function to use React modal
+    (window as any).dialogue_config = () => {
+      setIsPreferencesOpen(true);
+    };
   }, []);
 
   return (
     <div>
       {/* All existing HTML content from segmentation.html - preserved exactly */}
       <ul className='toolbar' id="toolbar" style={{visibility: 'hidden'}}>
-        <li className="toolbutton icon_button" id='tb_previous_image' onClick={() => (window as any).save_mask((window as any).prev_image)}>
+        <li className="toolbutton icon_button" id='tb_previous_image' onClick={() => {
+          const w = window as any;
+          if (w.save_mask && w.prev_image) w.save_mask(w.prev_image);
+        }}>
           <img src="/segmentation/static/icons/previous.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_next_image' onClick={() => (window as any).save_mask((window as any).next_image)}>
+        <li className="toolbutton icon_button" id='tb_next_image' onClick={() => {
+          const w = window as any;
+          if (w.save_mask && w.next_image) w.save_mask(w.next_image);
+        }}>
           <img src="/segmentation/static/icons/next.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_save_mask' onClick={() => (window as any).save_mask()}>
+        <li className="toolbutton icon_button" id='tb_save_mask' onClick={() => {
+          const w = window as any;
+          if (w.save_mask) w.save_mask();
+        }}>
           <img src="/segmentation/static/icons/save_mask.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_undo' onClick={() => (window as any).undo()}>
+        <li className="toolbutton icon_button" id='tb_undo' onClick={() => {
+          const w = window as any;
+          if (w.undo) w.undo();
+        }}>
           <img src="/segmentation/static/icons/undo.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_redo' onClick={() => (window as any).redo()}>
+        <li className="toolbutton icon_button" id='tb_redo' onClick={() => {
+          const w = window as any;
+          if (w.redo) w.redo();
+        }}>
           <img src="/segmentation/static/icons/redo.png" className="icon" />
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" id="tb_select_class" onClick={() => (window as any).dialogue_class_selection()} style={{width: '200px'}}>
+        <li className="toolbutton icon_button" id="tb_select_class" onClick={() => {
+          const w = window as any;
+          if (w.dialogue_class_selection) w.dialogue_class_selection();
+        }} style={{width: '200px'}}>
           <div>
             <img src="/segmentation/static/icons/class.png" className="icon" style={{float: 'left'}} />
           </div>
@@ -56,64 +94,124 @@ const SegmentationApp: React.FC = () => {
           </div>
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" id='tb_tool_move' onClick={() => (window as any).set_tool('move')}>
+        <li className="toolbutton icon_button" id='tb_tool_move' onClick={() => {
+          const w = window as any;
+          if (w.set_tool) w.set_tool('move');
+        }}>
           <img src="/segmentation/static/icons/move.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_tool_reset_views' onClick={() => (window as any).reset_views()}>
+        <li className="toolbutton icon_button" id='tb_tool_reset_views' onClick={() => {
+          const w = window as any;
+          if (w.reset_views) w.reset_views();
+        }}>
           <img src="/segmentation/static/icons/reset_views.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_tool_draw' onClick={() => (window as any).set_tool('draw')}>
+        <li className="toolbutton icon_button" id='tb_tool_draw' onClick={() => {
+          const w = window as any;
+          if (w.set_tool) w.set_tool('draw');
+        }}>
           <img src="/segmentation/static/icons/pencil.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_tool_eraser' onClick={() => (window as any).set_tool('eraser')}>
+        <li className="toolbutton icon_button" id='tb_tool_eraser' onClick={() => {
+          const w = window as any;
+          if (w.set_tool) w.set_tool('eraser');
+        }}>
           <img src="/segmentation/static/icons/eraser.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_reset_mask' onClick={() => (window as any).dialogue_reset_mask()}>
+        <li className="toolbutton icon_button" id='tb_reset_mask' onClick={() => {
+          const w = window as any;
+          if (w.dialogue_reset_mask) w.dialogue_reset_mask();
+        }}>
           <img src="/segmentation/static/icons/reset_mask.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_predict_mask' onClick={() => (window as any).predict_mask()}>
+        <li className="toolbutton icon_button" id='tb_predict_mask' onClick={() => {
+          const w = window as any;
+          if (w.predict_mask) w.predict_mask();
+        }}>
           <img src="/segmentation/static/icons/ai.png" className="icon" />
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" id='tb_toggle_mask' onClick={() => (window as any).show_mask(!(window as any).vars.show_mask)}>
+        <li className="toolbutton icon_button" id='tb_toggle_mask' onClick={() => {
+          const w = window as any;
+          if (w.vars && w.show_mask) {
+            w.show_mask(!w.vars.show_mask);
+          }
+        }}>
           <img src="/segmentation/static/icons/show_mask.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_mask_final' onClick={() => (window as any).set_mask_type('final')}>
+        <li className="toolbutton icon_button" id='tb_mask_final' onClick={() => {
+          const w = window as any;
+          if (w.set_mask_type) w.set_mask_type('final');
+        }}>
           <img src="/segmentation/static/icons/mask_final.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_mask_user' onClick={() => (window as any).set_mask_type('user')}>
+        <li className="toolbutton icon_button" id='tb_mask_user' onClick={() => {
+          const w = window as any;
+          if (w.set_mask_type) w.set_mask_type('user');
+        }}>
           <img src="/segmentation/static/icons/mask_user.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_mask_errors' onClick={() => (window as any).set_mask_type('errors')}>
+        <li className="toolbutton icon_button" id='tb_mask_errors' onClick={() => {
+          const w = window as any;
+          if (w.set_mask_type) w.set_mask_type('errors');
+        }}>
           <img src="/segmentation/static/icons/mask_errors.png" className="icon" />
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" id='tb_brightness_up' onClick={() => (window as any).change_brightness(true)}>
+        <li className="toolbutton icon_button" id='tb_brightness_up' onClick={() => {
+          const w = window as any;
+          if (w.change_brightness) w.change_brightness(true);
+        }}>
           <img src="/segmentation/static/icons/brightness_up.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_brightness_down' onClick={() => (window as any).change_brightness(false)}>
+        <li className="toolbutton icon_button" id='tb_brightness_down' onClick={() => {
+          const w = window as any;
+          if (w.change_brightness) w.change_brightness(false);
+        }}>
           <img src="/segmentation/static/icons/brightness_down.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_saturation_up' onClick={() => (window as any).change_saturation(true)}>
+        <li className="toolbutton icon_button" id='tb_saturation_up' onClick={() => {
+          const w = window as any;
+          if (w.change_saturation) w.change_saturation(true);
+        }}>
           <img src="/segmentation/static/icons/saturation_up.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_saturation_down' onClick={() => (window as any).change_saturation(false)}>
+        <li className="toolbutton icon_button" id='tb_saturation_down' onClick={() => {
+          const w = window as any;
+          if (w.change_saturation) w.change_saturation(false);
+        }}>
           <img src="/segmentation/static/icons/saturation_down.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_toggle_contrast' onClick={() => (window as any).set_contrast(!(window as any).vars.vm.filters.contrast)}>
+        <li className="toolbutton icon_button" id='tb_toggle_contrast' onClick={() => {
+          const w = window as any;
+          if (w.vars?.vm?.filters && w.set_contrast) {
+            w.set_contrast(!w.vars.vm.filters.contrast);
+          }
+        }}>
           <img src="/segmentation/static/icons/contrast.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_toggle_invert' onClick={() => (window as any).set_invert(!(window as any).vars.vm.filters.invert)}>
+        <li className="toolbutton icon_button" id='tb_toggle_invert' onClick={() => {
+          const w = window as any;
+          if (w.vars?.vm?.filters && w.set_invert) {
+            w.set_invert(!w.vars.vm.filters.invert);
+          }
+        }}>
           <img src="/segmentation/static/icons/invert.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id="tb_reset_filters" onClick={() => (window as any).reset_filters()}>
+        <li className="toolbutton icon_button" id="tb_reset_filters" onClick={() => {
+          const w = window as any;
+          if (w.reset_filters) w.reset_filters();
+        }}>
           <img src="/segmentation/static/icons/reset_filters.png" className="icon" />
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" onClick={() => (window as any).dialogue_help()}>
+        <li className="toolbutton icon_button" onClick={() => {
+          const w = window as any;
+          if (w.dialogue_help) w.dialogue_help();
+        }}>
           <img src="/segmentation/static/icons/help.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" onClick={() => (window as any).dialogue_config()}>
+        <li className="toolbutton icon_button" onClick={() => setIsPreferencesOpen(true)}>
           <img src="/segmentation/static/icons/preferences.png" className="icon" />
         </li>
       </ul>
@@ -123,13 +221,19 @@ const SegmentationApp: React.FC = () => {
       </div>
 
       <div id="statusbar" className='statusbar' style={{visibility: 'hidden', position: 'fixed', bottom: '10px', zIndex: 10}}>
-        <div className="statusbutton" onClick={() => (window as any).dialogue_user()} id="user-info">
+        <div className="statusbutton" onClick={() => {
+          const w = window as any;
+          if (w.dialogue_user) w.dialogue_user();
+        }} id="user-info">
           <div style={{float: 'left'}}>Login</div>
         </div>
         <div className="statusbutton" id="admin-button" onClick={() => window.open('/admin/', '_blank')}>
           <div style={{fontSize: '20px'}}>Admin</div>
         </div>
-        <div className="statusbutton" style={{minWidth: '150px'}} onClick={() => (window as any).dialogue_image()} id="image-info">
+        <div className="statusbutton" style={{minWidth: '150px'}} onClick={() => {
+          const w = window as any;
+          if (w.dialogue_image) w.dialogue_image();
+        }} id="image-info">
           <div className="info-box-top">{window.vars?.image_id || 'Loading...'}</div>
           <div className="info-box-bottom">image-ID</div>
         </div>
@@ -141,7 +245,10 @@ const SegmentationApp: React.FC = () => {
           <div id="drawn-pixels" className="info-box-top">0</div>
           <div className="info-box-bottom">Drawn pixels</div>
         </div>
-        <div className="statusbutton" onClick={() => (window as any).dialogue_confusion_matrix()}>
+        <div className="statusbutton" onClick={() => {
+          const w = window as any;
+          if (w.dialogue_confusion_matrix) w.dialogue_confusion_matrix();
+        }}>
           <div id="ai-score" className="info-box-top">0</div>
           <div className="info-box-bottom">AI-Score</div>
         </div>
@@ -150,6 +257,12 @@ const SegmentationApp: React.FC = () => {
           <div style={{fontSize: '16px', float: 'left', marginLeft: '10px'}} id="ai-recommendation">AI is loading</div>
         </div>
       </div>
+
+      {/* Preferences Modal */}
+      <PreferencesModal
+        isOpen={isPreferencesOpen}
+        onClose={() => setIsPreferencesOpen(false)}
+      />
 
       {/* React Development Indicator - Shows in development or when ?debug=1 */}
       {(window.location.search.includes('debug=1') || window.location.hostname === 'localhost') && (

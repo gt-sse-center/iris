@@ -21,8 +21,8 @@
     <!-- Pass data to JavaScript exactly as before -->
     <script type="text/javascript">
         // GLOBAL VARIABLES - preserved exactly as in original template
-        vars = {
-            'url': vars.url,
+        // Note: vars is already defined in base.html, we're just adding properties
+        Object.assign(vars, {
             'next_action': null,
             'user': null,
             'mask': null,
@@ -55,7 +55,7 @@
                 'pixels': null,
                 'resizing_mode': false
             }
-        };
+        });
 
         function next_image(){
             if (vars.show_dialogue_before_next_image){
