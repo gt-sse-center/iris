@@ -428,7 +428,7 @@
   },
   "properties": {
     "name": {
-      "description": "Optional name for this project. (e.g., `<code>cloud-segmentation</code>`)",
+      "description": "Optional name for this project. (e.g., `<code>raincloud-segmentation</code>`)",
       "title": "Name",
       "type": "string"
     },
