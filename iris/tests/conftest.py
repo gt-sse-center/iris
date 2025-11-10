@@ -49,6 +49,29 @@ def clean_db(app):
 
 
 @pytest.fixture
+def logged_in_user(app, client):
+    """Create a logged-in user for testing authenticated endpoints."""
+    from iris.models import User, db
+    import json
+    
+    with app.app_context():
+        # Create a test user
+        user = User(id=1, name="test_user", admin=False)
+        user.set_password("password123")
+        db.session.add(user)
+        db.session.commit()
+        
+        # Login the user
+        login_response = client.post('/user/login',
+            data=json.dumps({'username': 'test_user', 'password': 'password123'}),
+            content_type='application/json'
+        )
+        assert login_response.status_code == 200
+        
+        return user
+
+
+@pytest.fixture
 def project_snapshot():
     """Snapshot and restore the global `project` singleton from iris.project.
 

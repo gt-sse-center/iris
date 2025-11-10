@@ -61,3 +61,40 @@ export interface ActionsApiResponse {
   actions: Action[];
   image_stats: ImageStats;
 }
+
+// Preferences/Config Types
+export interface AIModelConfig {
+  n_estimators: number;
+  max_depth: number;
+  n_leaves: number;
+  train_ratio: number;
+  max_train_pixels: number;
+  use_edge_filter: boolean;
+  use_meshgrid: boolean;
+  meshgrid_cells: string;
+  use_superpixels: boolean;
+  bands: string[];
+  suppression_filter_size: number;
+  suppression_threshold: number;
+  suppression_default_class: number;
+}
+
+export interface ClassConfig {
+  name: string;
+  colour: number[];
+  css_colour: string;
+  description?: string;
+  user_colour?: number[];
+}
+
+export interface UserConfig {
+  segmentation: {
+    ai_model: AIModelConfig;
+  };
+  classes: ClassConfig[];
+}
+
+export interface UserConfigApiResponse {
+  config: UserConfig;
+  all_bands: string[];
+}
