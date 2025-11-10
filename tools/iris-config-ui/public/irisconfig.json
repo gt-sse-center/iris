@@ -12,7 +12,7 @@
             }
           ],
           "default": null,
-          "description": "Further description which explains what the user can see in this view.  Examples: \n\"views\": {\n  ...\n  \"Bing\": {\n      \"description\": \"Aerial Imagery\",\n      \"type\": \"bingmap\"\n  }\n}\n```\n",
+          "description": "Further description which explains what the user can see in this view.  Examples:\n\"views\": {\n  ...\n  \"Bing\": {\n      \"description\": \"Aerial Imagery\",\n      \"type\": \"bingmap\"\n  }\n}\n```\n",
           "title": "Description"
         },
         "type": {
@@ -428,7 +428,7 @@
   },
   "properties": {
     "name": {
-      "description": "Optional name for this project. (e.g., `<code>raincloud-segmentation</code>`)",
+      "description": "Optional name for this project. (e.g., `cloud-segmentation`)",
       "title": "Name",
       "type": "string"
     },
@@ -443,6 +443,10 @@
     "host": {
       "default": "127.0.0.1",
       "description": "Set the host IP address for IRIS. The default value 127.0.0.1 means IRIS will only be visible on the local machine. If you want to expose IRIS publicly as a web application, we recommend setting the host to 0.0.0.0 and adjusting your router / consulting with your network administrators accordingly.",
+      "examples": [
+        "127.0.0.1",
+        "0.0.0.0"
+      ],
       "title": "Host",
       "type": "string"
     },

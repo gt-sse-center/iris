@@ -35,6 +35,14 @@ button { padding: 6px 8px; margin-right: 8px }
 	color: #6c757d;
 	font-size: 0.9rem;
 }
+
+.rjsf-wrapper .field-description code {
+	font-family: Menlo, Monaco, monospace;
+	background: #f1f3f5;
+	padding: 2px 6px;
+	border-radius: 4px;
+	border: 1px solid #e2e2e2;
+}
 .rjsf-wrapper .controls .btn {
 	margin-right: 8px;
 }
@@ -48,7 +56,4 @@ button { padding: 6px 8px; margin-right: 8px }
 pre.json-preview { font-family: Menlo, Monaco, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
 
 /* Dev-visible debug border to confirm CSS is loading */
-.rjsf-wrapper {
-	outline: 4px dashed rgba(220,20,60,0.95);
-	box-shadow: 0 0 0 6px rgba(220,20,60,0.06) inset;
-}
+/* debug outline removed */

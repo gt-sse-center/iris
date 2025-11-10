@@ -327,7 +327,7 @@ class IrisConfig(BaseModel):
     # routine: Optional[str] = Field(None, description="The routine of the creator.")
 
     # LAB: docs say optional for name, but I question this
-    name: str = Field(..., description="Optional name for this project. (e.g., `<code>cloud-segmentation</code>`)")
+    name: str = Field(..., description="Optional name for this project. (e.g., `cloud-segmentation`)")
     port: Annotated[
         int,
         Field(5000, strict=True, ge=0, le=65535, description="Set the port on which IRIS is served. Example: `6060`."),
@@ -335,6 +335,7 @@ class IrisConfig(BaseModel):
     host: str = Field(
         "127.0.0.1",
         description="Set the host IP address for IRIS. The default value 127.0.0.1 means IRIS will only be visible on the local machine. If you want to expose IRIS publicly as a web application, we recommend setting the host to 0.0.0.0 and adjusting your router / consulting with your network administrators accordingly.",
+        json_schema_extra={"examples": ["127.0.0.1", "0.0.0.0"]},
     )
     images: IrisImages = Field(
         ...,
