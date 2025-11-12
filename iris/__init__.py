@@ -165,6 +165,14 @@ def parse_cmd_line(argv=None):
     parser.add_argument(
         "-p","--production", action="store_true",
         help="Use production WSGI server")
+    parser.add_argument(
+        "--admin-user", type=str, default=None,
+        help="Create admin user non-interactively (for CI/testing)"
+    )
+    parser.add_argument(
+        "--admin-password", type=str, default=None,
+        help="Admin password for non-interactive creation (for CI/testing)"
+    )
 
     # parse_known_args returns (known_args, unknown_args). Unknown args are
     # ignored so that external test runners (pytest) flags won't break parsing.
@@ -196,7 +204,7 @@ def run_app():
     if any(a in ("-h", "--help") for a in sys.argv[1:]):
         parse_cmd_line(sys.argv[1:])
 
-    create_default_admin(app)
+    create_default_admin(app, args.get('admin_user'), args.get('admin_password'))
     if args.get('production'):
         import gevent.pywsgi
         app_server = gevent.pywsgi.WSGIServer((project['host'], project['port']), app)
@@ -236,13 +244,28 @@ def create_app(project_file, args):
 
     return app
 
-def create_default_admin(app):
+def create_default_admin(app, admin_user=None, admin_password=None):
     # Add a default admin account:
     with app.app_context():
         admin = User.query.filter_by(name='admin').first()
     if admin is not None:
         return
 
+    # Non-interactive mode (for CI/testing)
+    if admin_user and admin_password:
+        print(f'Creating admin user "{admin_user}" non-interactively...')
+        admin = User(
+            name=admin_user,
+            admin=True,
+        )
+        admin.set_password(admin_password)
+        with app.app_context():
+            db.session.add(admin)
+            db.session.commit()
+        print(f'✅ Admin user "{admin_user}" created successfully')
+        return
+
+    # Interactive mode (original behavior)
     print('Welcome to IRIS! No admin user was detected so please enter a new admin password.')
     password_again = None
     password_valid = False
