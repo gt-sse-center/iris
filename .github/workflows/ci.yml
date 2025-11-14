@@ -67,7 +67,9 @@ jobs:
 
       - name: Install Node.js dependencies
         working-directory: iris
-        run: npm install
+        run: |
+          # Use npm ci for cleaner installs in CI
+          npm ci || npm install
 
       - name: Build React/TypeScript frontend
         working-directory: iris

@@ -6,20 +6,16 @@
  * 2. Editing AI model parameters and persisting across page reloads
  * 3. Form validation (preventing invalid configurations)
  * 
- * Prerequisites:
- * - IRIS application running on http://localhost:5000
- * - User account created (default: admin/123)
- * - Demo project loaded with test data
- * 
- * Key Design Decisions:
- * - Slider values are editable number inputs (better UX + easier testing)
- * - Uses window.dialogue_config() instead of button clicks (more reliable after reload)
- * - Manual dialog closing via DOM manipulation (workaround for React synthetic events)
- * - Long waits after reload (8s) to ensure React fully hydrates
- * 
  * @see cypress/support/commands.js for custom command implementations
- * @see cypress/README.md for setup instructions
  */
+
+// Test-specific timeouts
+// Note: These are longer than command timeouts to account for page reloads
+const TIMEOUTS = {
+  PAGE_RELOAD_WAIT: 2000,  // Time for React to fully hydrate after reload
+  TOOLBAR_READY: 3000,     // Max time to wait for toolbar to appear
+  VALIDATION_CHECK: 1000,  // Time to wait for validation errors to appear
+};
 
 describe('Preferences Modal - Segmentation AI Tab', () => {
   beforeEach(() => {
@@ -35,11 +31,8 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     cy.get('[data-testid="preferences-modal"]').should('be.visible');
     cy.contains('h2', 'Preferences').should('be.visible');
     
-    // Close preferences
+    // Close preferences and verify
     cy.closePreferences();
-    
-    // Verify modal is closed
-    cy.get('#dialogue').should('have.css', 'display', 'none');
   });
 
   it('should save all preferences and persist after page reload', () => {
@@ -82,8 +75,8 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     cy.reload();
     
     // Wait for application to reinitialize
-    cy.get('#toolbar', { timeout: 15000 }).should('be.visible');
-    cy.wait(8000); // Extra time for React hydration after reload
+    cy.get('#toolbar', { timeout: TIMEOUTS.TOOLBAR_READY }).should('be.visible');
+    cy.wait(TIMEOUTS.PAGE_RELOAD_WAIT); // Extra time for React hydration after reload
     
     // === STEP 4: Verify Persistence ===
     cy.log('Verifying saved values persisted...');
@@ -115,8 +108,9 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     cy.openPreferences();
     
     // Move all bands to excluded
-    cy.get('[data-testid="select-bands-included"] option').then($options => {
-      if ($options.length > 0) {
+    cy.get('[data-testid="select-bands-included"] option')
+      .should('have.length.greaterThan', 0) // Ensure bands exist
+      .then($options => {
         // Select all bands
         cy.get('[data-testid="select-bands-included"]').invoke('val', 
           Array.from($options).map(opt => opt.value)
@@ -128,14 +122,13 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
         // Try to save
         cy.get('[data-testid="save-preferences-button"]').click();
         
-        cy.wait(1000);
+        cy.wait(TIMEOUTS.VALIDATION_CHECK);
         
         // Should show an error message (this is the key validation test)
         cy.get('[data-testid="preferences-error-message"]')
           .should('be.visible')
           .and('contain', '[Segmentation] Need at least one band as input!');
-      }
-    });
+      });
     
     cy.closePreferences();
   });

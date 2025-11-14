@@ -263,4 +263,19 @@ The test suite includes:
 - Deep dictionary merging utilities
 - Frontend build and type checking (in CI)
 
+### E2E Testing with Cypress
+
+IRIS includes end-to-end tests for the React-based UI using Cypress. These tests verify user workflows like opening the preferences modal, editing settings, and saving configurations.
+
+```bash
+# Run Cypress tests in headless mode (requires IRIS server running)
+npm run cypress:headless
+
+# Open Cypress interactive test runner
+npm run cypress
+
+```
+
+**Note:** Cypress tests require the IRIS server to be running. Start it with `uv run iris demo` in a separate terminal before running tests.
+
 **Visit the official iris Github page:  https://github.com/ESA-PhiLab/iris**

@@ -5,11 +5,11 @@
 // Configuration constants
 // Note: These timeouts are generous to account for React hydration delays
 const TIMEOUTS = {
-  PAGE_LOAD: 30000,
-  REACT_HYDRATION: 5000,  // Time for React to attach event handlers
-  API_CALL: 15000,
+  PAGE_LOAD: 2000,
+  REACT_HYDRATION: 1500,  // Time for React to attach event handlers
+  API_CALL: 1500,
   MODAL_RENDER: 2000,
-  STATE_UPDATE: 200,
+  STATE_UPDATE: 300,
 };
 
 const SELECTORS = {
@@ -50,7 +50,7 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
   });
   
   // Wait for page to load
-  cy.wait(3000);
+  cy.wait(TIMEOUTS.PAGE_LOAD);
   
   cy.get('body').should('exist');
   
@@ -71,7 +71,7 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
       cy.get('#register-password-again').should('be.visible').clear().type(password);
       cy.get(SELECTORS.DIALOGUE).contains('button', 'Register').click();
       
-      cy.wait(2000); // Wait for registration to process
+      cy.wait(TIMEOUTS.PAGE_LOAD);
       
       // Verify registration succeeded
       cy.get('body').then($body => {
@@ -80,7 +80,7 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
           throw new Error(`Registration failed: ${$error.text().trim()}`);
         } else {
           cy.log(`Registration successful - ${username} is now admin (first user)`);
-          cy.wait(3000); // Wait for initialization
+          cy.wait(TIMEOUTS.PAGE_LOAD);
         }
       });
     } else if (isLoginRequired) {
@@ -91,7 +91,7 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
       cy.get('#login-password').should('be.visible').clear().type(password);
       cy.get(SELECTORS.DIALOGUE).contains('button', 'Login').click();
       
-      cy.wait(2000); // Wait for login to process
+      cy.wait(TIMEOUTS.PAGE_LOAD);
       
       // Verify login succeeded
       cy.get('body').then($body => {
@@ -100,17 +100,16 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
           // Login failed - might be first run, try registering
           cy.log('Login failed - attempting registration');
           cy.get(SELECTORS.DIALOGUE).contains('button', 'I have no account yet').click();
-          cy.wait(1000);
           
           cy.get('#register-username').should('be.visible').clear().type(username);
           cy.get('#register-password').should('be.visible').clear().type(password);
           cy.get('#register-password-again').should('be.visible').clear().type(password);
           cy.get(SELECTORS.DIALOGUE).contains('button', 'Register').click();
           
-          cy.wait(3000);
+          cy.wait(TIMEOUTS.PAGE_LOAD);
         } else {
           cy.log('Login successful');
-          cy.wait(3000); // Wait for initialization
+          cy.wait(TIMEOUTS.PAGE_LOAD)
         }
       });
     } else {
@@ -119,68 +118,66 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
   });
   
   // Wait for application to be ready
-  cy.get(SELECTORS.TOOLBAR, { timeout: 20000 })
+  cy.get(SELECTORS.TOOLBAR, { timeout: TIMEOUTS.PAGE_LOAD * 10 })
     .should('exist')
     .and('have.css', 'visibility', 'visible');
   
   // Extra wait for React to fully hydrate
-  cy.wait(3000);
-  
+  cy.wait(TIMEOUTS.PAGE_LOAD);
   cy.log('Application ready');
+});
+
+/**
+ * Close help dialogue if it's open
+ * 
+ * Clicks the X button on the dialogue to close it if visible.
+ * Does nothing if the dialogue is not open.
+ * 
+ * @example
+ * cy.closeHelpDialogue();
+ */
+Cypress.Commands.add('closeHelpDialogue', () => {
+  cy.get('body').then($body => {
+    const $dialogue = $body.find('#dialogue');
+    if ($dialogue.length > 0 && $dialogue.css('display') !== 'none') {
+      cy.log('Closing help dialogue...');
+      cy.get('#dialogue-close').click();
+      cy.get('#dialogue').should('not.be.visible');
+    }
+  });
 });
 
 /**
  * Open the preferences modal
  * 
- * Opens the preferences dialog by calling the global dialogue_config function.
- * Waits for the modal to render and the user config to load.
- * 
- * Note: Uses window.dialogue_config() instead of clicking the button because
- * React event handlers may not be attached immediately after page reload.
+ * Clicks the preferences button and waits for the modal to load.
+ * Automatically closes help dialog if it's open.
  * 
  * @example
  * cy.openPreferences();
  */
 Cypress.Commands.add('openPreferences', () => {
-  // Ensure preferences button exists (indicates React is loaded)
-  cy.get(SELECTORS.PREFERENCES_BUTTON, { timeout: 15000 })
-    .should('exist');
-  
-  // Wait for React to fully hydrate after page load/reload
-  cy.wait(5000);
+  // Close help dialogue if it's open (appears on first launch)
+  cy.closeHelpDialogue();
   
   // Intercept config fetch to know when modal is ready
   cy.intercept('GET', '/segmentation/api/user-config').as('getUserConfig');
   
-  // Call global function to open modal (more reliable than clicking)
-  cy.window().then((win) => {
-    if (typeof win.dialogue_config === 'function') {
-      win.dialogue_config();
-    } else {
-      throw new Error('dialogue_config function not found on window');
-    }
-  });
-  
-  // Wait for config to load
-  cy.wait('@getUserConfig', { timeout: TIMEOUTS.API_CALL });
-  
-  // Wait for modal to render
-  cy.wait(TIMEOUTS.MODAL_RENDER);
-  
-  // Verify modal is open
-  cy.get(SELECTORS.PREFERENCES_MODAL, { timeout: 5000 })
+  // Click preferences button (force: true bypasses visibility checks for clipped elements)
+  cy.get(SELECTORS.PREFERENCES_BUTTON)
     .should('exist')
-    .and('have.css', 'display', 'block');
+    .click({ force: true });
+  
+  // Wait for config to load and modal to render
+  cy.wait('@getUserConfig', { timeout: TIMEOUTS.API_CALL });
+  cy.get(SELECTORS.PREFERENCES_MODAL).should('be.visible');
 });
 
 /**
  * Save preferences and close the modal
  * 
- * Clicks the save button, waits for the save API call to complete,
- * and manually closes the dialog (workaround for React synthetic event issues).
- * 
- * Note: Manually closes dialog because React's onClick doesn't reliably
- * trigger in Cypress test environment.
+ * Clicks the save button and waits for the save API call to complete.
+ * The modal should close automatically on successful save.
  * 
  * @example
  * cy.savePreferences();
@@ -189,24 +186,8 @@ Cypress.Commands.add('savePreferences', () => {
   // Intercept save API call
   cy.intercept('POST', '/segmentation/api/user-config').as('saveConfig');
   
-  // Click save button via React fiber (more reliable than DOM click)
-  cy.get(SELECTORS.SAVE_BUTTON).then($button => {
-    const el = $button[0];
-    const fiberKey = Object.keys(el).find(key => key.startsWith('__reactFiber'));
-    
-    if (fiberKey) {
-      const fiber = el[fiberKey];
-      const onClick = fiber?.memoizedProps?.onClick || fiber?.pendingProps?.onClick;
-      
-      if (typeof onClick === 'function') {
-        onClick();
-      } else {
-        $button.click();
-      }
-    } else {
-      $button.click();
-    }
-  });
+  // Click save button
+  cy.get(SELECTORS.SAVE_BUTTON).click();
   
   // Wait for save to complete
   cy.wait('@saveConfig', { timeout: TIMEOUTS.API_CALL }).then((interception) => {
@@ -215,34 +196,22 @@ Cypress.Commands.add('savePreferences', () => {
     }
   });
   
-  cy.wait(1000); // Wait for React to process response
-  
-  // Manually close dialog (workaround for Cypress/React event handling)
-  cy.get(SELECTORS.DIALOGUE).then($dialogue => {
-    $dialogue.css('display', 'none');
-  });
-  
-  // Verify closed
-  cy.get(SELECTORS.DIALOGUE).should('have.css', 'display', 'none');
+  // Verify modal closed (React unmounts it, so it won't exist in DOM)
+  cy.get(SELECTORS.PREFERENCES_MODAL).should('not.exist');
 });
 
 /**
  * Close preferences modal without saving
  * 
- * Manually hides the dialog by setting display: none.
- * This is a workaround for React synthetic event handling in Cypress.
+ * Clicks the close button to dismiss the modal.
  * 
  * @example
  * cy.closePreferences();
  */
 Cypress.Commands.add('closePreferences', () => {
-  cy.get(SELECTORS.DIALOGUE).then($dialogue => {
-    $dialogue.css('display', 'none');
-  });
-  
-  cy.wait(500);
-  
-  cy.get(SELECTORS.DIALOGUE).should('have.css', 'display', 'none');
+  cy.get(SELECTORS.CLOSE_BUTTON).click();
+  // Verify modal closed (React unmounts it, so it won't exist in DOM)
+  cy.get(SELECTORS.PREFERENCES_MODAL).should('not.exist');
 });
 
 /**
