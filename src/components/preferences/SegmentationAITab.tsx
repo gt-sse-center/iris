@@ -44,7 +44,16 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td style={{ width: '300px' }}>Number of estimators:</td>
               <td style={{ width: '300px' }}>
                 <div className="slider">
-                  <div className="slider-value">{config.segmentation.ai_model.n_estimators}</div>
+                  <input
+                    type="number"
+                    className="slider-value"
+                    data-testid="input-n-estimators"
+                    min="10"
+                    max="200"
+                    value={config.segmentation.ai_model.n_estimators}
+                    onChange={(e) => updateAIModelConfig('n_estimators', parseInt(e.target.value) || 10)}
+                    style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }}
+                  />
                   <input
                     className="slider-widget"
                     type="range"
@@ -60,7 +69,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>Maximal depth:</td>
               <td>
                 <div className="slider">
-                  <div className="slider-value">{config.segmentation.ai_model.max_depth}</div>
+                  <input type="number" className="slider-value" data-testid="input-max-depth" min="5" max="100" value={config.segmentation.ai_model.max_depth} onChange={(e) => updateAIModelConfig('max_depth', parseInt(e.target.value) || 5)} style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }} />
                   <input
                     className="slider-widget"
                     type="range"
@@ -76,7 +85,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>Number of leaves:</td>
               <td>
                 <div className="slider">
-                  <div className="slider-value">{config.segmentation.ai_model.n_leaves}</div>
+                  <input type="number" className="slider-value" data-testid="input-n-leaves" min="5" max="100" value={config.segmentation.ai_model.n_leaves} onChange={(e) => updateAIModelConfig('n_leaves', parseInt(e.target.value) || 5)} style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }} />
                   <input
                     className="slider-widget"
                     type="range"
@@ -92,9 +101,16 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>Train ratio:</td>
               <td>
                 <div className="slider">
-                  <div className="slider-value">
-                    {Math.round(config.segmentation.ai_model.train_ratio * 100)}%
-                  </div>
+                  <input
+                    type="number"
+                    className="slider-value"
+                    min="10"
+                    max="100"
+                    value={Math.round(config.segmentation.ai_model.train_ratio * 100)}
+                    onChange={(e) => updateAIModelConfig('train_ratio', (parseInt(e.target.value) || 10) / 100)}
+                    style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }}
+                  />
+                  <span style={{ marginLeft: '5px' }}>%</span>
                   <input
                     className="slider-widget"
                     type="range"
@@ -110,7 +126,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>Max. number of training pixels per class:</td>
               <td>
                 <div className="slider">
-                  <div className="slider-value">{config.segmentation.ai_model.max_train_pixels}</div>
+                  <input type="number" className="slider-value" min="100" max="50000" value={config.segmentation.ai_model.max_train_pixels} onChange={(e) => updateAIModelConfig('max_train_pixels', parseInt(e.target.value) || 100)} style={{ width: '80px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }} />
                   <input
                     className="slider-widget"
                     type="range"
@@ -146,6 +162,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>
                 <input
                   type="checkbox"
+                  data-testid="checkbox-use-edge-filter"
                   checked={config.segmentation.ai_model.use_edge_filter}
                   onChange={(e) => updateAIModelConfig('use_edge_filter', e.target.checked)}
                 />
@@ -156,6 +173,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>
                 <input
                   type="checkbox"
+                  data-testid="checkbox-use-meshgrid"
                   checked={config.segmentation.ai_model.use_meshgrid}
                   onChange={(e) => updateAIModelConfig('use_meshgrid', e.target.checked)}
                 />
@@ -166,6 +184,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>
                 <select
                   className="with-arrow"
+                  data-testid="select-meshgrid-cells"
                   value={config.segmentation.ai_model.meshgrid_cells}
                   onChange={(e) => updateAIModelConfig('meshgrid_cells', e.target.value)}
                 >
@@ -182,6 +201,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>
                 <input
                   type="checkbox"
+                  data-testid="checkbox-use-superpixels"
                   checked={config.segmentation.ai_model.use_superpixels}
                   onChange={(e) => updateAIModelConfig('use_superpixels', e.target.checked)}
                 />
@@ -197,10 +217,12 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
                       bands={config.segmentation.ai_model.bands}
                       onSelectionChange={() => {}} // Handled by buttons
                       id="bands-included"
+                      data-testid="select-bands-included"
                     />
                   </div>
                   <div style={{ width: '70px', display: 'flex', alignItems: 'center' }}>
                     <button
+                      data-testid="button-move-bands-left"
                       onClick={() => {
                         const excludedSelect = document.getElementById('bands-excluded') as HTMLSelectElement;
                         const selected = Array.from(excludedSelect.selectedOptions).map((opt) => opt.value);
@@ -210,6 +232,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
                       &lt;
                     </button>
                     <button
+                      data-testid="button-move-bands-right"
                       onClick={() => {
                         const includedSelect = document.getElementById('bands-included') as HTMLSelectElement;
                         const selected = Array.from(includedSelect.selectedOptions).map((opt) => opt.value);
@@ -225,6 +248,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
                       bands={allBands.filter((band) => !config.segmentation.ai_model.bands.includes(band))}
                       onSelectionChange={() => {}} // Handled by buttons
                       id="bands-excluded"
+                      data-testid="select-bands-excluded"
                     />
                   </div>
                 </div>
@@ -254,6 +278,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td style={{ width: '300px' }}>
                 <select
                   className="with-arrow"
+                  data-testid="select-suppression-filter-size"
                   value={config.segmentation.ai_model.suppression_filter_size}
                   onChange={(e) => updateAIModelConfig('suppression_filter_size', parseInt(e.target.value))}
                 >
@@ -267,7 +292,7 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>Suppression filter threshold:</td>
               <td>
                 <div className="slider">
-                  <div className="slider-value">{config.segmentation.ai_model.suppression_threshold}%</div>
+                  <input type="number" className="slider-value" data-testid="input-suppression-threshold" min="0" max="100" value={config.segmentation.ai_model.suppression_threshold} onChange={(e) => updateAIModelConfig('suppression_threshold', parseInt(e.target.value) || 0)} style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }} /><span style={{ marginLeft: '5px' }}>%</span>
                   <input
                     className="slider-widget"
                     type="range"

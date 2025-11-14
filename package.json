@@ -7,7 +7,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cypress": "cypress open",
+    "cypress:headless": "cypress run",
+    "cypress:test": "cypress run --spec 'cypress/e2e/preferences-segmentation-ai.cy.js'"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -20,6 +23,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.0.0",
+    "cypress": "^14.5.4",
     "jsdom": "^23.0.1",
     "patch-package": "^8.0.0",
     "typescript": "^5.0.0",

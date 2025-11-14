@@ -34,17 +34,17 @@ const ImagesPage: React.FC = () => {
   return (
     <div>
       {/* Legacy Content Indicator */}
-      <div style={{ 
-        backgroundColor: '#fff3cd', 
-        border: '2px solid #ffc107', 
-        padding: '10px', 
-        margin: '10px 0', 
+      <div style={{
+        backgroundColor: '#fff3cd',
+        border: '2px solid #ffc107',
+        padding: '10px',
+        margin: '10px 0',
         borderRadius: '5px',
         textAlign: 'center'
       }}>
         ⚠️ <strong>Legacy Content</strong> - This page shows Flask-rendered content (to be converted to TypeScript React)
       </div>
-      
+
       {/* Render legacy HTML content */}
       <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
     </div>

@@ -126,3 +126,7 @@ dmypy.json
 
 # Our stuff
 /projects/
+
+# Cypress
+cypress/screenshots/
+cypress/videos/

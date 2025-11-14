@@ -211,7 +211,7 @@ const SegmentationApp: React.FC = () => {
         }}>
           <img src="/segmentation/static/icons/help.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" onClick={() => setIsPreferencesOpen(true)}>
+        <li className="toolbutton icon_button" data-testid="preferences-button" onClick={() => setIsPreferencesOpen(true)}>
           <img src="/segmentation/static/icons/preferences.png" className="icon" />
         </li>
       </ul>
