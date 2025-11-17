@@ -48,8 +48,7 @@ class TestRmCommand:
 
         monkeypatch.chdir(tmp_path)
         with patch('builtins.input', return_value='y'):
-            with pytest.raises(SystemExit):
-                handle_rm_command("test-project")
+            handle_rm_command("test-project")
             assert not project_dir.exists()
 
     def test_rm_cancelled(self, tmp_path, monkeypatch):
@@ -59,8 +58,7 @@ class TestRmCommand:
 
         monkeypatch.chdir(tmp_path)
         with patch('builtins.input', return_value='n'):
-            with pytest.raises(SystemExit):
-                handle_rm_command("test-project")
+            handle_rm_command("test-project")
             assert project_dir.exists()
 
 

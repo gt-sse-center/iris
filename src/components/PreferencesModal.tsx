@@ -164,7 +164,7 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <div id="dialogue" className="dialogue" style={{ display: 'block' }}>
+    <div id="dialogue" className="dialogue" style={{ display: 'block' }} data-testid="preferences-modal">
       <div className="dialogue-content">
         <div className="dialogue-header">
           <span className="dialogue-close" onClick={onClose}>
@@ -184,12 +184,14 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
               <div className="tab">
                 <button
                   className={`tablinks ${activeTab === 'segmentation-ai' ? 'checked' : ''}`}
+                  data-testid="tab-segmentation-ai"
                   onClick={() => setActiveTab('segmentation-ai')}
                 >
                   Segmentation AI
                 </button>
                 <button
                   className={`tablinks ${activeTab === 'views' ? 'checked' : ''}`}
+                  data-testid="tab-views"
                   onClick={() => setActiveTab('views')}
                 >
                   Views
@@ -210,17 +212,17 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
 
               {/* Error Display */}
               {error && (
-                <p className="tag red" style={{ display: 'block' }}>
+                <p className="tag red" style={{ display: 'block' }} data-testid="preferences-error-message">
                   {error}
                 </p>
               )}
 
               {/* Action Buttons */}
               <p>
-                <button onClick={saveConfig} disabled={isLoading || isSaving}>
+                <button onClick={saveConfig} disabled={isLoading || isSaving} data-testid="save-preferences-button">
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
-                <button onClick={onClose} disabled={isSaving}>
+                <button onClick={onClose} disabled={isSaving} data-testid="close-preferences-button">
                   Close
                 </button>
               </p>

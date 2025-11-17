@@ -10,16 +10,19 @@ interface BandSelectorProps {
   bands: string[];
   onSelectionChange: (selected: string[]) => void;
   id?: string;
+  'data-testid'?: string;
 }
 
 const BandSelector: React.FC<BandSelectorProps> = ({ 
   bands, 
   onSelectionChange, 
-  id = 'bands-selector' 
+  id = 'bands-selector',
+  'data-testid': dataTestId
 }) => {
   return (
     <select
       id={id}
+      data-testid={dataTestId}
       size={10}
       multiple
       style={{ width: '125px', height: '200px' }}

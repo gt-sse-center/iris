@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 import shutil
@@ -95,18 +94,16 @@ def handle_launch_command(folder_name: str) -> Path:
         print(f"Project '{folder_name}' created successfully!")
         return config_file.resolve()
 
-def handle_rm_command(folder_name: str) -> None:
+def handle_rm_command(folder_name: str, force: bool = False) -> None:
     """Handle the rm command - remove project folder with confirmation.
 
     Args:
         folder_name: Name of the project folder to remove
+        force: Skip confirmation prompt if True
 
     Raises:
         ValueError: If folder_name is empty, None, or is 'demo'
-
-    Note:
-        This function calls sys.exit(0) after completion for CLI usage.
-        It prompts for user confirmation before deletion.
+        FileNotFoundError: If folder doesn't exist
     """
     if not folder_name:
         raise ValueError("Remove command requires a folder name!")
@@ -117,106 +114,70 @@ def handle_rm_command(folder_name: str) -> None:
     folder_path = Path.cwd() / folder_name
 
     if not folder_path.exists():
-        print(f"Folder '{folder_name}' does not exist.")
-        sys.exit(0)
+        raise FileNotFoundError(f"Folder '{folder_name}' does not exist.")
 
-    # Ask for confirmation
-    response = input(
-        f"Are you sure you want to delete the project folder '{folder_name}'? "
-        "This cannot be undone. (y/N): "
-    )
-    if response.lower() in ['y', 'yes']:
-        shutil.rmtree(folder_path)
-        print(f"Project folder '{folder_name}' has been deleted.")
-    else:
-        print("Deletion cancelled.")
+    # Ask for confirmation unless force flag is set
+    if not force:
+        response = input(
+            f"Are you sure you want to delete the project folder '{folder_name}'? "
+            "This cannot be undone. (y/N): "
+        )
+        if response.lower() not in ['y', 'yes']:
+            print("Deletion cancelled.")
+            return
 
-    # Exit after rm command
-    sys.exit(0)
+    shutil.rmtree(folder_path)
+    print(f"Project folder '{folder_name}' has been deleted.")
 
-def parse_cmd_line(argv=None):
-    """Parse application arguments.
+# Legacy argparse function removed - now using Typer CLI in iris/cli.py
 
-    If argv is None, this reads from sys.argv; if a '--' separator is present
-    the parser will only consider tokens after '--' (convention for separating
-    tool args from app args).
+
+def start_server(
+    project_file: str,
+    debug: bool = False,
+    production: bool = False,
+    admin_user: str = None,
+    admin_password: str = None,
+):
     """
-    # Only consider tokens after `--` if present
-    tokens = [] if argv is None else argv
-    if '--' in tokens:
-        tokens = tokens[tokens.index('--') + 1:]
-    argv = tokens
-
-    # Parse the application-specific tokens
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "mode", type=str,
-        choices=["demo", "label", "launch", "rm"],
-        help="Specify the mode you want to start iris, can be either *label*, *demo*, *launch*, or *rm*."
-    )
-    parser.add_argument(
-        "project", type=str, nargs='?',
-        help="Path to the project configurations file (yaml or json) or folder name for launch/rm commands."
-    )
-    parser.add_argument(
-        "-d", "--debug", action="store_true",
-        help="start the app in debug mode"
-    )
-    parser.add_argument(
-        "-p","--production", action="store_true",
-        help="Use production WSGI server")
-
-    # parse_known_args returns (known_args, unknown_args). Unknown args are
-    # ignored so that external test runners (pytest) flags won't break parsing.
-    args, unknown = parser.parse_known_args(argv)
-    if unknown:
-        # optional: surface ignored tokens for debugging
-        print(f"[iris] Ignoring unknown CLI tokens: {unknown}")
-
-    if args.mode == "demo":
-        args.project = get_demo_file()
-    elif args.mode == "label":
-        if not args.project:
-            raise Exception("Label mode require a project file!")
-    elif args.mode == "launch":
-        args.project = str(handle_launch_command(args.project))
-    elif args.mode == "rm":
-        handle_rm_command(args.project)
+    Start the IRIS server with the given configuration.
+    
+    Args:
+        project_file: Path to project configuration file
+        debug: Enable debug mode
+        production: Use production WSGI server (gevent)
+        admin_user: Admin username for non-interactive creation
+        admin_password: Admin password for non-interactive creation
+    """
+    # Create Flask app
+    flask_app = create_app(project_file, {'debug': debug})
+    
+    # Register all blueprints
+    register_extensions(flask_app)
+    
+    # Ensure default admin exists
+    create_default_admin(flask_app, admin_user, admin_password)
+    
+    # Start server
+    if production:
+        import gevent.pywsgi
+        app_server = gevent.pywsgi.WSGIServer((project['host'], project['port']), flask_app)
+        print(f'IRIS is being served in production mode at http://{project["host"]}:{project["port"]}')
+        app_server.serve_forever()
     else:
-        raise Exception(f"Unknown mode '{args.mode}'!")
-
-    return vars(args)
+        flask_app.run(debug=project.debug, host=project['host'], port=project['port'])
 
 
 def run_app():
-    # ensure default admin exists and then start the server
-    # If user asked for help via the CLI, delegate to argparse to print help
-    # and exit. This covers the case where the console script is bound to
-    # `run_app` directly (so import-time guards may not run first).
-    if any(a in ("-h", "--help") for a in sys.argv[1:]):
-        parse_cmd_line(sys.argv[1:])
-
-    create_default_admin(app)
-    if args.get('production'):
-        import gevent.pywsgi
-        app_server = gevent.pywsgi.WSGIServer((project['host'], project['port']), app)
-        print('IRIS is being served in production mode at http://{}:{}'.format(project['host'], project['port']))
-        app_server.serve_forever()
-    else:
-        app.run(debug=project.debug, host=project['host'], port=project['port'])
+    """
+    Legacy entry point for backward compatibility.
+    Now delegates to the modern Typer CLI.
+    """
+    from iris.cli import main
+    main()
 
 
-def _cli_should_parse(argv):
-    # Parse if the first token is a known mode, or if user requests help
-    if not argv:
-        return False
-    if argv[0] in ("demo", "label", "launch", "rm"):
-        return True
-    # if help is requested anywhere on the command line, parse so argparse
-    # can show the help message
-    if any(a in ("-h", "--help") for a in argv):
-        return True
-    return False
+# Legacy CLI parsing removed - now using Typer
 
 def create_app(project_file, args):
     project.load_from(project_file)
@@ -236,13 +197,28 @@ def create_app(project_file, args):
 
     return app
 
-def create_default_admin(app):
+def create_default_admin(app, admin_user=None, admin_password=None):
     # Add a default admin account:
     with app.app_context():
         admin = User.query.filter_by(name='admin').first()
     if admin is not None:
         return
 
+    # Non-interactive mode (for CI/testing)
+    if admin_user and admin_password:
+        print(f'Creating admin user "{admin_user}" non-interactively...')
+        admin = User(
+            name=admin_user,
+            admin=True,
+        )
+        admin.set_password(admin_password)
+        with app.app_context():
+            db.session.add(admin)
+            db.session.commit()
+        print(f'✅ Admin user "{admin_user}" created successfully')
+        return
+
+    # Interactive mode (original behavior)
     print('Welcome to IRIS! No admin user was detected so please enter a new admin password.')
     password_again = None
     password_valid = False
@@ -279,23 +255,18 @@ def register_extensions(app):
     app.register_blueprint(user_app, url_prefix="/user")
 
 # Decide whether to parse CLI args. If help is requested or the first token
-# looks like an IRIS mode ('demo'/'label'), let argparse handle args. This
-# allows `iris --help` to show argparse help while still avoiding accidental
-# parsing of pytest flags.
-if _cli_should_parse(sys.argv[1:]):
-    # Pass the CLI tokens through so argparse sees '-h'/'--help' when present.
-    args = parse_cmd_line(sys.argv[1:])
-else:
-    # Default args used when importing the module in non-CLI contexts
-    # (tests, imports). Keep keys that other functions expect.
-    args = {
-        'debug': False,
-        'production': False,
-    }
-    args['project'] = get_demo_file()
-
-app = create_app(args['project'], args)
+# Module-level initialization for when IRIS is imported (not run as CLI)
+# This is used by tests and when importing iris as a library
 from iris.models import Action, User
+
+# Create default app for imports/tests
+_default_args = {
+    'debug': False,
+    'production': False,
+}
+_default_args['project'] = get_demo_file()
+
+app = create_app(_default_args['project'], _default_args)
 
 with app.app_context():
     db.create_all()

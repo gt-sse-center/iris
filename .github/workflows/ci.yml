@@ -67,7 +67,9 @@ jobs:
 
       - name: Install Node.js dependencies
         working-directory: iris
-        run: npm install
+        run: |
+          # Use npm ci for cleaner installs in CI
+          npm ci || npm install
 
       - name: Build React/TypeScript frontend
         working-directory: iris
@@ -115,3 +117,50 @@ jobs:
             echo "❌ React build failed - adminApp.js not found at static/dist/"
             exit 1
           fi
+
+      - name: Install Cypress dependencies (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
+        working-directory: iris
+        run: |
+          # Install Cypress binary and dependencies
+          npx cypress install
+          # Install system dependencies for Cypress on Ubuntu
+          sudo apt-get update
+          sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libnss3 libxss1 libxtst6 xauth xvfb
+
+      - name: Run Cypress E2E tests (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
+        run: |
+          # Start IRIS demo server with non-interactive admin creation
+          echo "Starting IRIS server with admin credentials..."
+          uv run iris demo --admin-user admin --admin-password 123 &
+          SERVER_PID=$!
+          echo "Started IRIS server with PID: $SERVER_PID"
+          
+          # Wait for server to be ready (max 60 seconds)
+          echo "Waiting for server to start..."
+          for i in {1..60}; do
+            if curl -s http://localhost:5000 > /dev/null; then
+              echo "✅ Server is ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ Server failed to start within 60 seconds"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 1
+          done
+          
+          # Run Cypress tests in headless mode (from iris/ subdirectory)
+          echo "Running Cypress E2E tests..."
+          cd iris
+          npm run cypress:headless || TEST_EXIT_CODE=$?
+          
+          # Stop the server
+          echo "Stopping IRIS server..."
+          kill $SERVER_PID 2>/dev/null || true
+          wait $SERVER_PID 2>/dev/null || true
+          
+          # Exit with test result
+          exit ${TEST_EXIT_CODE:-0}
