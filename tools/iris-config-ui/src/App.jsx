@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import Form, { withTheme } from '@rjsf/core'
 import validator from '@rjsf/validator-ajv8'
 
@@ -112,74 +112,34 @@ export default function App(){
   // DOM post-processor with MutationObserver: convert inline backticks in rendered
   // descriptions to <code> elements and re-run when RJSF updates the DOM.
   useEffect(()=>{
-    const processDescriptions = () => {
-      try{
-        const wrapper = document.querySelector('.rjsf-wrapper')
-        if(!wrapper) return
-        const nodes = wrapper.querySelectorAll('.field-description')
-        nodes.forEach(n => {
-          // skip if already processed
-          if(n.dataset.codeProcessed === '1') return
-
-          const raw = n.textContent || ''
-          if(!raw.includes('`')) return
-
-          const frag = document.createDocumentFragment()
-          // Match either fenced code blocks ```...``` (group 1) or inline `...` (group 2)
-          const re = /```([\s\S]*?)```|`([^`]+)`/g
-          let lastIndex = 0
-          let m
-          while((m = re.exec(raw)) !== null){
-            const idx = m.index
-            if(idx > lastIndex){
-              frag.appendChild(document.createTextNode(raw.slice(lastIndex, idx)))
-            }
-            if(m[1] !== undefined){
-              // fenced block
-              const pre = document.createElement('pre')
-              const code = document.createElement('code')
-              code.textContent = m[1]
-              pre.appendChild(code)
-              frag.appendChild(pre)
-            } else if(m[2] !== undefined){
-              // inline code
-              const code = document.createElement('code')
-              code.textContent = m[2]
-              frag.appendChild(code)
-            }
-            lastIndex = re.lastIndex
-          }
-          if(lastIndex < raw.length){
-            frag.appendChild(document.createTextNode(raw.slice(lastIndex)))
-          }
-
-          if(frag.childNodes.length > 0){
-            // replace safely via DOM
-            n.innerHTML = ''
-            n.appendChild(frag)
-            n.dataset.codeProcessed = '1'
-          }
-        })
-      }catch(e){
-        console.debug('description-postprocess', e)
-      }
-    }
-
-    // Initial run
-    processDescriptions()
-
-    // Observe mutations under the wrapper and re-run processing
-    const wrapper = document.querySelector('.rjsf-wrapper')
-    if(!wrapper) return
-    const mo = new MutationObserver((mutations)=>{
-      // run a single pass when changes occur
-      processDescriptions()
-    })
-    mo.observe(wrapper, { childList: true, subtree: true, characterData: true })
-
-    return ()=>{
-      try{ mo.disconnect() }catch(e){/* ignore */}
-    }
+    // Run a single, safe pass to convert code spans/blocks in descriptions.
+    // Previously we used a MutationObserver to re-run on every DOM change;
+    // that has been observed to interact poorly with RJSF's updates and can
+    // cause inputs to lose focus. For stability, only process descriptions
+    // once after the schema renders.
+    try{
+      const wrapper = document.querySelector('.rjsf-wrapper')
+      if(!wrapper) return
+      const nodes = wrapper.querySelectorAll('.field-description')
+      nodes.forEach(n => {
+        if(n.dataset.codeProcessed === '1') return
+        const raw = n.textContent || ''
+        if(!raw.includes('`')) return
+        const frag = document.createDocumentFragment()
+        const re = /```([\s\S]*?)```|`([^`]+)`/g
+        let lastIndex = 0
+        let m
+        while((m = re.exec(raw)) !== null){
+          const idx = m.index
+          if(idx > lastIndex){ frag.appendChild(document.createTextNode(raw.slice(lastIndex, idx))) }
+          if(m[1] !== undefined){ const pre = document.createElement('pre'); const code = document.createElement('code'); code.textContent = m[1]; pre.appendChild(code); frag.appendChild(pre) }
+          else if(m[2] !== undefined){ const code = document.createElement('code'); code.textContent = m[2]; frag.appendChild(code) }
+          lastIndex = re.lastIndex
+        }
+        if(lastIndex < raw.length) frag.appendChild(document.createTextNode(raw.slice(lastIndex)))
+        if(frag.childNodes.length > 0){ n.innerHTML = ''; n.appendChild(frag); n.dataset.codeProcessed = '1' }
+      })
+    }catch(e){ console.debug('description-postprocess', e) }
   }, [schema])
 
   useEffect(()=>{
@@ -238,10 +198,15 @@ export default function App(){
     }
   }
 
-  if(!schema) return <div style={{padding:20}}>Loading schema...</div>
+  const parsedUi = useMemo(()=>{
+    try{ return JSON.parse(uiSchema) }catch(e){ return {} }
+  }, [uiSchema])
 
-  let parsedUi = {}
-  try{ parsedUi = JSON.parse(uiSchema) }catch(e){ parsedUi = {} }
+  // Memoize templates so we pass a stable object reference to RJSF and avoid
+  // unnecessary internal re-initialization which can cause focus loss.
+  const templates = useMemo(()=>({ DescriptionField, FieldTemplate }), [])
+
+  if(!schema) return <div style={{padding:20}}>Loading schema...</div>
 
   return (
     <div className="container-fluid" style={{height:'100vh'}}>
@@ -287,7 +252,7 @@ export default function App(){
                   onChange={(e)=>setFormData(e.formData)}
                   onSubmit={({formData})=>{ setFormData(formData); setSuccess('Form submitted'); setTimeout(()=>setSuccess(null),3000) }}
                   onError={(err)=>console.log('Form errors', err)}
-                  templates={{ DescriptionField, FieldTemplate }}
+                  templates={templates}
                 />
                 <h6 className="mt-3">Current formData</h6>
                 <pre className="bg-light border rounded p-3 json-preview" style={{maxHeight:300, overflow:'auto'}}>{JSON.stringify(formData, null, 2)}</pre>
