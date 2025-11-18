@@ -52,6 +52,17 @@ button { padding: 6px 8px; margin-right: 8px }
 	max-width: 760px;
 }
 
+.fullwidth-add{
+	display:block;
+	width:100%;
+	text-align:center;
+	padding:10px 12px;
+	border-radius:6px;
+}
+
+.array-field .array-item { margin-bottom: 10px }
+
+
 /* make JSON preview monospace and scrollable */
 pre.json-preview { font-family: Menlo, Monaco, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
 

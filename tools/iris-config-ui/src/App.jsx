@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Form, { withTheme } from '@rjsf/core'
 import validator from '@rjsf/validator-ajv8'
 
@@ -22,7 +22,7 @@ export default function App(){
 
   // Custom DescriptionField: render inline backtick code as <code> tags
   // This will be passed into RJSF via the `templates` prop.
-  function DescriptionField({ id, description }){
+  const DescriptionField = useCallback(function DescriptionField({ id, description }){
     if(!description) return null
     if (typeof description !== 'string') return (<div id={id} className="field-description">{description}</div>)
 
@@ -80,10 +80,10 @@ export default function App(){
     })
 
     return <div id={id} className="field-description" dangerouslySetInnerHTML={{ __html: escaped }} />
-  }
+  }, [])
 
   // Generic FieldTemplate to ensure we control how descriptions render.
-  function FieldTemplate(props){
+  const FieldTemplate = useCallback(function FieldTemplate(props){
     const { id, classNames, label, required, description, errors, help, children, schema } = props
 
     // description may be a React node or a string. If it's a string, format it.
@@ -107,7 +107,37 @@ export default function App(){
         {help}
       </div>
     )
-  }
+  }, [DescriptionField])
+
+  // Custom ArrayFieldTemplate to render a clearer add button and nicer item layout
+  const ArrayFieldTemplate = useCallback(function ArrayFieldTemplate(props){
+    const { items, canAdd, onAddClick, uiSchema, title, description, idSchema } = props
+    return (
+      <div className="array-field">
+        {title ? <h6 id={idSchema && idSchema.$id} className="array-field-title">{title}</h6> : null}
+        {description ? <DescriptionField id={`${idSchema && idSchema.$id}__desc`} description={description} /> : null}
+        <div>
+          {items && items.map((it, idx) => (
+            <div className="array-item" key={it.key || idx}>
+              <div className="row g-2 align-items-start">
+                <div className="col">
+                  {it.children}
+                </div>
+                <div className="col-auto d-flex align-items-start" style={{marginTop: 4}}>
+                  {it.hasRemove ? <button className="btn btn-sm btn-outline-danger" onClick={it.onDropIndexClick(it.index)} type="button">Remove</button> : null}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {canAdd ? (
+          <div className="array-item-add mt-2">
+            <button type="button" className="btn btn-outline-primary fullwidth-add" onClick={onAddClick}>{(uiSchema && uiSchema['ui:options'] && uiSchema['ui:options'].addButtonText) || '+ Add'}</button>
+          </div>
+        ) : null}
+      </div>
+    )
+  }, [])
 
   // DOM post-processor with MutationObserver: convert inline backticks in rendered
   // descriptions to <code> elements and re-run when RJSF updates the DOM.
@@ -171,14 +201,20 @@ export default function App(){
   }
 
   useEffect(()=>{
-    fetch('/irisconfig.json')
-      .then(r=>r.json())
-      .then(s=>{
-        setSchema(s)
-        const text = JSON.stringify(s, null, 2)
-        setRawSchemaText(text)
-      })
-      .catch(e=>setError(String(e)))
+    // Load both the main schema and (if present) a persisted uiSchema file.
+    // The persistence server writes `public/uischema.json` when you save from the UI.
+    Promise.all([
+      fetch('/irisconfig.json').then(r=>{ if(!r.ok) throw new Error('schema fetch failed'); return r.json() }),
+      fetch('/uischema.json').then(r=>{ if(!r.ok) return '{}'; return r.text() }).catch(()=>'{}')
+    ]).then(([s, uiText])=>{
+      setSchema(s)
+      const text = JSON.stringify(s, null, 2)
+      setRawSchemaText(text)
+      try{ if(uiText && uiText.trim()) setUiSchema(typeof uiText === 'string' ? uiText : JSON.stringify(uiText, null, 2)) }catch(e){}
+    }).catch(e=>{
+      // If the main schema fetch fails, keep previous state and show an error.
+      setError(String(e))
+    })
   },[])
 
   function applySchemaText(){
@@ -250,6 +286,28 @@ export default function App(){
     }
   }
 
+  // Sanitize schemas for RJSF/AJV: remove empty anyOf arrays which cause AJV validation errors
+  function sanitizeSchema(s){
+    try{
+      const copy = JSON.parse(JSON.stringify(s || {}))
+      const walk = (obj)=>{
+        if(!obj || typeof obj !== 'object') return
+        if(Array.isArray(obj)){ obj.forEach(walk); return }
+        Object.keys(obj).forEach(k=>{
+          const v = obj[k]
+          if(k === 'anyOf' && Array.isArray(v) && v.length === 0){
+            console.debug('sanitizeSchema: removing empty anyOf at', obj)
+            delete obj[k]
+            return
+          }
+          walk(v)
+        })
+      }
+      walk(copy)
+      return copy
+    }catch(e){ return s }
+  }
+
   function getGeneralSchema(){
     const keys = ['name','port','host','images']
     const props = {}
@@ -298,7 +356,19 @@ export default function App(){
     const imagesVal = formData.images || {}
     const imagesForForm = { ...imagesVal, path: pathValueToArray(imagesVal.path) }
     if(!Array.isArray(imagesForForm.path) || imagesForForm.path.length === 0){ imagesForForm.path = [{key:'', value:''}] }
-    next['General'] = { name: formData.name, port: formData.port, host: formData.host, images: imagesForForm }
+
+    // Only include fields in the per-tab formData when they exist in the global
+    // formData. If we include keys with `undefined` values, RJSF treats the
+    // presence of those keys as user-provided data and will not apply schema
+    // defaults (e.g. `port: 5000`). To allow schema defaults to show up, omit
+    // absent keys so RJSF may fill them from `schema.default`.
+    const general = {}
+    if(formData.name !== undefined) general.name = formData.name
+    if(formData.port !== undefined) general.port = formData.port
+    if(formData.host !== undefined) general.host = formData.host
+    // always include images object for editing (we provide a blank placeholder row)
+    general.images = imagesForForm
+    next['General'] = general
     EDIT_TABS.forEach(t=>{ if(t !== 'General') next[t] = formData[t] })
     setTabFormData(next)
     tabFormDataRef.current = next
@@ -333,9 +403,141 @@ export default function App(){
     try{ return JSON.parse(uiSchema) }catch(e){ return {} }
   }, [uiSchema])
 
+  // Default uiSchema enhancements for the General tab to improve array editing UX
+  const defaultGeneralUi = {
+    images: {
+      path: {
+        'ui:options': { addButtonText: '➕ Add path', removable: true },
+        // Use a custom ui:field which renders key and value side-by-side using
+        // Bootstrap grid classes. This is more reliable than a generic layout
+        // object because we can control the rendered markup.
+        items: {
+          'ui:field': 'KeyValue',
+          key: { 'ui:placeholder': 'optional key (e.g. Sentinel2)' },
+          value: {
+            'ui:placeholder': 'images/{id}.tif',
+            'ui:help': 'Full or relative path to set of image files. Must use "{id}" placeholder.'
+          }
+        }
+      }
+    }
+  }
+
+  // Custom inline field that renders a two-column Bootstrap row for a {key,value} object
+  const KeyValueField = useCallback(function KeyValueField(props){
+    // props: { schema, uiSchema, idSchema, formData, onChange }
+    const { formData = {}, onChange, uiSchema = {} } = props
+    const keyVal = formData.key || ''
+    const valueVal = formData.value || ''
+
+    return (
+      <div className="row g-2 align-items-start">
+        <div className="col-4">
+          <input
+            type="text"
+            className="form-control"
+            value={keyVal}
+            placeholder={uiSchema.key && uiSchema.key['ui:placeholder']}
+            onChange={e=> onChange({ ...(formData||{}), key: e.target.value })}
+          />
+        </div>
+        <div className="col-8">
+          <input
+            type="text"
+            className="form-control"
+            value={valueVal}
+            placeholder={uiSchema.value && uiSchema.value['ui:placeholder']}
+            onChange={e=> onChange({ ...(formData||{}), value: e.target.value })}
+          />
+          {uiSchema.value && uiSchema.value['ui:help'] ? <div className="form-text">{uiSchema.value['ui:help']}</div> : null}
+        </div>
+      </div>
+    )
+  }, [])
+
+  const fields = useMemo(()=>({ KeyValue: KeyValueField }), [KeyValueField])
+
   // Memoize templates so we pass a stable object reference to RJSF and avoid
   // unnecessary internal re-initialization which can cause focus loss.
-  const templates = useMemo(()=>({ DescriptionField, FieldTemplate }), [])
+  const templates = useMemo(()=>({ DescriptionField, FieldTemplate, ArrayFieldTemplate }), [DescriptionField, FieldTemplate, ArrayFieldTemplate])
+
+  // Precompute sanitized schema for each tab and memoize to avoid recreating
+  // a new schema object on every render (this was causing RJSF to re-init and
+  // reset input focus). Only recompute when the upstream `schema` changes.
+  const schemasByTab = useMemo(()=>{
+    const map = {}
+    EDIT_TABS.forEach(tab => {
+      const tabSchema = getSchemaForTab(tab)
+      let tabSchemaSanitized = sanitizeSchema(tabSchema)
+      // For General, force images.path to be the array-of-{key,value} schema
+      if(tab === 'General'){
+        try{
+          if(!tabSchemaSanitized.properties) tabSchemaSanitized.properties = {}
+          if(!tabSchemaSanitized.properties.images) tabSchemaSanitized.properties.images = {}
+          if(!tabSchemaSanitized.properties.images.properties) tabSchemaSanitized.properties.images.properties = {}
+          const original = (tabSchemaSanitized.properties.images.properties && tabSchemaSanitized.properties.images.properties.path) || {}
+          tabSchemaSanitized.properties.images.properties.path = {
+            type: 'array',
+            title: original.title || 'Path',
+            description: original.description || undefined,
+            items: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', title: 'Key' },
+                value: { type: 'string', title: 'Path' }
+              },
+              required: ['value']
+            },
+            default: []
+          }
+        }catch(e){ console.debug('force array path failed', e) }
+      }
+
+      // debug: detect any anyOf with zero items which breaks AJV
+      try{
+        const scan = (obj, path=[])=>{
+          if(!obj || typeof obj !== 'object') return
+          if(Array.isArray(obj)){
+            obj.forEach((v,i)=> scan(v, path.concat([`[${i}]`])))
+            return
+          }
+          Object.keys(obj).forEach(k=>{
+            if(k === 'anyOf' && Array.isArray(obj[k]) && obj[k].length === 0){
+              console.error('Detected empty anyOf at', path.concat([k]).join('/'), 'for tab', tab, obj)
+            }
+            scan(obj[k], path.concat([k]))
+          })
+        }
+        scan(tabSchema)
+      }catch(e){ console.debug('schema-scan failed', e) }
+
+      if(tab === 'General'){
+        try{ console.debug('General tab schema (sanitized):', tabSchemaSanitized) }catch(e){}
+      }
+      map[tab] = tabSchemaSanitized
+    })
+    return map
+  }, [schema])
+
+  // Precompute uiSchema for each tab (merge defaults only when parsedUi changes)
+  const uiByTab = useMemo(()=>{
+    const map = {}
+    EDIT_TABS.forEach(tab => {
+      if(tab === 'General'){
+        let tabUi = { ...(parsedUi || {}) }
+        tabUi.images = { ...(tabUi.images || {}), ...(defaultGeneralUi.images || {}) }
+        if(tabUi.images.path && defaultGeneralUi.images.path){
+          tabUi.images.path = { ...(defaultGeneralUi.images.path || {}), ...(tabUi.images.path || {}) }
+          tabUi.images.path.items = { ...(defaultGeneralUi.images.path.items || {}), ...((tabUi.images.path && tabUi.images.path.items) || {}) }
+          tabUi.images.path['ui:options'] = { ...(defaultGeneralUi.images.path['ui:options'] || {}), ...((tabUi.images.path && tabUi.images.path['ui:options']) || {}) }
+        }
+        map[tab] = tabUi
+      } else {
+        map[tab] = (parsedUi && parsedUi[tab]) || {}
+      }
+    })
+    return map
+  }, [parsedUi])
 
   if(!schema) return <div style={{padding:20}}>Loading schema...</div>
 
@@ -377,11 +579,11 @@ export default function App(){
               <div className="rjsf-wrapper">
                 <div className="accordion" id="irisAccordion">
                   {EDIT_TABS.map(tab => {
-                    const tabSchema = getSchemaForTab(tab)
-                    const tabUi = tab === 'General' ? parsedUi : {}
                     const currentTabData = (tabFormData && tabFormData[tab]) || (tabFormDataRef.current && tabFormDataRef.current[tab]) || {}
                     formRenderCountsRef.current[tab] = (formRenderCountsRef.current[tab] || 0) + 1
                     console.debug(`Form render (${tab}) count:`, formRenderCountsRef.current[tab])
+                    const tabSchemaSanitized = schemasByTab[tab] || {}
+                    const tabUi = uiByTab[tab] || {}
                     return (
                       <div className="accordion-item" key={tab}>
                         <h2 className="accordion-header" id={`heading-${tab}`}>
@@ -402,7 +604,7 @@ export default function App(){
                             try{ commitTabToGlobal(tab) }catch(e){console.debug('commit on blur failed', e)}
                           }}>
                             <Form
-                              schema={tabSchema}
+                              schema={tabSchemaSanitized}
                               uiSchema={tabUi}
                               validator={validator}
                               formData={currentTabData}
@@ -413,6 +615,7 @@ export default function App(){
                               onSubmit={({formData})=>{ tabFormDataRef.current = { ...(tabFormDataRef.current || {}), [tab]: formData }; setTabFormData(prev=>({...prev, [tab]: formData})); commitTabToGlobal(tab); setSuccess('Form submitted'); setTimeout(()=>setSuccess(null),3000) }}
                               onError={(err)=>console.log('Form errors', err)}
                               templates={templates}
+                              fields={fields}
                             />
                           </div>
                         </div>
