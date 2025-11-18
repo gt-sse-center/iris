@@ -142,6 +142,34 @@ export default function App(){
     }catch(e){ console.debug('description-postprocess', e) }
   }, [schema])
 
+  // Commit current tab's local form data into the global formData
+  function commitTabToGlobal(tab){
+    try{
+      const local = (tabFormDataRef.current && tabFormDataRef.current[tab]) || tabFormData[tab] || {}
+      if(tab === 'General'){
+        const g = {...(local || {})}
+        if(g.images && g.images.path !== undefined){
+          g.images = { ...g.images, path: arrayToPathValue(g.images.path) }
+        }
+        const currentGlobal = JSON.stringify(formData || {})
+        const candidate = JSON.stringify({ ...(formData||{}), ...(g||{}) })
+        console.debug('blur-commit merge check currentGlobal vs candidate', currentGlobal, candidate)
+        if(currentGlobal !== candidate){
+          console.debug('blur-commit: applying merge for General', g)
+          setFormData(prev => ({ ...(prev||{}), ...(g||{}) }))
+        }
+      } else {
+        const currentGlobal = JSON.stringify(formData && formData[tab] ? formData[tab] : {})
+        const candidate = JSON.stringify(local || {})
+        console.debug('blur-commit merge check for tab', tab, 'current vs candidate', currentGlobal, candidate)
+        if(currentGlobal !== candidate){
+          console.debug('blur-commit: applying merge for tab', tab)
+          setFormData(prev => ({ ...(prev||{}), [tab]: local }))
+        }
+      }
+    }catch(e){ console.debug('commitTabToGlobal error', e) }
+  }
+
   useEffect(()=>{
     fetch('/irisconfig.json')
       .then(r=>r.json())
@@ -172,6 +200,109 @@ export default function App(){
   }
 
   const [saving, setSaving] = useState(false)
+  const EDIT_TABS = ['General','classes','views','view_groups','segmentation']
+  // allow multiple open panels; keep an array of open panel ids
+  const [openPanels, setOpenPanels] = useState(['General'])
+  const [tabFormData, setTabFormData] = useState({})
+  const tabFormDataRef = React.useRef({})
+  const formRenderCountsRef = React.useRef({})
+
+  // Helpers to convert the images.path value between the project's schema form and an
+  // array-of-{key,value} form convenient for RJSF editing.
+  function pathValueToArray(val){
+    if(val == null) return []
+    if(typeof val === 'string') return [{ key: '', value: val }]
+    if(typeof val === 'object'){
+      return Object.entries(val).map(([k,v]) => ({ key: k, value: v }))
+    }
+    return []
+  }
+
+  function arrayToPathValue(arr){
+    if(!Array.isArray(arr)) return arr
+    if(arr.length === 0) return undefined
+    if(arr.length === 1 && (!arr[0].key || arr[0].key.trim() === '')) return arr[0].value
+    const out = {}
+    arr.forEach((it, idx) => {
+      const k = (it.key && it.key.trim() !== '') ? it.key : String(idx)
+      out[k] = it.value
+    })
+    return out
+  }
+
+  // Resolve a property schema for a top-level property. If it's a $ref to $defs, return the referenced def schema.
+  function resolvePropSchema(propSchema){
+    if(!propSchema) return {}
+    const defs = schema && schema.$defs ? schema.$defs : undefined
+    if(propSchema.$ref && typeof propSchema.$ref === 'string'){
+      const m = propSchema.$ref.match(/^#\/$defs\/(.+)$/)
+      if(m && defs && defs[m[1]]){
+        const cloned = JSON.parse(JSON.stringify(defs[m[1]]))
+        return Object.assign({ $defs: defs }, cloned)
+      }
+    }
+    try{
+      const cloned = JSON.parse(JSON.stringify(propSchema))
+      if(defs) cloned.$defs = defs
+      return cloned
+    }catch(e){
+      return propSchema
+    }
+  }
+
+  function getGeneralSchema(){
+    const keys = ['name','port','host','images']
+    const props = {}
+    const required = []
+    keys.forEach(k=>{
+      if(schema.properties && schema.properties[k]){
+        props[k] = resolvePropSchema(schema.properties[k])
+        if(Array.isArray(schema.required) && schema.required.includes(k)) required.push(k)
+      }
+    })
+    // Override images.path to be an array-of-key/value pairs for easier editing in RJSF
+    if(props.images && props.images.properties && props.images.properties.path){
+      const original = props.images.properties.path
+      props.images.properties.path = {
+        type: 'array',
+        title: original.title || 'Path',
+        description: original.description || undefined,
+        items: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', title: 'Key' },
+            value: { type: 'string', title: 'Path' }
+          },
+          required: ['value']
+        },
+        default: []
+      }
+    }
+    const out = { type: 'object', title: 'General', properties: props }
+    if(required.length) out.required = required
+    if(schema && schema.$defs) out.$defs = schema.$defs
+    return out
+  }
+
+  function getSchemaForTab(tab){
+    if(!schema) return {}
+    if(tab === 'General') return getGeneralSchema()
+    const propSchema = schema.properties && schema.properties[tab]
+    return resolvePropSchema(propSchema)
+  }
+
+  // Initialize tabFormData from global formData when schema loads
+  useEffect(()=>{
+    if(!schema) return
+    const next = {}
+    const imagesVal = formData.images || {}
+    const imagesForForm = { ...imagesVal, path: pathValueToArray(imagesVal.path) }
+    if(!Array.isArray(imagesForForm.path) || imagesForForm.path.length === 0){ imagesForForm.path = [{key:'', value:''}] }
+    next['General'] = { name: formData.name, port: formData.port, host: formData.host, images: imagesForForm }
+    EDIT_TABS.forEach(t=>{ if(t !== 'General') next[t] = formData[t] })
+    setTabFormData(next)
+    tabFormDataRef.current = next
+  }, [schema])
 
   async function saveSchemaToServer(){
     // send rawSchemaText and uiSchema to the persistence endpoint
@@ -244,16 +375,51 @@ export default function App(){
             <div className="card-header">Form Preview</div>
             <div className="card-body">
               <div className="rjsf-wrapper">
-                <Form
-                  schema={schema}
-                  uiSchema={parsedUi}
-                  validator={validator}
-                  formData={formData}
-                  onChange={(e)=>setFormData(e.formData)}
-                  onSubmit={({formData})=>{ setFormData(formData); setSuccess('Form submitted'); setTimeout(()=>setSuccess(null),3000) }}
-                  onError={(err)=>console.log('Form errors', err)}
-                  templates={templates}
-                />
+                <div className="accordion" id="irisAccordion">
+                  {EDIT_TABS.map(tab => {
+                    const tabSchema = getSchemaForTab(tab)
+                    const tabUi = tab === 'General' ? parsedUi : {}
+                    const currentTabData = (tabFormData && tabFormData[tab]) || (tabFormDataRef.current && tabFormDataRef.current[tab]) || {}
+                    formRenderCountsRef.current[tab] = (formRenderCountsRef.current[tab] || 0) + 1
+                    console.debug(`Form render (${tab}) count:`, formRenderCountsRef.current[tab])
+                    return (
+                      <div className="accordion-item" key={tab}>
+                        <h2 className="accordion-header" id={`heading-${tab}`}>
+                          <button className={`accordion-button ${openPanels.includes(tab) ? '' : 'collapsed'}`} type="button" onClick={()=>{
+                              // toggle this panel open/closed
+                              setOpenPanels(prev => {
+                                const now = new Set(prev || [])
+                                if(now.has(tab)) now.delete(tab)
+                                else now.add(tab)
+                                return Array.from(now)
+                              })
+                            }} aria-expanded={openPanels.includes(tab)} aria-controls={`collapse-${tab}`}>
+                            {tab}
+                          </button>
+                        </h2>
+                        <div id={`collapse-${tab}`} className={`accordion-collapse collapse ${openPanels.includes(tab) ? 'show' : ''}`} aria-labelledby={`heading-${tab}`}>
+                          <div className="accordion-body" onBlurCapture={()=>{
+                            try{ commitTabToGlobal(tab) }catch(e){console.debug('commit on blur failed', e)}
+                          }}>
+                            <Form
+                              schema={tabSchema}
+                              uiSchema={tabUi}
+                              validator={validator}
+                              formData={currentTabData}
+                              onChange={(e)=>{
+                                tabFormDataRef.current = { ...(tabFormDataRef.current || {}), [tab]: e.formData }
+                                setTabFormData(prev => ({ ...(prev||{}), [tab]: e.formData }))
+                              }}
+                              onSubmit={({formData})=>{ tabFormDataRef.current = { ...(tabFormDataRef.current || {}), [tab]: formData }; setTabFormData(prev=>({...prev, [tab]: formData})); commitTabToGlobal(tab); setSuccess('Form submitted'); setTimeout(()=>setSuccess(null),3000) }}
+                              onError={(err)=>console.log('Form errors', err)}
+                              templates={templates}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
                 <h6 className="mt-3">Current formData</h6>
                 <pre className="bg-light border rounded p-3 json-preview" style={{maxHeight:300, overflow:'auto'}}>{JSON.stringify(formData, null, 2)}</pre>
               </div>
