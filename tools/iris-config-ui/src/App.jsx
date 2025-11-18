@@ -20,18 +20,15 @@ export default function App(){
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
 
-  // Custom DescriptionField: render inline backtick code as <code> tags
-  // This will be passed into RJSF via the `templates` prop.
+  // Note: UI defaults that used to be hard-coded here are moved into
+  // `public/uischema.json`. The runtime still provides a small custom field
+  // implementation (`KeyValue`) and registers it via `fields`, but layout,
+  // placeholders and helpers live in the external uiSchema file so they can be
+  // edited without changing code.
+
   const DescriptionField = useCallback(function DescriptionField({ id, description }){
     if(!description) return null
     if (typeof description !== 'string') return (<div id={id} className="field-description">{description}</div>)
-
-    // We'll support three things safely:
-    // 1) Fenced code blocks: ```...``` -> <pre><code>...</code></pre>
-    // 2) Inline backticks: `...` -> <code>...</code>
-    // 3) Existing <code>...</code> tags in the source -> treat like inline code
-    // Approach: extract code blocks and inline code to placeholders, escape the rest,
-    // then re-insert safe HTML for code elements.
 
     const codeBlocks = []
     const inlineCodes = []
@@ -403,25 +400,7 @@ export default function App(){
     try{ return JSON.parse(uiSchema) }catch(e){ return {} }
   }, [uiSchema])
 
-  // Default uiSchema enhancements for the General tab to improve array editing UX
-  const defaultGeneralUi = {
-    images: {
-      path: {
-        'ui:options': { addButtonText: '➕ Add path', removable: true },
-        // Use a custom ui:field which renders key and value side-by-side using
-        // Bootstrap grid classes. This is more reliable than a generic layout
-        // object because we can control the rendered markup.
-        items: {
-          'ui:field': 'KeyValue',
-          key: { 'ui:placeholder': 'optional key (e.g. Sentinel2)' },
-          value: {
-            'ui:placeholder': 'images/{id}.tif',
-            'ui:help': 'Full or relative path to set of image files. Must use "{id}" placeholder.'
-          }
-        }
-      }
-    }
-  }
+  // UI defaults moved to `public/uischema.json` (see note above)
 
   // Custom inline field that renders a two-column Bootstrap row for a {key,value} object
   const KeyValueField = useCallback(function KeyValueField(props){
@@ -524,14 +503,9 @@ export default function App(){
     const map = {}
     EDIT_TABS.forEach(tab => {
       if(tab === 'General'){
-        let tabUi = { ...(parsedUi || {}) }
-        tabUi.images = { ...(tabUi.images || {}), ...(defaultGeneralUi.images || {}) }
-        if(tabUi.images.path && defaultGeneralUi.images.path){
-          tabUi.images.path = { ...(defaultGeneralUi.images.path || {}), ...(tabUi.images.path || {}) }
-          tabUi.images.path.items = { ...(defaultGeneralUi.images.path.items || {}), ...((tabUi.images.path && tabUi.images.path.items) || {}) }
-          tabUi.images.path['ui:options'] = { ...(defaultGeneralUi.images.path['ui:options'] || {}), ...((tabUi.images.path && tabUi.images.path['ui:options']) || {}) }
-        }
-        map[tab] = tabUi
+        // The root uiSchema controls fields under the top-level properties such as `images`,
+        // `host`, `port` etc. Use the parsed uiSchema as-is for the General tab.
+        map[tab] = (parsedUi || {})
       } else {
         map[tab] = (parsedUi && parsedUi[tab]) || {}
       }

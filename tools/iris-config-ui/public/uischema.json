@@ -26,7 +26,16 @@
       "metadata"
     ],
     "path": {
-      "ui:help": "Use {id} as placeholder for image identifiers"
+      "ui:help": "Use {id} as placeholder for image identifiers",
+      "ui:options": { "addButtonText": "➕ Add path", "removable": true },
+      "items": {
+        "ui:field": "KeyValue",
+        "key": { "ui:placeholder": "optional key (e.g. Sentinel2)" },
+        "value": {
+          "ui:placeholder": "images/{id}.tif",
+          "ui:help": "Full or relative path to set of image files. Must use \"{id}\" placeholder."
+        }
+      }
     },
     "shape": {
       "ui:options": {
