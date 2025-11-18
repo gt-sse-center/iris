@@ -9,12 +9,6 @@
   "name": {
     "ui:help": "This will be used as the project identifier"
   },
-  "host": {
-    "ui:widget": "radio",
-    "ui:options": {
-      "inline": true
-    }
-  },
   "port": {
     "ui:widget": "updown"
   },
