@@ -21,25 +21,47 @@ const AdminNavigation: React.FC = () => {
   });
 
   return (
-    <div className="tab" style={{ display: 'flex', borderBottom: '1px solid #ccc' }}>
-      <button 
-        style={buttonStyle('/users')}
-        onClick={() => navigate('/users')}
+    <div className="tab" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc' }}>
+      <div style={{ display: 'flex' }}>
+        <button 
+          style={buttonStyle('/users')}
+          onClick={() => navigate('/users')}
+        >
+          Users
+        </button>
+        <button 
+          style={buttonStyle('/images')}
+          onClick={() => navigate('/images')}
+        >
+          Images
+        </button>
+        <button 
+          style={buttonStyle('/actions')}
+          onClick={() => navigate('/actions/segmentation')}
+        >
+          Masks
+        </button>
+      </div>
+      <a
+        href="/segmentation?openPreferences=true"
+        style={{
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          marginRight: '8px',
+          textDecoration: 'none'
+        }}
+        title="Preferences"
       >
-        Users
-      </button>
-      <button 
-        style={buttonStyle('/images')}
-        onClick={() => navigate('/images')}
-      >
-        Images
-      </button>
-      <button 
-        style={buttonStyle('/actions')}
-        onClick={() => navigate('/actions/segmentation')}
-      >
-        Masks
-      </button>
+        <img 
+          src="/segmentation/static/icons/preferences.png" 
+          alt="Preferences"
+          style={{ width: '24px', height: '24px' }}
+        />
+      </a>
     </div>
   );
 };
