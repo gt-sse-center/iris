@@ -34,7 +34,7 @@ When you have your data distributed over multiple files (e.g. coming from Sentin
     )
     # maybe not needed for launch, but neede dfor working, right?
     shape: List[int] = Field(
-        None,
+        ...,
         min_length=2,
         max_length=2,
         description="The shape of the images. Must be a list of width and height. Example: `[512, 512]`",

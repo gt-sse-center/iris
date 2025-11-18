@@ -43,7 +43,6 @@
           "title": "Path"
         },
         "shape": {
-          "default": null,
           "description": "The shape of the images. Must be a list of width and height. Example: `[512, 512]`",
           "items": {
             "type": "integer"
@@ -81,7 +80,8 @@
         }
       },
       "required": [
-        "path"
+        "path",
+        "shape"
       ],
       "title": "IrisImages",
       "type": "object"

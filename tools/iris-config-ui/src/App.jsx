@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import { resolvePropSchema as resolvePropSchemaFromUtils } from './schema-utils'
 import Form, { withTheme } from '@rjsf/core'
 import validator from '@rjsf/validator-ajv8'
 
@@ -109,6 +110,32 @@ export default function App(){
   // Custom ArrayFieldTemplate to render a clearer add button and nicer item layout
   const ArrayFieldTemplate = useCallback(function ArrayFieldTemplate(props){
     const { items, canAdd, onAddClick, uiSchema, title, description, idSchema } = props
+    // Special-case layout for `shape` arrays: render the two numeric inputs on a
+    // single row (side-by-side) and hide per-item Remove buttons. Detect by
+    // title or idSchema path to avoid relying on uiSchema contents.
+    const isShapeArray = (title && String(title).toLowerCase() === 'shape') || (idSchema && idSchema.$id && String(idSchema.$id).toLowerCase().includes('shape'))
+
+    if(isShapeArray){
+      return (
+        <div className="array-field">
+          {title ? <h6 id={idSchema && idSchema.$id} className="array-field-title">{title}</h6> : null}
+          {description ? <DescriptionField id={`${idSchema && idSchema.$id}__desc`} description={description} /> : null}
+          <div className="row g-2">
+            {items && items.map((it, idx) => (
+              <div className="col-6 array-item" key={it.key || idx}>
+                {it.children}
+              </div>
+            ))}
+          </div>
+          {canAdd ? (
+            <div className="array-item-add mt-2">
+              <button type="button" className="btn btn-outline-primary fullwidth-add" onClick={onAddClick}>{(uiSchema && uiSchema['ui:options'] && uiSchema['ui:options'].addButtonText) || '+ Add'}</button>
+            </div>
+          ) : null}
+        </div>
+      )
+    }
+
     return (
       <div className="array-field">
         {title ? <h6 id={idSchema && idSchema.$id} className="array-field-title">{title}</h6> : null}
@@ -166,7 +193,7 @@ export default function App(){
         if(lastIndex < raw.length) frag.appendChild(document.createTextNode(raw.slice(lastIndex)))
         if(frag.childNodes.length > 0){ n.innerHTML = ''; n.appendChild(frag); n.dataset.codeProcessed = '1' }
       })
-    }catch(e){ console.debug('description-postprocess', e) }
+    }catch(e){ /* ignore description postprocess errors */ }
   }, [schema])
 
   // Commit current tab's local form data into the global formData
@@ -180,21 +207,17 @@ export default function App(){
         }
         const currentGlobal = JSON.stringify(formData || {})
         const candidate = JSON.stringify({ ...(formData||{}), ...(g||{}) })
-        console.debug('blur-commit merge check currentGlobal vs candidate', currentGlobal, candidate)
-        if(currentGlobal !== candidate){
-          console.debug('blur-commit: applying merge for General', g)
+          if(currentGlobal !== candidate){
           setFormData(prev => ({ ...(prev||{}), ...(g||{}) }))
         }
       } else {
         const currentGlobal = JSON.stringify(formData && formData[tab] ? formData[tab] : {})
         const candidate = JSON.stringify(local || {})
-        console.debug('blur-commit merge check for tab', tab, 'current vs candidate', currentGlobal, candidate)
-        if(currentGlobal !== candidate){
-          console.debug('blur-commit: applying merge for tab', tab)
+          if(currentGlobal !== candidate){
           setFormData(prev => ({ ...(prev||{}), [tab]: local }))
         }
       }
-    }catch(e){ console.debug('commitTabToGlobal error', e) }
+    }catch(e){ /* commitTabToGlobal error ignored */ }
   }
 
   useEffect(()=>{
@@ -265,22 +288,7 @@ export default function App(){
 
   // Resolve a property schema for a top-level property. If it's a $ref to $defs, return the referenced def schema.
   function resolvePropSchema(propSchema){
-    if(!propSchema) return {}
-    const defs = schema && schema.$defs ? schema.$defs : undefined
-    if(propSchema.$ref && typeof propSchema.$ref === 'string'){
-      const m = propSchema.$ref.match(/^#\/$defs\/(.+)$/)
-      if(m && defs && defs[m[1]]){
-        const cloned = JSON.parse(JSON.stringify(defs[m[1]]))
-        return Object.assign({ $defs: defs }, cloned)
-      }
-    }
-    try{
-      const cloned = JSON.parse(JSON.stringify(propSchema))
-      if(defs) cloned.$defs = defs
-      return cloned
-    }catch(e){
-      return propSchema
-    }
+    return resolvePropSchemaFromUtils(propSchema, schema && schema.$defs)
   }
 
   // Sanitize schemas for RJSF/AJV: remove empty anyOf arrays which cause AJV validation errors
@@ -293,7 +301,6 @@ export default function App(){
         Object.keys(obj).forEach(k=>{
           const v = obj[k]
           if(k === 'anyOf' && Array.isArray(v) && v.length === 0){
-            console.debug('sanitizeSchema: removing empty anyOf at', obj)
             delete obj[k]
             return
           }
@@ -311,7 +318,17 @@ export default function App(){
     const required = []
     keys.forEach(k=>{
       if(schema.properties && schema.properties[k]){
+        try{
+          // Diagnostic: log the original property and the resolved prop to
+          // understand why some subproperties might be missing at runtime.
+      if(k === 'images'){
+        // intentionally quiet in production
+          }
+        }catch(e){/*ignore*/}
         props[k] = resolvePropSchema(schema.properties[k])
+        if(k === 'images'){
+          // resolved images prop handled silently
+        }
         if(Array.isArray(schema.required) && schema.required.includes(k)) required.push(k)
       }
     })
@@ -469,7 +486,7 @@ export default function App(){
             },
             default: []
           }
-        }catch(e){ console.debug('force array path failed', e) }
+        }catch(e){ /* failed to force array path — ignore */ }
       }
 
       // debug: detect any anyOf with zero items which breaks AJV
@@ -488,11 +505,9 @@ export default function App(){
           })
         }
         scan(tabSchema)
-      }catch(e){ console.debug('schema-scan failed', e) }
+      }catch(e){ /* schema scan failed, ignore */ }
 
-      if(tab === 'General'){
-        try{ console.debug('General tab schema (sanitized):', tabSchemaSanitized) }catch(e){}
-      }
+      // no debug logging here
       map[tab] = tabSchemaSanitized
     })
     return map
@@ -554,10 +569,10 @@ export default function App(){
                 <div className="accordion" id="irisAccordion">
                   {EDIT_TABS.map(tab => {
                     const currentTabData = (tabFormData && tabFormData[tab]) || (tabFormDataRef.current && tabFormDataRef.current[tab]) || {}
-                    formRenderCountsRef.current[tab] = (formRenderCountsRef.current[tab] || 0) + 1
-                    console.debug(`Form render (${tab}) count:`, formRenderCountsRef.current[tab])
+                                    formRenderCountsRef.current[tab] = (formRenderCountsRef.current[tab] || 0) + 1
                     const tabSchemaSanitized = schemasByTab[tab] || {}
                     const tabUi = uiByTab[tab] || {}
+                    // no debug logging in render
                     return (
                       <div className="accordion-item" key={tab}>
                         <h2 className="accordion-header" id={`heading-${tab}`}>
@@ -575,7 +590,7 @@ export default function App(){
                         </h2>
                         <div id={`collapse-${tab}`} className={`accordion-collapse collapse ${openPanels.includes(tab) ? 'show' : ''}`} aria-labelledby={`heading-${tab}`}>
                           <div className="accordion-body" onBlurCapture={()=>{
-                            try{ commitTabToGlobal(tab) }catch(e){console.debug('commit on blur failed', e)}
+                            try{ commitTabToGlobal(tab) }catch(e){ /* commit on blur failed */ }
                           }}>
                             <Form
                               schema={tabSchemaSanitized}
