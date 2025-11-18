@@ -197,7 +197,7 @@ export default function App(){
   }, [schema])
 
   // Commit current tab's local form data into the global formData
-  function commitTabToGlobal(tab){
+  function commitTabToGlobal(tab, attempts = 0){
     try{
       const local = (tabFormDataRef.current && tabFormDataRef.current[tab]) || tabFormData[tab] || {}
       if(tab === 'General'){
@@ -205,10 +205,114 @@ export default function App(){
         if(g.images && g.images.path !== undefined){
           g.images = { ...g.images, path: arrayToPathValue(g.images.path) }
         }
+        // If any image subkeys are still undefined, allow a few short retries
+        // to give RJSF/widget onChange handlers time to propagate into
+        // tabFormDataRef.current. This avoids losing values when blur fires
+        // before onChange completes.
+        try{
+          if(g.images){
+            // If the tab-local object lacks an explicit metadata/thumbnails key
+            // but the UI toggle for that field is unchecked, explicitly set
+            // the key to null so merging removes any previous value.
+            try{
+              const ensureToggleNull = (suffix, keyName) => {
+                try{
+                  // try common enabled-checkbox id we create in the widget
+                  const chk = document.querySelector(`[id*='${suffix}__enabled'], [id*='${suffix}__anyof_select'], [id*='${suffix}__select']`)
+                  if(chk && (chk.type === 'checkbox' || chk.getAttribute('role') === 'switch')){
+                    if(!chk.checked){
+                      g.images[keyName] = null
+                      if(tabFormDataRef && tabFormDataRef.current && tabFormDataRef.current['General']){
+                        try{ const cur = tabFormDataRef.current['General']; if(!cur.images) cur.images = {}; cur.images[keyName] = null; tabFormDataRef.current['General'] = cur }catch(e){}
+                      }
+                    }
+                  }
+                }catch(e){}
+              }
+              ensureToggleNull('images_metadata','metadata')
+              ensureToggleNull('images_thumbnails','thumbnails')
+            }catch(e){}
+            const hasUndef = Object.values(g.images).some(v => v === undefined)
+            if(hasUndef && attempts < 3){
+              try{ console.debug('commitTabToGlobal: detected undefined image keys, retrying', {tab, attempts}) }catch(e){}
+              setTimeout(()=>commitTabToGlobal(tab, attempts+1), 60)
+              return
+            }
+          }
+        }catch(e){}
+          // If toggling widgets didn't propagate their value to tabFormDataRef
+          // (race or widget onChange edge), attempt to read the corresponding
+          // inputs from the DOM as a fallback. RJSF typically uses ids like
+          // 'root_images_thumbnails' for the field; we try a suffix match to be
+          // resilient to id prefixes.
+          try{
+            if(g.images){
+              const findValueFor = (suffix) => {
+                try{
+                  // search any element whose id contains the suffix
+                  const nodes = Array.from(document.querySelectorAll(`[id*='${suffix}']`))
+                  for(const n of nodes){
+                    const tag = (n.tagName || '').toLowerCase()
+                    if(tag === 'input' || tag === 'textarea'){
+                      const type = (n.getAttribute && n.getAttribute('type')) || ''
+                      if(type === 'checkbox' || type === 'radio') continue // skip checkboxes (they have value 'on')
+                      if(n.value !== undefined && n.value !== '') return n.value
+                    }
+                    if(tag === 'select'){
+                      const val = n.value; if(val && val !== '') return val
+                    }
+                    // if container, look for a textual input/select/textarea inside
+                    const input = n.querySelector && (n.querySelector('input[type=text]') || n.querySelector('input[type=url]') || n.querySelector('input[type=search]') || n.querySelector('input[type=email]') || n.querySelector('textarea') || n.querySelector('input'))
+                    if(input && input.value !== undefined){ const itype = (input.getAttribute && input.getAttribute('type')) || ''; if(itype === 'checkbox' || itype === 'radio'){} else { if(input.value !== '') return input.value } }
+                    const sel = n.querySelector && n.querySelector('select')
+                    if(sel && sel.value) return sel.value
+                  }
+                  // also try inputs whose name attribute contains the suffix, but skip checkboxes/radios
+                  const byName = Array.from(document.querySelectorAll(`input[name*='${suffix}'], textarea[name*='${suffix}'], select[name*='${suffix}']`))
+                  for(const n of byName){ const type = (n.getAttribute && n.getAttribute('type')) || ''; if(type === 'checkbox' || type === 'radio') continue; if(n.value && n.value !== '') return n.value }
+                }catch(e){}
+                return undefined
+              }
+              try{
+                const vThumb = findValueFor('images_thumbnails')
+                if(vThumb !== undefined && vThumb !== null) g.images.thumbnails = vThumb
+              }catch(e){}
+              try{
+                const vMeta = findValueFor('images_metadata')
+                if(vMeta !== undefined && vMeta !== null) g.images.metadata = vMeta
+              }catch(e){}
+            }
+          }catch(e){}
         const currentGlobal = JSON.stringify(formData || {})
-        const candidate = JSON.stringify({ ...(formData||{}), ...(g||{}) })
-          if(currentGlobal !== candidate){
-          setFormData(prev => ({ ...(prev||{}), ...(g||{}) }))
+        // Merge at top-level but deep-merge images so subfields are preserved
+        const merged = { ...(formData||{}), ...(g||{}) }
+        if(g.images){
+          const prevImgs = (formData && formData.images) ? formData.images : {}
+          // Only copy keys from g.images that are not `undefined` so we don't
+          // unintentionally overwrite existing values with undefined.
+          const entries = Object.entries(g.images || {}).filter(([k,v]) => v !== undefined)
+          const safeG = Object.fromEntries(entries)
+          merged.images = { ...prevImgs, ...safeG }
+        }
+        const candidate = JSON.stringify(merged)
+        // DEBUG: print merge details to help trace missing subfields. Use JSON.stringify
+        try{
+          const safe = (v) => {
+            try{ return JSON.stringify(v) }catch(e){ return String(v) }
+          }
+          console.debug('commitTabToGlobal: tabFormDataRef=', safe(tabFormDataRef.current))
+          console.debug('commitTabToGlobal: local=', safe(local))
+          console.debug('commitTabToGlobal: General g=', safe(g))
+          console.debug('commitTabToGlobal: merged=', safe(merged))
+          try{
+            const ig = g.images || {}
+            const im = merged.images || {}
+            console.debug('images keys in g:', Object.keys(ig), 'values:', { thumbnails: ig.thumbnails, metadata: ig.metadata })
+            console.debug('images keys in merged:', Object.keys(im), 'values:', { thumbnails: im.thumbnails, metadata: im.metadata })
+          }catch(e){}
+        }catch(e){}
+        if(currentGlobal !== candidate){
+          setFormData(merged)
         }
       } else {
         const currentGlobal = JSON.stringify(formData && formData[tab] ? formData[tab] : {})
@@ -368,7 +472,11 @@ export default function App(){
     if(!schema) return
     const next = {}
     const imagesVal = formData.images || {}
+    // Normalize thumbnails/metadata values for the per-tab form so they match
+    // the nullable-string schema we provide: convert non-string values to null
     const imagesForForm = { ...imagesVal, path: pathValueToArray(imagesVal.path) }
+    imagesForForm.thumbnails = (typeof imagesForForm.thumbnails === 'string') ? imagesForForm.thumbnails : null
+    imagesForForm.metadata = (typeof imagesForForm.metadata === 'string') ? imagesForForm.metadata : null
     if(!Array.isArray(imagesForForm.path) || imagesForForm.path.length === 0){ imagesForForm.path = [{key:'', value:''}] }
 
     // Only include fields in the per-tab formData when they exist in the global
@@ -451,7 +559,163 @@ export default function App(){
     )
   }, [])
 
+  // Custom optional-path field: renders a toggle and, when enabled, a text input.
+  // This is useful for schema entries like `thumbnails` or `metadata` which can
+  // be either a string path or `false`/null. The widget emits either a string
+  // (the path) or `false` when disabled.
+  const OptionalPathField = useCallback(function OptionalPathField(props){
+    const { id, formData, onChange, schema, uiSchema = {} } = props
+    const [enabled, setEnabled] = React.useState(typeof formData === 'string')
+    const [val, setVal] = React.useState(typeof formData === 'string' ? formData : '')
+
+    React.useEffect(()=>{
+      setEnabled(typeof formData === 'string')
+      setVal(typeof formData === 'string' ? formData : '')
+    }, [formData])
+
+    const toggle = (now)=>{
+      setEnabled(now)
+      if(now){
+        try{ console.debug('OptionalPathField toggle ON id=', id, 'emitting value=', val || '') }catch(e){}
+        onChange(val || '')
+      }
+      else {
+        try{ console.debug('OptionalPathField toggle OFF id=', id, 'emitting null') }catch(e){}
+        // clear any lingering textual input in the DOM so our DOM-fallback
+        // doesn't pick up the previous value when committing
+        try{
+          const el = document.getElementById(id)
+          if(el && (el.tagName||'').toLowerCase() === 'input'){
+            el.value = ''
+            el.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+        }catch(e){}
+        onChange(null)
+      }
+    }
+
+    const onValChange = (v)=>{ setVal(v); onChange(v) }
+    // attempt to eagerly mirror changes into tabFormDataRef to avoid races
+    React.useEffect(()=>{
+      try{
+        const suffix = id && id.toString()
+        if(!suffix) return
+        const isThumb = suffix.endsWith('images_thumbnails') || suffix.endsWith('images_thumbnails__enabled') || suffix.includes('images_thumbnails')
+        const isMeta = suffix.endsWith('images_metadata') || suffix.endsWith('images_metadata__enabled') || suffix.includes('images_metadata')
+        if(tabFormDataRef && tabFormDataRef.current && tabFormDataRef.current['General'] && (isThumb || isMeta)){
+          const cur = tabFormDataRef.current['General'] || {}
+          if(!cur.images) cur.images = {}
+          if(isThumb) cur.images.thumbnails = (typeof formData === 'string' ? formData : (typeof val === 'string' ? val : cur.images.thumbnails))
+          if(isMeta) cur.images.metadata = (typeof formData === 'string' ? formData : (typeof val === 'string' ? val : cur.images.metadata))
+          tabFormDataRef.current['General'] = cur
+        }
+      }catch(e){}
+    }, [val, id])
+
+    return (
+      <div>
+        <div className="form-check form-switch mb-2">
+          <input id={id + '__enabled'} className="form-check-input" type="checkbox" role="switch" checked={enabled} onChange={e=>toggle(e.target.checked)} />
+          <label className="form-check-label" htmlFor={id + '__enabled'}>{(uiSchema && uiSchema['ui:title']) || (schema && schema.title) || 'Enable'}</label>
+        </div>
+        {enabled ? (
+          <div>
+            <input id={id} type="text" className="form-control" value={val} placeholder={(uiSchema && uiSchema['ui:placeholder']) || ''} onChange={e=>onValChange(e.target.value)} />
+            {uiSchema && uiSchema['ui:help'] ? <div className="form-text">{uiSchema['ui:help']}</div> : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }, [])
+
+  // Widget variant for OptionalPath so uiSchema can use `ui:widget` instead
+  const OptionalPathWidget = useCallback(function OptionalPathWidget(props){
+    // widget props: { id, value, onChange, schema, uiSchema }
+    const { id, value, onChange, schema, uiSchema = {} } = props
+    const [enabled, setEnabled] = React.useState(typeof value === 'string')
+    const [val, setVal] = React.useState(typeof value === 'string' ? value : '')
+
+    React.useEffect(()=>{
+      setEnabled(typeof value === 'string')
+      setVal(typeof value === 'string' ? value : '')
+    }, [value])
+
+    const toggle = (now) => {
+      setEnabled(now)
+      if(now){
+        try{ console.debug('OptionalPathWidget toggle ON id=', id, 'emitting value=', val || '') }catch(e){}
+        onChange(val || '')
+        try{
+          /* mirror into tabFormDataRef */
+          if(tabFormDataRef && tabFormDataRef.current){
+            const cur = tabFormDataRef.current['General'] || {}
+            if(!cur.images) cur.images = {}
+            if(id && (id.includes('images_metadata') || id.endsWith('images_metadata'))) cur.images.metadata = val || ''
+            if(id && (id.includes('images_thumbnails') || id.endsWith('images_thumbnails'))) cur.images.thumbnails = val || ''
+            tabFormDataRef.current['General'] = cur
+            try{ console.debug('OptionalPathWidget mirrored to tabFormDataRef', JSON.stringify(tabFormDataRef.current['General'].images)) }catch(e){}
+          }
+        }catch(e){}
+      } else {
+        try{ console.debug('OptionalPathWidget toggle OFF id=', id, 'emitting null') }catch(e){}
+        // clear underlying text input to avoid DOM-fallback reading stale value
+        try{
+          const el = document.getElementById(id)
+          if(el && (el.tagName||'').toLowerCase() === 'input'){
+            el.value = ''
+            el.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+        }catch(e){}
+        onChange(null)
+        try{
+          if(tabFormDataRef && tabFormDataRef.current){
+            const cur = tabFormDataRef.current['General'] || {}
+            if(!cur.images) cur.images = {}
+            if(id && (id.includes('images_metadata') || id.endsWith('images_metadata'))) cur.images.metadata = null
+            if(id && (id.includes('images_thumbnails') || id.endsWith('images_thumbnails'))) cur.images.thumbnails = null
+            tabFormDataRef.current['General'] = cur
+            try{ console.debug('OptionalPathWidget mirrored OFF to tabFormDataRef', JSON.stringify(tabFormDataRef.current['General'].images)) }catch(e){}
+          }
+        }catch(e){}
+      }
+    }
+
+    const onValChange = (v)=>{ setVal(v); onChange(v) }
+    // mirror keystrokes into tabFormDataRef immediately to avoid blur races
+    React.useEffect(()=>{
+      try{
+        if(!id) return
+        const isThumb = id.includes('images_thumbnails')
+        const isMeta = id.includes('images_metadata')
+        if(tabFormDataRef && tabFormDataRef.current && tabFormDataRef.current['General'] && (isThumb || isMeta)){
+          const cur = tabFormDataRef.current['General']
+          if(!cur.images) cur.images = {}
+          if(isThumb) cur.images.thumbnails = (typeof value === 'string' ? value : cur.images.thumbnails)
+          if(isMeta) cur.images.metadata = (typeof value === 'string' ? value : cur.images.metadata)
+          tabFormDataRef.current['General'] = cur
+          try{ console.debug('OptionalPathWidget useEffect mirrored value to tabFormDataRef', isMeta?{metadata:cur.images.metadata}:{thumbnails:cur.images.thumbnails}) }catch(e){}
+        }
+      }catch(e){}
+    }, [value, id])
+
+    return (
+      <div>
+        <div className="form-check form-switch mb-2">
+          <input id={id + '__enabled'} className="form-check-input" type="checkbox" role="switch" checked={enabled} onChange={e=>toggle(e.target.checked)} />
+          <label className="form-check-label" htmlFor={id + '__enabled'}>{(uiSchema && uiSchema['ui:title']) || (schema && schema.title) || 'Enable'}</label>
+        </div>
+        {enabled ? (
+          <div>
+            <input id={id} type="text" className="form-control" value={val} placeholder={(uiSchema && uiSchema['ui:placeholder']) || ''} onChange={e=>onValChange(e.target.value)} />
+            {uiSchema && uiSchema['ui:help'] ? <div className="form-text">{uiSchema['ui:help']}</div> : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }, [])
+
   const fields = useMemo(()=>({ KeyValue: KeyValueField }), [KeyValueField])
+  const widgets = useMemo(()=>({ OptionalPath: OptionalPathWidget }), [OptionalPathWidget])
 
   // Memoize templates so we pass a stable object reference to RJSF and avoid
   // unnecessary internal re-initialization which can cause focus loss.
@@ -486,6 +750,22 @@ export default function App(){
             },
             default: []
           }
+          // Force thumbnails and metadata to a simple nullable-string type so
+          // RJSF doesn't render an anyOf selector. We replace whatever exists
+          // with a { type: ['string','null'], ... } form using available
+          // title/description/default when present.
+          try{
+            const imgProps = tabSchemaSanitized.properties.images.properties || {}
+            ['thumbnails','metadata'].forEach(pk => {
+              const p = imgProps[pk] || {}
+              const normalized = { type: ['string','null'] }
+                if(p.title) normalized.title = p.title
+                if(p.description) normalized.description = p.description
+                normalized.default = (p.default !== undefined) ? p.default : null
+              imgProps[pk] = normalized
+            })
+            tabSchemaSanitized.properties.images.properties = imgProps
+          }catch(e){ /* normalization failed, ignore */ }
         }catch(e){ /* failed to force array path — ignore */ }
       }
 
@@ -590,7 +870,9 @@ export default function App(){
                         </h2>
                         <div id={`collapse-${tab}`} className={`accordion-collapse collapse ${openPanels.includes(tab) ? 'show' : ''}`} aria-labelledby={`heading-${tab}`}>
                           <div className="accordion-body" onBlurCapture={()=>{
-                            try{ commitTabToGlobal(tab) }catch(e){ /* commit on blur failed */ }
+                            // Run commit slightly later to avoid races where RJSF onChange
+                            // hasn't updated tabFormDataRef.current yet when blur fires.
+                            try{ setTimeout(()=>{ commitTabToGlobal(tab) }, 50) }catch(e){ /* commit on blur failed */ }
                           }}>
                             <Form
                               schema={tabSchemaSanitized}
@@ -605,6 +887,7 @@ export default function App(){
                               onError={(err)=>console.log('Form errors', err)}
                               templates={templates}
                               fields={fields}
+                              widgets={widgets}
                             />
                           </div>
                         </div>

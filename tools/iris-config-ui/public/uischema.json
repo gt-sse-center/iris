@@ -35,7 +35,9 @@
       "ui:options": {
         "orderable": false
       }
-    }
+    },
+  "thumbnails": { "ui:widget": "OptionalPath", "ui:placeholder": "thumbnails/{id}.png", "ui:help": "Provide a thumbnail path containing {id} or disable." },
+  "metadata": { "ui:widget": "OptionalPath", "ui:placeholder": "metadata/{id}.json", "ui:help": "Optional metadata file (json/yaml)." }
   },
   "classes": {
     "ui:options": {
