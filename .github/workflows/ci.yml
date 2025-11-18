@@ -67,8 +67,11 @@ jobs:
 
       - name: Install Node.js dependencies
         working-directory: iris
+        env:
+          CYPRESS_INSTALL_BINARY: 0
         run: |
           # Use npm ci for cleaner installs in CI
+          # Skip Cypress binary download (installed separately later for E2E tests)
           npm ci || npm install
 
       - name: Build React/TypeScript frontend
