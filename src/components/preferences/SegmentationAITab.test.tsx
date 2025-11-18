@@ -53,8 +53,9 @@ describe('SegmentationAITab', () => {
       />
     );
 
-    // Check that n_estimators value is displayed
-    expect(screen.getByText('100')).toBeInTheDocument();
+    // Check that n_estimators value is displayed in the input field
+    const nEstimatorsInput = screen.getByTestId('input-n-estimators') as HTMLInputElement;
+    expect(nEstimatorsInput.value).toBe('100');
   });
 
   it('has correct CSS classes', () => {

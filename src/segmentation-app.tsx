@@ -20,6 +20,16 @@ const SegmentationApp: React.FC = () => {
       console.log('🚀 IRIS Segmentation: React SPA initialized');
     }
     
+    // Check if we should auto-open preferences (from admin navigation)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openPreferences') === 'true') {
+      setIsPreferencesOpen(true);
+      // Clean up URL parameter
+      urlParams.delete('openPreferences');
+      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+    
     // Wait for legacy JavaScript to load, then initialize
     const waitForLegacyScripts = setInterval(() => {
       if (window.init_segmentation) {
