@@ -97,4 +97,5 @@ export interface UserConfig {
 export interface UserConfigApiResponse {
   config: UserConfig;
   all_bands: string[];
+  is_admin: boolean;
 }
