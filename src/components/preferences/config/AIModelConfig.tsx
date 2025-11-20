@@ -1,95 +1,64 @@
 import React from 'react';
 import { FormInput, FormSlider, FormCheckbox, FormSelect } from './FormField';
 
-interface AIModelConfigProps {
+export interface AIModelConfigData {
   unverifiedThreshold: number;
-  setUnverifiedThreshold: (value: number) => void;
   aiModel: string;
-  setAiModel: (value: string) => void;
   bands: string;
-  setBands: (value: string) => void;
   trainRatio: number;
-  setTrainRatio: (value: number) => void;
   maxTrainPixels: number;
-  setMaxTrainPixels: (value: number) => void;
   nEstimators: number;
-  setNEstimators: (value: number) => void;
   maxDepth: number;
-  setMaxDepth: (value: number) => void;
   nLeaves: number;
-  setNLeaves: (value: number) => void;
   suppressionThreshold: number;
-  setSuppressionThreshold: (value: number) => void;
   suppressionFilterSize: number;
-  setSuppressionFilterSize: (value: number) => void;
   suppressionDefaultClass: number;
-  setSuppressionDefaultClass: (value: number) => void;
   useEdgeFilter: boolean;
-  setUseEdgeFilter: (value: boolean) => void;
   useSuperpixels: boolean;
-  setUseSuperpixels: (value: boolean) => void;
   useMeshgrid: boolean;
-  setUseMeshgrid: (value: boolean) => void;
-  meshgridCells: number;
-  setMeshgridCells: (value: number) => void;
+  meshgridCells: string;
 }
 
-const AIModelConfig: React.FC<AIModelConfigProps> = ({
-  unverifiedThreshold,
-  setUnverifiedThreshold,
-  aiModel,
-  setAiModel,
-  bands,
-  setBands,
-  trainRatio,
-  setTrainRatio,
-  maxTrainPixels,
-  setMaxTrainPixels,
-  nEstimators,
-  setNEstimators,
-  maxDepth,
-  setMaxDepth,
-  nLeaves,
-  setNLeaves,
-  suppressionThreshold,
-  setSuppressionThreshold,
-  suppressionFilterSize,
-  setSuppressionFilterSize,
-  suppressionDefaultClass,
-  setSuppressionDefaultClass,
-  useEdgeFilter,
-  setUseEdgeFilter,
-  useSuperpixels,
-  setUseSuperpixels,
-  useMeshgrid,
-  setUseMeshgrid,
-  meshgridCells,
-  setMeshgridCells,
-}) => {
+interface AIModelConfigProps {
+  config: AIModelConfigData;
+  onChange: (config: AIModelConfigData) => void;
+}
+
+const AIModelConfig: React.FC<AIModelConfigProps> = ({ config, onChange }) => {
+  const updateField = <K extends keyof AIModelConfigData>(field: K, value: AIModelConfigData[K]) => {
+    onChange({ ...config, [field]: value });
+  };
+
   return (
     <>
       <FormInput
         label="Unverified Threshold"
-        value={unverifiedThreshold}
-        onChange={(value) => setUnverifiedThreshold(parseInt(value) || 0)}
+        value={config.unverifiedThreshold}
+        onChange={(value) => updateField('unverifiedThreshold', parseInt(value) || 0)}
         type="number"
         description="TODO Number of unverified users contributing masks above which to tag an image 'unverified'."
       />
 
       <FormSelect
-        label="IrisSegAIModel"
+        label="AI Model *"
         options={['IrisSegAIModel*']}
-        value={aiModel}
-        onChange={setAiModel}
+        value={config.aiModel}
+        onChange={(value) => updateField('aiModel', value)}
         required
       />
 
-      <FormInput label="Bands" value={bands} onChange={setBands} type="text" required />
+      <FormInput
+        label="Bands"
+        value={config.bands}
+        onChange={(value) => updateField('bands', value)}
+        type="text"
+        required
+      />
 
       <FormSlider
         label="Train Ratio"
-        value={trainRatio}
-        onChange={setTrainRatio}
+        value={config.trainRatio}
+        onChange={(value) => updateField('trainRatio', value)}
         min={0}
         max={1}
         step={0.01}
@@ -97,23 +66,44 @@ const AIModelConfig: React.FC<AIModelConfigProps> = ({
 
       <FormSlider
         label="Max Train Pixels"
-        value={maxTrainPixels}
-        onChange={setMaxTrainPixels}
+        value={config.maxTrainPixels}
+        onChange={(value) => updateField('maxTrainPixels', value)}
         min={0}
         max={100000}
         step={1000}
       />
 
-      <FormSlider label="N Estimators" value={nEstimators} onChange={setNEstimators} min={1} max={200} step={1} />
+      <FormSlider
+        label="N Estimators"
+        value={config.nEstimators}
+        onChange={(value) => updateField('nEstimators', value)}
+        min={1}
+        max={200}
+        step={1}
+      />
 
-      <FormSlider label="Max Depth" value={maxDepth} onChange={setMaxDepth} min={1} max={100} step={1} />
+      <FormSlider
+        label="Max Depth"
+        value={config.maxDepth}
+        onChange={(value) => updateField('maxDepth', value)}
+        min={1}
+        max={100}
+        step={1}
+      />
 
-      <FormSlider label="N Leaves" value={nLeaves} onChange={setNLeaves} min={1} max={100} step={1} />
+      <FormSlider
+        label="N Leaves"
+        value={config.nLeaves}
+        onChange={(value) => updateField('nLeaves', value)}
+        min={1}
+        max={100}
+        step={1}
+      />
 
       <FormSlider
         label="Suppression Threshold"
-        value={suppressionThreshold}
-        onChange={setSuppressionThreshold}
+        value={config.suppressionThreshold}
+        onChange={(value) => updateField('suppressionThreshold', value)}
         min={0}
         max={100}
         step={1}
@@ -121,29 +111,41 @@ const AIModelConfig: React.FC<AIModelConfigProps> = ({
 
       <FormInput
         label="Suppression Filter Size"
-        value={suppressionFilterSize}
-        onChange={(value) => setSuppressionFilterSize(parseInt(value) || 0)}
+        value={config.suppressionFilterSize}
+        onChange={(value) => updateField('suppressionFilterSize', parseInt(value) || 5)}
         type="number"
       />
 
       <FormInput
         label="Suppression Default Class"
-        value={suppressionDefaultClass}
-        onChange={(value) => setSuppressionDefaultClass(parseInt(value) || 0)}
+        value={config.suppressionDefaultClass}
+        onChange={(value) => updateField('suppressionDefaultClass', parseInt(value) || 0)}
         type="number"
       />
 
-      <FormCheckbox label="Use Edge Filter" checked={useEdgeFilter} onChange={setUseEdgeFilter} />
+      <FormCheckbox
+        label="Use Edge Filter"
+        checked={config.useEdgeFilter}
+        onChange={(value) => updateField('useEdgeFilter', value)}
+      />
 
-      <FormCheckbox label="Use Superpixels" checked={useSuperpixels} onChange={setUseSuperpixels} />
+      <FormCheckbox
+        label="Use Superpixels"
+        checked={config.useSuperpixels}
+        onChange={(value) => updateField('useSuperpixels', value)}
+      />
 
-      <FormCheckbox label="Use Meshgrid" checked={useMeshgrid} onChange={setUseMeshgrid} />
+      <FormCheckbox
+        label="Use Meshgrid"
+        checked={config.useMeshgrid}
+        onChange={(value) => updateField('useMeshgrid', value)}
+      />
 
       <FormInput
         label="Meshgrid Cells"
-        value={meshgridCells}
-        onChange={(value) => setMeshgridCells(parseInt(value) || 0)}
-        type="number"
+        value={config.meshgridCells}
+        onChange={(value) => updateField('meshgridCells', value)}
+        type="text"
       />
     </>
   );

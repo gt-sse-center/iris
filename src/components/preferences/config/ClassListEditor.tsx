@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface ClassEntry {
   id: number;
@@ -6,9 +6,20 @@ interface ClassEntry {
   description: string;
 }
 
-const ClassListEditor: React.FC = () => {
+const ClassListEditor = forwardRef<any, {}>((props, ref) => {
   const [classes, setClasses] = useState<ClassEntry[]>([]);
   const [nextId, setNextId] = useState(1);
+
+  const getData = () => {
+    return classes.map((cls) => ({
+      name: cls.name,
+      description: cls.description,
+    }));
+  };
+
+  useImperativeHandle(ref, () => ({
+    getData,
+  }));
 
   const addClass = () => {
     setClasses([...classes, { id: nextId, name: '', description: '' }]);
@@ -24,12 +35,7 @@ const ClassListEditor: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    const classesData = classes.map((cls) => ({
-      name: cls.name,
-      description: cls.description,
-      colour: [255, 255, 255, 0], // Default white, will be customizable later
-      user_colour: [0, 255, 255, 70], // Default cyan with transparency
-    }));
+    const classesData = getData();
     console.log('Classes Data:', JSON.stringify(classesData, null, 2));
   };
 
@@ -127,6 +133,8 @@ const ClassListEditor: React.FC = () => {
       </button>
     </div>
   );
-};
+});
+
+ClassListEditor.displayName = 'ClassListEditor';
 
 export default ClassListEditor;

@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewGroupListEditor from './ViewGroupListEditor';
 
-const ViewGroupsSection: React.FC = () => {
+const ViewGroupsSection = forwardRef<any, {}>((props, ref) => {
+  const editorRef = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    getData: () => editorRef.current?.getData() || {},
+  }));
+
   return (
     <>
       <div
@@ -41,11 +47,13 @@ const ViewGroupsSection: React.FC = () => {
           <small style={{ color: '#666', display: 'block', marginBottom: '16px' }}>
             The 'default' group is required and will be shown first
           </small>
-          <ViewGroupListEditor />
+          <ViewGroupListEditor ref={editorRef} />
         </div>
       </div>
     </>
   );
-};
+});
+
+ViewGroupsSection.displayName = 'ViewGroupsSection';
 
 export default ViewGroupsSection;

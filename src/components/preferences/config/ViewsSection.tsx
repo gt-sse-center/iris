@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewListEditor from './ViewListEditor';
 
-const ViewsSection: React.FC = () => {
+const ViewsSection = forwardRef<any, {}>((props, ref) => {
+  const editorRef = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    getData: () => editorRef.current?.getData() || {},
+  }));
+
   return (
     <>
       <div
@@ -24,11 +30,13 @@ const ViewsSection: React.FC = () => {
             key is the name of the view and the value another dictionary containing properties for the view.
           </small>
           <h4 style={{ marginBottom: '16px' }}>Views</h4>
-          <ViewListEditor />
+          <ViewListEditor ref={editorRef} />
         </div>
       </div>
     </>
   );
-};
+});
+
+ViewsSection.displayName = 'ViewsSection';
 
 export default ViewsSection;

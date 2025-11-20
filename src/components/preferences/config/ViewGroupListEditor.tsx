@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface ViewGroupEntry {
   id: number;
@@ -6,9 +6,20 @@ interface ViewGroupEntry {
   views: string[];
 }
 
-const ViewGroupListEditor: React.FC = () => {
+const ViewGroupListEditor = forwardRef<any, {}>((props, ref) => {
   const [groups, setGroups] = useState<ViewGroupEntry[]>([]);
   const [nextId, setNextId] = useState(1);
+
+  const getData = () => {
+    return groups.reduce((acc, group) => {
+      acc[group.key] = group.views;
+      return acc;
+    }, {} as Record<string, string[]>);
+  };
+
+  useImperativeHandle(ref, () => ({
+    getData,
+  }));
 
   const addGroup = () => {
     setGroups([...groups, { id: nextId, key: '', views: [] }]);
@@ -24,10 +35,7 @@ const ViewGroupListEditor: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    const groupsData = groups.reduce((acc, group) => {
-      acc[group.key] = group.views;
-      return acc;
-    }, {} as Record<string, string[]>);
+    const groupsData = getData();
     console.log('View Groups Data:', JSON.stringify(groupsData, null, 2));
   };
 
@@ -114,6 +122,8 @@ const ViewGroupListEditor: React.FC = () => {
       </button>
     </div>
   );
-};
+});
+
+ViewGroupListEditor.displayName = 'ViewGroupListEditor';
 
 export default ViewGroupListEditor;

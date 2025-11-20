@@ -1,57 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { FormInput, FormRadioGroup, FormCheckbox } from './FormField';
 import MaskAreaConfig from './MaskAreaConfig';
-import AIModelConfig from './AIModelConfig';
+import AIModelConfig, { AIModelConfigData } from './AIModelConfig';
 
-const SegmentationSection: React.FC = () => {
+const SegmentationSection = forwardRef<any, {}>((props, ref) => {
   // Basic Configuration
   const [path, setPath] = useState('');
-  const [maskEnum, setMaskEnum] = useState('integer');
+  const [maskEnum, setMaskEnum] = useState('rgb');
   const [maskArea, setMaskArea] = useState('Mask Area option 2');
   const [maskAreaCoords, setMaskAreaCoords] = useState<number[]>([0, 0, 0, 0]);
   const [scoreEnum, setScoreEnum] = useState('f1');
   const [prioritiseUnmarked, setPrioritiseUnmarked] = useState(true);
 
   // AI Model Configuration
-  const [unverifiedThreshold, setUnverifiedThreshold] = useState(1);
-  const [aiModel, setAiModel] = useState('IrisSegAIModel*');
-  const [bands, setBands] = useState('');
-  const [trainRatio, setTrainRatio] = useState(0.8);
-  const [maxTrainPixels, setMaxTrainPixels] = useState(20000);
-  const [nEstimators, setNEstimators] = useState(20);
-  const [maxDepth, setMaxDepth] = useState(10);
-  const [nLeaves, setNLeaves] = useState(10);
-  const [suppressionThreshold, setSuppressionThreshold] = useState(0);
-  const [suppressionFilterSize, setSuppressionFilterSize] = useState(0);
-  const [suppressionDefaultClass, setSuppressionDefaultClass] = useState(0);
-  const [useEdgeFilter, setUseEdgeFilter] = useState(false);
-  const [useSuperpixels, setUseSuperpixels] = useState(false);
-  const [useMeshgrid, setUseMeshgrid] = useState(false);
-  const [meshgridCells, setMeshgridCells] = useState(0);
+  const [aiConfig, setAiConfig] = useState<AIModelConfigData>({
+    unverifiedThreshold: 1,
+    aiModel: 'IrisSegAIModel*',
+    bands: '',
+    trainRatio: 0.8,
+    maxTrainPixels: 20000,
+    nEstimators: 20,
+    maxDepth: 10,
+    nLeaves: 10,
+    suppressionThreshold: 0,
+    suppressionFilterSize: 5,
+    suppressionDefaultClass: 0,
+    useEdgeFilter: false,
+    useSuperpixels: false,
+    useMeshgrid: false,
+    meshgridCells: '3x3',
+  });
 
-  const handleSubmit = () => {
-    const data = {
+  const getData = () => {
+    return {
       path,
       mask_encoding: maskEnum,
       mask_area: maskArea,
       score: scoreEnum,
-      prioritise_unmarked: prioritiseUnmarked,
-      unverified_threshold: unverifiedThreshold,
-      ai_model: aiModel,
-      bands,
-      train_ratio: trainRatio,
-      max_train_pixels: maxTrainPixels,
-      n_estimators: nEstimators,
-      max_depth: maxDepth,
-      n_leaves: nLeaves,
-      suppression_threshold: suppressionThreshold,
-      suppression_filter_size: suppressionFilterSize,
-      suppression_default_class: suppressionDefaultClass,
-      use_edge_filter: useEdgeFilter,
-      use_superpixels: useSuperpixels,
-      use_meshgrid: useMeshgrid,
-      meshgrid_cells: meshgridCells,
+      prioritise_unmarked_images: prioritiseUnmarked,
+      unverified_threshold: aiConfig.unverifiedThreshold,
+      ai_model: {
+        bands: aiConfig.bands,
+        train_ratio: aiConfig.trainRatio,
+        max_train_pixels: aiConfig.maxTrainPixels,
+        n_estimators: aiConfig.nEstimators,
+        max_depth: aiConfig.maxDepth,
+        n_leaves: aiConfig.nLeaves,
+        suppression_threshold: aiConfig.suppressionThreshold,
+        suppression_filter_size: aiConfig.suppressionFilterSize,
+        suppression_default_class: aiConfig.suppressionDefaultClass,
+        use_edge_filter: aiConfig.useEdgeFilter,
+        use_superpixels: aiConfig.useSuperpixels,
+        use_meshgrid: aiConfig.useMeshgrid,
+        meshgrid_cells: aiConfig.meshgridCells,
+      },
     };
+  };
+
+  useImperativeHandle(ref, () => ({
+    getData,
+  }));
+
+  const handleSubmit = () => {
+    const data = getData();
     console.log('Segmentation Data:', JSON.stringify(data, null, 2));
   };
 
@@ -111,38 +122,7 @@ const SegmentationSection: React.FC = () => {
             description="Mode to serve up images with the lowest number of annotations when user asks for next image."
           />
 
-          <AIModelConfig
-            unverifiedThreshold={unverifiedThreshold}
-            setUnverifiedThreshold={setUnverifiedThreshold}
-            aiModel={aiModel}
-            setAiModel={setAiModel}
-            bands={bands}
-            setBands={setBands}
-            trainRatio={trainRatio}
-            setTrainRatio={setTrainRatio}
-            maxTrainPixels={maxTrainPixels}
-            setMaxTrainPixels={setMaxTrainPixels}
-            nEstimators={nEstimators}
-            setNEstimators={setNEstimators}
-            maxDepth={maxDepth}
-            setMaxDepth={setMaxDepth}
-            nLeaves={nLeaves}
-            setNLeaves={setNLeaves}
-            suppressionThreshold={suppressionThreshold}
-            setSuppressionThreshold={setSuppressionThreshold}
-            suppressionFilterSize={suppressionFilterSize}
-            setSuppressionFilterSize={setSuppressionFilterSize}
-            suppressionDefaultClass={suppressionDefaultClass}
-            setSuppressionDefaultClass={setSuppressionDefaultClass}
-            useEdgeFilter={useEdgeFilter}
-            setUseEdgeFilter={setUseEdgeFilter}
-            useSuperpixels={useSuperpixels}
-            setUseSuperpixels={setUseSuperpixels}
-            useMeshgrid={useMeshgrid}
-            setUseMeshgrid={setUseMeshgrid}
-            meshgridCells={meshgridCells}
-            setMeshgridCells={setMeshgridCells}
-          />
+          <AIModelConfig config={aiConfig} onChange={setAiConfig} />
 
           <button
             onClick={handleSubmit}
@@ -163,6 +143,8 @@ const SegmentationSection: React.FC = () => {
       </div>
     </>
   );
-};
+});
+
+SegmentationSection.displayName = 'SegmentationSection';
 
 export default SegmentationSection;

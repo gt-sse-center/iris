@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import PathListEditor from './PathListEditor';
 
 interface GeneralSectionProps {
   onDataChange?: (data: any) => void;
 }
 
-const GeneralSection: React.FC<GeneralSectionProps> = ({ onDataChange }) => {
+const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, ref) => {
   const [name, setName] = useState('');
   const [port, setPort] = useState(5000);
   const [host, setHost] = useState('127.0.0.1');
@@ -16,17 +16,25 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ onDataChange }) => {
   const [metadataEnabled, setMetadataEnabled] = useState(false);
   const [metadataPath, setMetadataPath] = useState('');
 
-  const handleSave = () => {
-    const data = {
+  const getData = () => {
+    return {
       name,
       port,
       host,
-      irisImages: {
+      images: {
         shape: [parseInt(shape1) || 0, parseInt(shape2) || 0],
       },
       thumbnails: thumbnailsEnabled ? thumbnailsPath : false,
       metadata: metadataEnabled ? metadataPath : false,
     };
+  };
+
+  useImperativeHandle(ref, () => ({
+    getData,
+  }));
+
+  const handleSave = () => {
+    const data = getData();
     console.log('General Section Data:', JSON.stringify(data, null, 2));
     if (onDataChange) {
       onDataChange(data);
@@ -82,7 +90,7 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ onDataChange }) => {
                   type="number"
                   value={port}
                   onChange={(e) => setPort(parseInt(e.target.value) || 5000)}
-                  min="1"
+                  min="0"
                   max="65535"
                   style={{ width: '100%' }}
                 />
@@ -342,6 +350,8 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ onDataChange }) => {
       </div>
     </>
   );
-};
+});
+
+GeneralSection.displayName = 'GeneralSection';
 
 export default GeneralSection;

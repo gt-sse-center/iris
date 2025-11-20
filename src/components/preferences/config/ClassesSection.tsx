@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import ClassListEditor from './ClassListEditor';
 
-const ClassesSection: React.FC = () => {
+const ClassesSection = forwardRef<any, {}>((props, ref) => {
+  const editorRef = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    getData: () => editorRef.current?.getData() || [],
+  }));
+
   return (
     <>
       <div
@@ -29,11 +35,13 @@ const ClassesSection: React.FC = () => {
             </code>
           </small>
           <h4 style={{ marginBottom: '16px' }}>Classes</h4>
-          <ClassListEditor />
+          <ClassListEditor ref={editorRef} />
         </div>
       </div>
     </>
   );
-};
+});
+
+ClassesSection.displayName = 'ClassesSection';
 
 export default ClassesSection;

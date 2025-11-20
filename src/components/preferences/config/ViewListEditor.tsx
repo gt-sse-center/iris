@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface ViewEntry {
   id: number;
@@ -12,9 +12,28 @@ interface ViewEntry {
   vmax: string;
 }
 
-const ViewListEditor: React.FC = () => {
+const ViewListEditor = forwardRef<any, {}>((props, ref) => {
   const [views, setViews] = useState<ViewEntry[]>([]);
   const [nextId, setNextId] = useState(1);
+
+  const getData = () => {
+    return views.reduce((acc, view) => {
+      acc[view.key] = {
+        type: view.type,
+        description: view.description,
+        data: view.data,
+        cmap: view.cmap || undefined,
+        clip: view.clip || undefined,
+        vmin: view.vmin || undefined,
+        vmax: view.vmax || undefined,
+      };
+      return acc;
+    }, {} as Record<string, any>);
+  };
+
+  useImperativeHandle(ref, () => ({
+    getData,
+  }));
 
   const addView = () => {
     setViews([
@@ -25,7 +44,7 @@ const ViewListEditor: React.FC = () => {
         type: 'IrisMonochromeView',
         description: '',
         data: '',
-        cmap: '',
+        cmap: 'jet',
         clip: '',
         vmin: '',
         vmax: '',
@@ -43,18 +62,7 @@ const ViewListEditor: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    const viewsData = views.reduce((acc, view) => {
-      acc[view.key] = {
-        type: view.type,
-        description: view.description,
-        data: view.data,
-        cmap: view.cmap || undefined,
-        clip: view.clip || undefined,
-        vmin: view.vmin || undefined,
-        vmax: view.vmax || undefined,
-      };
-      return acc;
-    }, {} as Record<string, any>);
+    const viewsData = getData();
     console.log('Views Data:', JSON.stringify(viewsData, null, 2));
   };
 
@@ -121,25 +129,11 @@ const ViewListEditor: React.FC = () => {
             <small style={{ display: 'block', color: '#666', marginBottom: '4px', fontSize: '12px' }}>
               Further description which explains what the user can see in this view.
             </small>
-            <select
-              value={view.description}
-              onChange={(e) => updateView(view.id, 'description', e.target.value)}
-              style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
-            >
-              <option value="">Select description</option>
-              <option value="Description option 1">Description option 1</option>
-              <option value="Description option 2">Description option 2</option>
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              <strong>Type</strong>
-            </label>
             <input
               type="text"
-              value={view.type}
-              onChange={(e) => updateView(view.id, 'type', e.target.value)}
+              placeholder="e.g., Normal RGB image"
+              value={view.description}
+              onChange={(e) => updateView(view.id, 'description', e.target.value)}
               style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
           </div>
@@ -251,6 +245,8 @@ const ViewListEditor: React.FC = () => {
       </button>
     </div>
   );
-};
+});
+
+ViewListEditor.displayName = 'ViewListEditor';
 
 export default ViewListEditor;
