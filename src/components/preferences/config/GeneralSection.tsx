@@ -54,8 +54,9 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
         General
       </div>
       <div className="panel" style={{ display: 'block' }}>
-        <table>
-          <tbody>
+        <div style={{ padding: '16px' }}>
+          <table style={{ width: '100%' }}>
+            <tbody>
             <tr>
               <td style={{ width: '300px' }}>
                 <strong>Name</strong>
@@ -347,6 +348,7 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </>
   );
