@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface ViewGroupEntry {
   id: number;
@@ -6,7 +6,7 @@ interface ViewGroupEntry {
   views: string[];
 }
 
-const ViewGroupListEditor = forwardRef<any, {}>((props, ref) => {
+const ViewGroupListEditor = forwardRef<any, {}>((_props, ref) => {
   const [groups, setGroups] = useState<ViewGroupEntry[]>([]);
   const [nextId, setNextId] = useState(1);
 

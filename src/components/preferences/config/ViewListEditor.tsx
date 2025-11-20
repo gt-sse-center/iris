@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface ViewEntry {
   id: number;
@@ -12,7 +12,7 @@ interface ViewEntry {
   vmax: string;
 }
 
-const ViewListEditor = forwardRef<any, {}>((props, ref) => {
+const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
   const [views, setViews] = useState<ViewEntry[]>([]);
   const [nextId, setNextId] = useState(1);
 

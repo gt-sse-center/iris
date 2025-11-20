@@ -1,7 +1,7 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewGroupListEditor from './ViewGroupListEditor';
 
-const ViewGroupsSection = forwardRef<any, {}>((props, ref) => {
+const ViewGroupsSection = forwardRef<any, {}>((_props, ref) => {
   const editorRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({

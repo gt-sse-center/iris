@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface ClassEntry {
   id: number;
@@ -6,7 +6,7 @@ interface ClassEntry {
   description: string;
 }
 
-const ClassListEditor = forwardRef<any, {}>((props, ref) => {
+const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
   const [classes, setClasses] = useState<ClassEntry[]>([]);
   const [nextId, setNextId] = useState(1);
 
@@ -41,7 +41,7 @@ const ClassListEditor = forwardRef<any, {}>((props, ref) => {
 
   return (
     <div>
-      {classes.map((cls, index) => (
+      {classes.map((cls) => (
         <div
           key={cls.id}
           style={{

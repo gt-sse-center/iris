@@ -1,9 +1,9 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 import { FormInput, FormRadioGroup, FormCheckbox } from './FormField';
 import MaskAreaConfig from './MaskAreaConfig';
 import AIModelConfig, { AIModelConfigData } from './AIModelConfig';
 
-const SegmentationSection = forwardRef<any, {}>((props, ref) => {
+const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
   // Basic Configuration
   const [path, setPath] = useState('');
   const [maskEnum, setMaskEnum] = useState('rgb');

@@ -1,7 +1,7 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useImperativeHandle, forwardRef } from 'react';
 import ClassListEditor from './ClassListEditor';
 
-const ClassesSection = forwardRef<any, {}>((props, ref) => {
+const ClassesSection = forwardRef<any, {}>((_props, ref) => {
   const editorRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({

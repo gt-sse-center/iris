@@ -1,7 +1,7 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewListEditor from './ViewListEditor';
 
-const ViewsSection = forwardRef<any, {}>((props, ref) => {
+const ViewsSection = forwardRef<any, {}>((_props, ref) => {
   const editorRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
