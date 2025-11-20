@@ -18,7 +18,10 @@ api_bp = flask.Blueprint(
 @requires_auth
 def get_user_config():
     """Get current user configuration as JSON."""
+    from iris.models import User
+    
     user_id = flask.session['user_id']
+    user = User.query.get(user_id)
     config = project.get_user_config(user_id)
     all_bands = project.get_image_bands(project.image_ids[0])
 
@@ -28,7 +31,8 @@ def get_user_config():
 
     return flask.jsonify({
         'config': config,
-        'all_bands': all_bands
+        'all_bands': all_bands,
+        'is_admin': user.admin if user else False
     })
 
 

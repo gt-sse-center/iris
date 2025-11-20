@@ -215,6 +215,27 @@ Cypress.Commands.add('closePreferences', () => {
 });
 
 /**
+ * Select the Segmentation AI tab in the preferences modal
+ * 
+ * Clicks the Segmentation AI tab button to switch to that tab.
+ * Should be called after openPreferences().
+ * 
+ * @example
+ * cy.openPreferences();
+ * cy.selectSegmentationAITab();
+ */
+Cypress.Commands.add('selectSegmentationAITab', () => {
+  cy.log('Selecting Segmentation AI tab...');
+  cy.get('[data-testid="tab-segmentation-ai"]')
+    .should('be.visible')
+    .click();
+  
+  // Wait for tab content to render
+  cy.wait(TIMEOUTS.STATE_UPDATE);
+  cy.log('✓ Segmentation AI tab selected');
+});
+
+/**
  * Set a slider value by typing into its editable number input
  * 
  * Uses data-testid for robust, semantic selection.

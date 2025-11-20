@@ -27,6 +27,9 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     // Open preferences
     cy.openPreferences();
     
+    // Select Segmentation AI tab
+    cy.selectSegmentationAITab();
+    
     // Verify modal is open
     cy.get('[data-testid="preferences-modal"]').should('be.visible');
     cy.contains('h2', 'Preferences').should('be.visible');
@@ -47,6 +50,7 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     };
     
     cy.openPreferences();
+    cy.selectSegmentationAITab();
     
     // === STEP 1: Modify AI Model Parameters ===
     cy.log('Modifying AI model parameters...');
@@ -81,6 +85,7 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     // === STEP 4: Verify Persistence ===
     cy.log('Verifying saved values persisted...');
     cy.openPreferences();
+    cy.selectSegmentationAITab();
     
     // Verify all values match what we saved
     cy.get('[data-testid="input-n-estimators"]')
@@ -106,6 +111,7 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
 
   it('should show error when trying to save with no bands selected', () => {
     cy.openPreferences();
+    cy.selectSegmentationAITab();
     
     // Move all bands to excluded
     cy.get('[data-testid="select-bands-included"] option')
