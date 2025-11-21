@@ -12,6 +12,9 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
   const [scoreEnum, setScoreEnum] = useState('f1');
   const [prioritiseUnmarked, setPrioritiseUnmarked] = useState(true);
 
+  // AI Model Enable/Disable
+  const [aiModelEnabled, setAiModelEnabled] = useState(true);
+
   // AI Model Configuration
   const [aiConfig, setAiConfig] = useState<AIModelConfigData>({
     unverifiedThreshold: 1,
@@ -39,21 +42,25 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
       score: scoreEnum,
       prioritise_unmarked_images: prioritiseUnmarked,
       unverified_threshold: aiConfig.unverifiedThreshold,
-      ai_model: {
-        bands: aiConfig.bands,
-        train_ratio: aiConfig.trainRatio,
-        max_train_pixels: aiConfig.maxTrainPixels,
-        n_estimators: aiConfig.nEstimators,
-        max_depth: aiConfig.maxDepth,
-        n_leaves: aiConfig.nLeaves,
-        suppression_threshold: aiConfig.suppressionThreshold,
-        suppression_filter_size: aiConfig.suppressionFilterSize,
-        suppression_default_class: aiConfig.suppressionDefaultClass,
-        use_edge_filter: aiConfig.useEdgeFilter,
-        use_superpixels: aiConfig.useSuperpixels,
-        use_meshgrid: aiConfig.useMeshgrid,
-        meshgrid_cells: aiConfig.meshgridCells,
-      },
+      test_images: null, // Issue #5: Always null, used for specifying test image IDs
+      // AI model can be false (disabled) or full object (enabled)
+      ai_model: aiModelEnabled
+        ? {
+            bands: aiConfig.bands.trim() ? aiConfig.bands : null, // Issue #4: Convert empty string to null
+            train_ratio: aiConfig.trainRatio,
+            max_train_pixels: aiConfig.maxTrainPixels,
+            n_estimators: aiConfig.nEstimators,
+            max_depth: aiConfig.maxDepth,
+            n_leaves: aiConfig.nLeaves,
+            suppression_threshold: aiConfig.suppressionThreshold,
+            suppression_filter_size: aiConfig.suppressionFilterSize,
+            suppression_default_class: aiConfig.suppressionDefaultClass,
+            use_edge_filter: aiConfig.useEdgeFilter,
+            use_superpixels: aiConfig.useSuperpixels,
+            use_meshgrid: aiConfig.useMeshgrid,
+            meshgrid_cells: aiConfig.meshgridCells,
+          }
+        : false,
     };
   };
 
@@ -122,7 +129,28 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
             description="Mode to serve up images with the lowest number of annotations when user asks for next image."
           />
 
-          <AIModelConfig config={aiConfig} onChange={setAiConfig} />
+          {/* AI Model Enable/Disable Toggle */}
+          <div style={{ marginBottom: '20px', padding: '12px', background: '#f8f9fa', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <input
+                type="checkbox"
+                checked={aiModelEnabled}
+                onChange={(e) => setAiModelEnabled(e.target.checked)}
+                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+              />
+              <label style={{ cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setAiModelEnabled(!aiModelEnabled)}>
+                Enable AI Model
+              </label>
+            </div>
+            <small style={{ display: 'block', color: '#666', lineHeight: '1.5' }}>
+              {aiModelEnabled
+                ? 'AI-assisted segmentation is enabled. Configure the model parameters below.'
+                : 'AI-assisted segmentation is disabled. The ai_model field will be set to false.'}
+            </small>
+          </div>
+
+          {/* AI Model Configuration - Only show when enabled */}
+          {aiModelEnabled && <AIModelConfig config={aiConfig} onChange={setAiConfig} />}
 
           <button
             onClick={handleSubmit}
