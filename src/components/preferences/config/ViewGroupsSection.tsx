@@ -1,7 +1,11 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewGroupListEditor from './ViewGroupListEditor';
 
-const ViewGroupsSection = forwardRef<any, {}>((_props, ref) => {
+interface ViewGroupsSectionProps {
+  getAvailableViews: () => string[];
+}
+
+const ViewGroupsSection = forwardRef<any, ViewGroupsSectionProps>(({ getAvailableViews }, ref) => {
   const editorRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
@@ -47,7 +51,7 @@ const ViewGroupsSection = forwardRef<any, {}>((_props, ref) => {
           <small style={{ color: '#666', display: 'block', marginBottom: '16px' }}>
             The 'default' group is required and will be shown first
           </small>
-          <ViewGroupListEditor ref={editorRef} />
+          <ViewGroupListEditor ref={editorRef} getAvailableViews={getAvailableViews} />
         </div>
       </div>
     </>
