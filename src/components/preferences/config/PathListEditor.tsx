@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface PathEntry {
   id: number;
@@ -6,11 +6,48 @@ interface PathEntry {
   value: string;
 }
 
-const PathListEditor: React.FC = () => {
+/**
+ * PathListEditor Component
+ * 
+ * Allows users to configure image paths for the IRIS project.
+ * Paths can be either:
+ * - A single string: "images/{id}.tif"
+ * - An object with named paths: { "Sentinel1": "images/{id}/s1.tif", "Sentinel2": "..." }
+ * 
+ * Uses forwardRef to expose a getData() method to parent components.
+ */
+const PathListEditor = forwardRef<any, {}>((props, ref) => {
   const [paths, setPaths] = useState<PathEntry[]>([
     { id: 1, key: '', value: 'images/{id}.tif' },
   ]);
   const [nextId, setNextId] = useState(2);
+
+  /**
+   * getData - Exposes path data to parent component
+   * 
+   * Returns either:
+   * - String: if single path with no key (e.g., "images/{id}.tif")
+   * - Object: if multiple paths or single path with key (e.g., {"Sentinel1": "...", "Sentinel2": "..."})
+   */
+  const getData = () => {
+    // Case 1: Single path with no key → return as simple string
+    if (paths.length === 1 && !paths[0].key.trim()) {
+      return paths[0].value;
+    }
+    
+    // Case 2: Multiple paths OR single path with key → return as object
+    return paths.reduce((acc, path) => {
+      // Use provided key, or generate one if empty
+      const key = path.key.trim() || `path${path.id}`;
+      acc[key] = path.value;
+      return acc;
+    }, {} as Record<string, string>);
+  };
+
+  // Expose getData method to parent via ref
+  useImperativeHandle(ref, () => ({
+    getData,
+  }));
 
   const addPath = () => {
     setPaths([...paths, { id: nextId, key: '', value: '' }]);
@@ -91,6 +128,8 @@ const PathListEditor: React.FC = () => {
       </small>
     </div>
   );
-};
+});
+
+PathListEditor.displayName = 'PathListEditor';
 
 export default PathListEditor;

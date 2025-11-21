@@ -3,9 +3,12 @@ import { useState, useImperativeHandle, forwardRef } from 'react';
 interface ViewEntry {
   id: number;
   key: string;
-  type: string;
+  type: string; // 'Monochrome', 'RGB', or 'Bing Map'
   description: string;
-  data: string;
+  data: string; // For monochrome
+  dataR: string; // For RGB - Red channel
+  dataG: string; // For RGB - Green channel
+  dataB: string; // For RGB - Blue channel
   cmap: string;
   clip: string;
   vmin: string;
@@ -16,17 +19,49 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
   const [views, setViews] = useState<ViewEntry[]>([]);
   const [nextId, setNextId] = useState(1);
 
+  /**
+   * Map UI display names to actual config type values
+   */
+  const mapViewType = (uiType: string): string => {
+    switch (uiType) {
+      case 'Monochrome':
+      case 'RGB':
+        return 'image';
+      case 'Bing Map':
+        return 'bingmap';
+      default:
+        return 'image';
+    }
+  };
+
   const getData = () => {
     return views.reduce((acc, view) => {
-      acc[view.key] = {
-        type: view.type,
-        description: view.description,
-        data: view.data,
-        cmap: view.cmap || undefined,
-        clip: view.clip || undefined,
-        vmin: view.vmin || undefined,
-        vmax: view.vmax || undefined,
+      const viewData: any = {
+        type: mapViewType(view.type),
       };
+
+      // Add description if not empty (Issue #9)
+      if (view.description.trim()) {
+        viewData.description = view.description;
+      }
+
+      // Handle data field based on view type (Issue #8)
+      if (view.type === 'RGB') {
+        // RGB views need array of 3 strings
+        viewData.data = [view.dataR, view.dataG, view.dataB];
+      } else if (view.type === 'Monochrome') {
+        // Monochrome views use single string
+        viewData.data = view.data;
+      }
+      // Bing Map views don't have data field (Issue #10)
+
+      // Add optional fields only if they have values (Issue #9, #16)
+      if (view.cmap.trim()) viewData.cmap = view.cmap;
+      if (view.clip.trim()) viewData.clip = parseFloat(view.clip) || view.clip;
+      if (view.vmin.trim()) viewData.vmin = parseFloat(view.vmin);
+      if (view.vmax.trim()) viewData.vmax = parseFloat(view.vmax);
+
+      acc[view.key] = viewData;
       return acc;
     }, {} as Record<string, any>);
   };
@@ -41,9 +76,12 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
       {
         id: nextId,
         key: '',
-        type: 'IrisMonochromeView',
+        type: 'Monochrome',
         description: '',
         data: '',
+        dataR: '',
+        dataG: '',
+        dataB: '',
         cmap: 'jet',
         clip: '',
         vmin: '',
@@ -109,16 +147,16 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
 
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px' }}>
-              <strong>IrisMonochromeView</strong>
+              <strong>View Type *</strong>
             </label>
             <select
               value={view.type}
               onChange={(e) => updateView(view.id, 'type', e.target.value)}
               style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
             >
-              <option value="IrisMonochromeView">IrisMonochromeView</option>
-              <option value="IrisRGBView">IrisRGBView</option>
-              <option value="IrisBingView">IrisBingView</option>
+              <option value="Monochrome">Monochrome (single band)</option>
+              <option value="RGB">RGB (3 bands)</option>
+              <option value="Bing Map">Bing Map (aerial imagery)</option>
             </select>
           </div>
 
@@ -138,22 +176,81 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
             />
           </div>
 
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              <strong>Data *</strong>
-            </label>
-            <small style={{ display: 'block', color: '#666', marginBottom: '4px', fontSize: '12px', lineHeight: '1.5' }}>
-              Expression for a monochrome image built from one or more valid band arrays. Use band expressions like $B1,
-              $B2 or $Sentinel2.B1
-            </small>
-            <input
-              type="text"
-              placeholder="Use band expressions like $B1, $B2 or $Sentinel2.B1"
-              value={view.data}
-              onChange={(e) => updateView(view.id, 'data', e.target.value)}
-              style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-          </div>
+          {/* Data field - different UI based on view type */}
+          {view.type === 'Monochrome' && (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px' }}>
+                <strong>Data *</strong>
+              </label>
+              <small style={{ display: 'block', color: '#666', marginBottom: '4px', fontSize: '12px', lineHeight: '1.5' }}>
+                Band expression for monochrome view. Examples: $B1, $Sentinel2.B11**0.8*5, edges($Sentinel2.B2+$Sentinel2.B3)
+              </small>
+              <input
+                type="text"
+                placeholder="e.g., $Sentinel2.B11**0.8*5"
+                value={view.data}
+                onChange={(e) => updateView(view.id, 'data', e.target.value)}
+                style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+            </div>
+          )}
+
+          {view.type === 'RGB' && (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px' }}>
+                <strong>Data (RGB Channels) *</strong>
+              </label>
+              <small style={{ display: 'block', color: '#666', marginBottom: '8px', fontSize: '12px' }}>
+                Three band expressions for Red, Green, and Blue channels. Each can be a complex expression.
+              </small>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Red Channel</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., $Sentinel2.B5"
+                    value={view.dataR}
+                    onChange={(e) => {
+                      setViews(views.map((v) => (v.id === view.id ? { ...v, dataR: e.target.value } : v)));
+                    }}
+                    style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Green Channel</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., $Sentinel2.B3"
+                    value={view.dataG}
+                    onChange={(e) => {
+                      setViews(views.map((v) => (v.id === view.id ? { ...v, dataG: e.target.value } : v)));
+                    }}
+                    style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Blue Channel</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., $Sentinel2.B2"
+                    value={view.dataB}
+                    onChange={(e) => {
+                      setViews(views.map((v) => (v.id === view.id ? { ...v, dataB: e.target.value } : v)));
+                    }}
+                    style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {view.type === 'Bing Map' && (
+            <div style={{ marginBottom: '12px', padding: '12px', background: '#e7f3ff', borderRadius: '4px' }}>
+              <small style={{ color: '#0066cc' }}>
+                ℹ️ Bing Map views don't require a data field. They use metadata location coordinates.
+              </small>
+            </div>
+          )}
 
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px' }}>
