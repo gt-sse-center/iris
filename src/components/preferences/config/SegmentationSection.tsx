@@ -7,7 +7,7 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
   // Basic Configuration
   const [path, setPath] = useState('');
   const [maskEnum, setMaskEnum] = useState('rgb');
-  const [maskArea, setMaskArea] = useState('Mask Area option 2');
+  const [maskAreaEnabled, setMaskAreaEnabled] = useState(false);
   const [maskAreaCoords, setMaskAreaCoords] = useState<number[]>([0, 0, 0, 0]);
   const [scoreEnum, setScoreEnum] = useState('f1');
   const [prioritiseUnmarked, setPrioritiseUnmarked] = useState(true);
@@ -35,7 +35,7 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
     return {
       path,
       mask_encoding: maskEnum,
-      mask_area: maskArea,
+      mask_area: maskAreaEnabled ? maskAreaCoords : null, // Array of 4 ints or null
       score: scoreEnum,
       prioritise_unmarked_images: prioritiseUnmarked,
       unverified_threshold: aiConfig.unverifiedThreshold,
@@ -101,8 +101,8 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
           />
 
           <MaskAreaConfig
-            maskArea={maskArea}
-            setMaskArea={setMaskArea}
+            maskAreaEnabled={maskAreaEnabled}
+            setMaskAreaEnabled={setMaskAreaEnabled}
             maskAreaCoords={maskAreaCoords}
             setMaskAreaCoords={setMaskAreaCoords}
           />
