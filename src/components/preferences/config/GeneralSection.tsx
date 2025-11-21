@@ -30,9 +30,9 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
       images: {
         path: pathData, // Include path from PathListEditor
         shape: [parseInt(shape1) || 0, parseInt(shape2) || 0],
+        thumbnails: thumbnailsEnabled ? thumbnailsPath : false,
+        metadata: metadataEnabled ? metadataPath : false,
       },
-      thumbnails: thumbnailsEnabled ? thumbnailsPath : false,
-      metadata: metadataEnabled ? metadataPath : false,
     };
   };
 
