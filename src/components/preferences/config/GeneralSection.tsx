@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef, useRef } from 'react';
 import PathListEditor from './PathListEditor';
 
 interface GeneralSectionProps {
@@ -16,12 +16,19 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
   const [metadataEnabled, setMetadataEnabled] = useState(false);
   const [metadataPath, setMetadataPath] = useState('');
 
+  // Create a ref to access PathListEditor's getData() method
+  const pathListRef = useRef<any>(null);
+
   const getData = () => {
+    // Get path data from PathListEditor component
+    const pathData = pathListRef.current?.getData();
+    
     return {
       name,
       port,
       host,
       images: {
+        path: pathData, // Include path from PathListEditor
         shape: [parseInt(shape1) || 0, parseInt(shape2) || 0],
       },
       thumbnails: thumbnailsEnabled ? thumbnailsPath : false,
@@ -194,7 +201,7 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
             <tr>
               <td colSpan={2}>
                 <h4 style={{ marginBottom: '12px' }}>Path</h4>
-                <PathListEditor />
+                <PathListEditor ref={pathListRef} />
               </td>
             </tr>
             <tr>
