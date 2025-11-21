@@ -67,6 +67,15 @@ const ProjectConfigTab: React.FC = () => {
    * 
    * The "?." is optional chaining - it safely handles if ref is null
    */
+  /**
+   * Get available view keys from the Views section
+   * This is used to populate the dropdown in View Groups
+   */
+  const getAvailableViews = (): string[] => {
+    const viewsData = viewsRef.current?.getData();
+    return viewsData ? Object.keys(viewsData) : [];
+  };
+
   const handleSaveAll = () => {
     // Get data from each section by calling their getData() methods
     const generalData = generalRef.current?.getData();
@@ -95,7 +104,7 @@ const ProjectConfigTab: React.FC = () => {
       <GeneralSection ref={generalRef} />
       <ClassesSection ref={classesRef} />
       <ViewsSection ref={viewsRef} />
-      <ViewGroupsSection ref={viewGroupsRef} />
+      <ViewGroupsSection ref={viewGroupsRef} getAvailableViews={getAvailableViews} />
       <SegmentationSection ref={segmentationRef} />
       
       <div style={{ padding: '20px', borderTop: '2px solid #ddd', marginTop: '20px', background: '#f8f9fa' }}>
