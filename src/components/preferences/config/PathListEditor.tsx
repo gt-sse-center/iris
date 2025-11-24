@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 
 interface PathEntry {
   id: number;
@@ -16,7 +16,7 @@ interface PathEntry {
  * 
  * Uses forwardRef to expose a getData() method to parent components.
  */
-const PathListEditor = forwardRef<any, {}>((props, ref) => {
+const PathListEditor = forwardRef<any, {}>((_props, ref) => {
   const [paths, setPaths] = useState<PathEntry[]>([
     { id: 1, key: '', value: 'images/{id}.tif' },
   ]);
