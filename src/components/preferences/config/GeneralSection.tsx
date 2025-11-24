@@ -36,8 +36,55 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
     };
   };
 
+  const setData = (data: any) => {
+    if (data.name !== undefined) {
+      setName(data.name);
+    }
+    if (data.port !== undefined) {
+      setPort(data.port);
+    }
+    if (data.host !== undefined) {
+      setHost(data.host);
+    }
+    if (data.images) {
+      // Set path via PathListEditor
+      if (data.images.path !== undefined && pathListRef.current?.setData) {
+        pathListRef.current.setData(data.images.path);
+      }
+      
+      // Set shape
+      if (data.images.shape && Array.isArray(data.images.shape)) {
+        setShape1(String(data.images.shape[0] || ''));
+        setShape2(String(data.images.shape[1] || ''));
+      }
+      
+      // Set thumbnails
+      if (data.images.thumbnails !== undefined) {
+        if (data.images.thumbnails === false) {
+          setThumbnailsEnabled(false);
+          setThumbnailsPath('');
+        } else {
+          setThumbnailsEnabled(true);
+          setThumbnailsPath(data.images.thumbnails);
+        }
+      }
+      
+      // Set metadata
+      if (data.images.metadata !== undefined) {
+        if (data.images.metadata === false) {
+          setMetadataEnabled(false);
+          setMetadataPath('');
+        } else {
+          setMetadataEnabled(true);
+          setMetadataPath(data.images.metadata);
+        }
+      }
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     getData,
+    setData,
   }));
 
   const handleSave = () => {

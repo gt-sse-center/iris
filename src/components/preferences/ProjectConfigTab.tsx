@@ -1,18 +1,22 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import GeneralSection from './config/GeneralSection';
 import ClassesSection from './config/ClassesSection';
 import ViewsSection from './config/ViewsSection';
 import ViewGroupsSection from './config/ViewGroupsSection';
 import SegmentationSection from './config/SegmentationSection';
+import { getProjectConfig, updateProjectConfig, validateProjectConfig } from '../../services/config';
+import type { ProjectConfig } from '../../services/config';
 
 /**
  * SectionRef Interface
  * 
  * Defines the shape of the ref object that each section component exposes.
  * Each section must implement a getData() method that returns its configuration data.
+ * Also includes setData() to populate the form with loaded configuration.
  */
 export interface SectionRef {
   getData: () => any;
+  setData?: (data: any) => void;
 }
 
 /**
@@ -57,16 +61,96 @@ const ProjectConfigTab: React.FC = () => {
   const viewGroupsRef = useRef<SectionRef>(null);
   const segmentationRef = useRef<SectionRef>(null);
 
+  // State management
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loadedConfig, setLoadedConfig] = useState<ProjectConfig | null>(null);
+
   /**
-   * handleSaveAll - Aggregates data from all sections
-   * 
-   * When user clicks "Save Complete Configuration":
-   * 1. Calls getData() on each section ref to get current form values
-   * 2. Combines all section data into a single config object
-   * 3. Logs the complete JSON to console (will eventually save to backend)
-   * 
-   * The "?." is optional chaining - it safely handles if ref is null
+   * Load configuration from backend on mount
    */
+  useEffect(() => {
+    loadConfiguration();
+  }, []);
+
+  /**
+   * Populate sections after they're rendered (when loading becomes false and config is loaded)
+   */
+  useEffect(() => {
+    if (!loading && loadedConfig) {
+      populateSections(loadedConfig);
+    }
+  }, [loading, loadedConfig]);
+
+  /**
+   * Load configuration from backend
+   */
+  const loadConfiguration = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await getProjectConfig();
+      const config = response.config;
+      
+      // Store config - it will be populated after components render
+      setLoadedConfig(config);
+      setSuccess('Configuration loaded successfully');
+      
+      // Auto-dismiss success message
+      setTimeout(() => setSuccess(null), 3000);
+      
+    } catch (err: any) {
+      console.error('[ProjectConfigTab] Failed to load configuration:', err);
+      setError(err.message || 'Failed to load configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Populate sections with loaded config data
+   * Called after components are rendered (via useEffect)
+   */
+  const populateSections = (config: ProjectConfig) => {
+    if (generalRef.current?.setData) {
+      generalRef.current.setData({
+        name: config.name,
+        host: config.host,
+        port: config.port,
+        images: config.images
+      });
+    } else {
+      console.error('[ProjectConfigTab] GeneralSection ref not available');
+    }
+    
+    if (classesRef.current?.setData) {
+      classesRef.current.setData(config.classes);
+    } else {
+      console.error('[ProjectConfigTab] ClassesSection ref not available');
+    }
+    
+    if (viewsRef.current?.setData) {
+      viewsRef.current.setData(config.views);
+    } else {
+      console.error('[ProjectConfigTab] ViewsSection ref not available');
+    }
+    
+    if (viewGroupsRef.current?.setData) {
+      viewGroupsRef.current.setData(config.view_groups);
+    } else {
+      console.error('[ProjectConfigTab] ViewGroupsSection ref not available');
+    }
+    
+    if (segmentationRef.current?.setData) {
+      segmentationRef.current.setData(config.segmentation);
+    } else {
+      console.error('[ProjectConfigTab] SegmentationSection ref not available');
+    }
+  };
+
   /**
    * Get available view keys from the Views section
    * This is used to populate the dropdown in View Groups
@@ -76,30 +160,104 @@ const ProjectConfigTab: React.FC = () => {
     return viewsData ? Object.keys(viewsData) : [];
   };
 
-  const handleSaveAll = () => {
-    // Get data from each section by calling their getData() methods
-    const generalData = generalRef.current?.getData();
-    const classesData = classesRef.current?.getData();
-    const viewsData = viewsRef.current?.getData();
-    const viewGroupsData = viewGroupsRef.current?.getData();
-    const segmentationData = segmentationRef.current?.getData();
+  /**
+   * handleSaveAll - Aggregates data from all sections and saves to backend
+   * 
+   * When user clicks "Save Complete Configuration":
+   * 1. Calls getData() on each section ref to get current form values
+   * 2. Combines all section data into a single config object
+   * 3. Sends to backend API
+   * 
+   * The "?." is optional chaining - it safely handles if ref is null
+   */
+  const handleSaveAll = async () => {
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      // Get data from each section by calling their getData() methods
+      const generalData = generalRef.current?.getData();
+      const classesData = classesRef.current?.getData();
+      const viewsData = viewsRef.current?.getData();
+      const viewGroupsData = viewGroupsRef.current?.getData();
+      const segmentationData = segmentationRef.current?.getData();
 
-    // Combine into final config structure
-    // GeneralSection returns { name, port, host, images }, so we spread it at root level
-    const config = {
-      ...generalData,              // Spreads: name, port, host, images
-      classes: classesData,         // Array of class definitions
-      views: viewsData,             // Object of view configurations
-      view_groups: viewGroupsData,  // Object of view group arrays
-      segmentation: segmentationData, // Segmentation configuration
-    };
-
-    // For now, just log to console. Eventually this will POST to backend API
-    console.log('Complete Configuration:', JSON.stringify(config, null, 2));
+      // Combine into final config structure
+      const config: ProjectConfig = {
+        ...generalData,
+        classes: classesData,
+        views: viewsData,
+        view_groups: viewGroupsData,
+        segmentation: segmentationData,
+      };
+      
+      // Validate before saving
+      const validationResult = await validateProjectConfig(config);
+      
+      if (!validationResult.valid) {
+        setError(`Validation failed: ${validationResult.errors.join(', ')}`);
+        return;
+      }
+      
+      // Save to backend
+      const response = await updateProjectConfig(config);
+      
+      setSuccess(response.message || 'Configuration saved successfully');
+      setLoadedConfig(config);
+      
+      // Auto-dismiss success message
+      setTimeout(() => setSuccess(null), 5000);
+      
+    } catch (err: any) {
+      console.error('[ProjectConfigTab] Failed to save configuration:', err);
+      setError(err.message || 'Failed to save configuration');
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div id="config-project" className="iris-tabs-config tabcontent" style={{ display: 'block', padding: '40px', textAlign: 'center' }}>
+        <div style={{ fontSize: '18px', color: '#666' }}>
+          Loading configuration...
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div id="config-project" className="iris-tabs-config tabcontent" style={{ display: 'block' }}>
+      {/* Error message */}
+      {error && (
+        <div style={{
+          padding: '12px 20px',
+          margin: '10px 20px',
+          background: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px',
+        }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+      
+      {/* Success message */}
+      {success && (
+        <div style={{
+          padding: '12px 20px',
+          margin: '10px 20px',
+          background: '#d4edda',
+          color: '#155724',
+          border: '1px solid #c3e6cb',
+          borderRadius: '4px',
+        }}>
+          <strong>Success:</strong> {success}
+        </div>
+      )}
+      
       {/* Each section component receives a ref so we can call its getData() method */}
       <GeneralSection ref={generalRef} />
       <ClassesSection ref={classesRef} />
@@ -110,22 +268,24 @@ const ProjectConfigTab: React.FC = () => {
       <div style={{ padding: '20px', borderTop: '2px solid #ddd', marginTop: '20px', background: '#f8f9fa' }}>
         <button
           onClick={handleSaveAll}
+          disabled={saving}
           style={{
             width: '100%',
             padding: '12px 24px',
-            background: '#28a745',
+            background: saving ? '#6c757d' : '#28a745',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: 'pointer',
+            cursor: saving ? 'not-allowed' : 'pointer',
             fontSize: '16px',
             fontWeight: 'bold',
+            opacity: saving ? 0.6 : 1,
           }}
         >
-          Save Complete Configuration
+          {saving ? 'Saving...' : 'Save Complete Configuration'}
         </button>
         <small style={{ display: 'block', marginTop: '8px', color: '#666', textAlign: 'center' }}>
-          This will log the complete configuration JSON to the console
+          {saving ? 'Validating and saving to backend...' : 'This will validate and save the configuration to the backend'}
         </small>
       </div>
     </div>

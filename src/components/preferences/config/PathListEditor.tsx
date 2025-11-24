@@ -44,9 +44,32 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
     }, {} as Record<string, string>);
   };
 
-  // Expose getData method to parent via ref
+  /**
+   * setData - Populates the editor with loaded path data
+   * 
+   * Accepts either:
+   * - String: "images/{id}.tif" → creates single path entry
+   * - Object: {"Sentinel1": "...", "Sentinel2": "..."} → creates multiple path entries
+   */
+  const setData = (data: string | Record<string, string>) => {
+    if (typeof data === 'string') {
+      setPaths([{ id: 1, key: '', value: data }]);
+      setNextId(2);
+    } else if (typeof data === 'object' && data !== null) {
+      const entries = Object.entries(data).map(([key, value], index) => ({
+        id: index + 1,
+        key,
+        value,
+      }));
+      setPaths(entries);
+      setNextId(entries.length + 1);
+    }
+  };
+
+  // Expose getData and setData methods to parent via ref
   useImperativeHandle(ref, () => ({
     getData,
+    setData,
   }));
 
   const addPath = () => {
