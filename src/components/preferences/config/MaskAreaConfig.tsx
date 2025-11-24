@@ -1,27 +1,25 @@
 import React from 'react';
 
 interface MaskAreaConfigProps {
-  maskArea: string;
-  setMaskArea: (value: string) => void;
+  maskAreaEnabled: boolean;
+  setMaskAreaEnabled: (enabled: boolean) => void;
   maskAreaCoords: number[];
   setMaskAreaCoords: (coords: number[]) => void;
 }
 
+/**
+ * MaskAreaConfig Component
+ * 
+ * Allows configuration of the segmentation mask area.
+ * When enabled, requires exactly 4 coordinates: [x1, y1, x2, y2]
+ * When disabled, mask_area will be null (full image segmentation)
+ */
 const MaskAreaConfig: React.FC<MaskAreaConfigProps> = ({
-  maskArea,
-  setMaskArea,
+  maskAreaEnabled,
+  setMaskAreaEnabled,
   maskAreaCoords,
   setMaskAreaCoords,
 }) => {
-  const removeMaskCoord = (index: number) => {
-    const newCoords = maskAreaCoords.filter((_, i) => i !== index);
-    setMaskAreaCoords(newCoords);
-  };
-
-  const addMaskCoord = () => {
-    setMaskAreaCoords([...maskAreaCoords, 0]);
-  };
-
   const updateMaskCoord = (index: number, value: number) => {
     const newCoords = [...maskAreaCoords];
     newCoords[index] = value;
@@ -33,81 +31,87 @@ const MaskAreaConfig: React.FC<MaskAreaConfigProps> = ({
       <label style={{ display: 'block', marginBottom: '4px' }}>
         <strong>Mask Area</strong>
       </label>
-      <small style={{ display: 'block', color: '#666', marginBottom: '8px' }}>
-        In case you don't want to allow the user to label the complete image, you can limit the segmentation area.
-        Example: <code style={{ color: '#d63384' }}>"mask_area": [100, 100, 400, 400]</code>
+      <small style={{ display: 'block', color: '#666', marginBottom: '12px', lineHeight: '1.5' }}>
+        Limit the segmentation area to a specific region of the image. When disabled, users can label the entire image.
+        When enabled, provide 4 coordinates: [x1, y1, x2, y2] defining the top-left and bottom-right corners.
+        <br />
+        Example: <code style={{ color: '#d63384' }}>[64, 64, 448, 448]</code>
       </small>
-      <select
-        value={maskArea}
-        onChange={(e) => setMaskArea(e.target.value)}
-        style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '12px' }}
-      >
-        <option value="Mask Area option 1">Mask Area option 1</option>
-        <option value="Mask Area option 2">Mask Area option 2</option>
-      </select>
 
-      {maskArea === 'Mask Area option 1' && (
-        <div style={{ marginTop: '12px' }}>
-          <div style={{ marginBottom: '8px' }}>
-            <strong>mask_area</strong>
+      {/* Enable/Disable Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={maskAreaEnabled}
+            onChange={(e) => setMaskAreaEnabled(e.target.checked)}
+            style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+          />
+          <span style={{ marginLeft: '8px' }}>
+            {maskAreaEnabled ? 'Enabled - Limit segmentation area' : 'Disabled - Allow full image segmentation'}
+          </span>
+        </label>
+      </div>
+
+      {/* Coordinate Inputs - Only show when enabled */}
+      {maskAreaEnabled && (
+        <div style={{ marginTop: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '4px' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <strong>Coordinates (must be exactly 4 values)</strong>
           </div>
-          <div style={{ marginBottom: '8px' }}>mask_area</div>
-          {maskAreaCoords.map((coord, index) => (
-            <div
-              key={index}
-              style={{
-                marginBottom: '12px',
-                padding: '12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                background: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <label style={{ minWidth: '100px' }}>
-                <strong>mask_area-{index + 1} *</strong>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px' }}>
+                <strong>X1 (left) *</strong>
               </label>
               <input
                 type="number"
-                value={coord}
-                onChange={(e) => updateMaskCoord(index, parseInt(e.target.value) || 0)}
-                style={{ flex: 1, padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                value={maskAreaCoords[0] || 0}
+                onChange={(e) => updateMaskCoord(0, parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                min="0"
               />
-              <button
-                onClick={() => removeMaskCoord(index)}
-                style={{
-                  padding: '4px 12px',
-                  border: '1px solid #dc3545',
-                  background: 'white',
-                  color: '#dc3545',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                Remove
-              </button>
             </div>
-          ))}
-          {maskAreaCoords.length < 4 && (
-            <button
-              onClick={addMaskCoord}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '2px dashed #007bff',
-                background: 'white',
-                color: '#007bff',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                marginTop: '8px',
-              }}
-            >
-              + Add
-            </button>
-          )}
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px' }}>
+                <strong>Y1 (top) *</strong>
+              </label>
+              <input
+                type="number"
+                value={maskAreaCoords[1] || 0}
+                onChange={(e) => updateMaskCoord(1, parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                min="0"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px' }}>
+                <strong>X2 (right) *</strong>
+              </label>
+              <input
+                type="number"
+                value={maskAreaCoords[2] || 0}
+                onChange={(e) => updateMaskCoord(2, parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                min="0"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px' }}>
+                <strong>Y2 (bottom) *</strong>
+              </label>
+              <input
+                type="number"
+                value={maskAreaCoords[3] || 0}
+                onChange={(e) => updateMaskCoord(3, parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                min="0"
+              />
+            </div>
+          </div>
+          <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
+            Coordinates define a rectangle: top-left corner (X1, Y1) to bottom-right corner (X2, Y2)
+          </small>
         </div>
       )}
     </div>
