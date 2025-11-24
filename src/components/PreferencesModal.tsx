@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { UserConfig, UserConfigApiResponse, AIModelConfig } from '../types/iris';
 import SegmentationAITab from './preferences/SegmentationAITab';
 import ViewsTab from './preferences/ViewsTab';
+import ProjectConfigTab from './preferences/ProjectConfigTab';
 
 interface PreferencesModalProps {
   isOpen: boolean;
@@ -58,7 +59,8 @@ class PreferencesErrorBoundary extends React.Component<
 const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onClose }) => {
   const [config, setConfig] = useState<UserConfig | null>(null);
   const [allBands, setAllBands] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'segmentation-ai' | 'views'>('segmentation-ai');
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'configuration' | 'segmentation-ai' | 'views'>('segmentation-ai');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -75,6 +77,15 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
       const data: UserConfigApiResponse = await response.json();
       setConfig(data.config);
       setAllBands(data.all_bands);
+      
+      // Check if user is admin from the config response
+      const isAdminUser = data.is_admin || false;
+      setIsAdmin(isAdminUser);
+      
+      // Set default tab to configuration for admins
+      if (isAdminUser) {
+        setActiveTab('configuration');
+      }
     } catch (error) {
       console.error('Error fetching config:', error);
       setError('Failed to load preferences. Please try again.');
@@ -182,6 +193,18 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
             <>
               {/* Tab Navigation */}
               <div className="tab">
+                {isAdmin && (
+                  <button
+                    className={`tablinks ${activeTab === 'configuration' ? 'checked' : ''}`}
+                    data-testid="tab-configuration"
+                    onClick={() => {
+                      console.log('Configuration tab clicked');
+                      setActiveTab('configuration');
+                    }}
+                  >
+                    Configuration
+                  </button>
+                )}
                 <button
                   className={`tablinks ${activeTab === 'segmentation-ai' ? 'checked' : ''}`}
                   data-testid="tab-segmentation-ai"
@@ -199,6 +222,8 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
               </div>
 
               {/* Tab Content */}
+              {activeTab === 'configuration' && isAdmin && <ProjectConfigTab />}
+
               {activeTab === 'segmentation-ai' && (
                 <SegmentationAITab
                   config={config}
