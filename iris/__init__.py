@@ -255,8 +255,7 @@ def register_extensions(app):
     app.register_blueprint(user_app, url_prefix="/user")
     
     # Register REST API blueprint
-    from iris.api import create_api_blueprint, init_api_extensions
-    init_api_extensions(app)
+    from iris.api import create_api_blueprint
     api_bp = create_api_blueprint()
     app.register_blueprint(api_bp)
 
