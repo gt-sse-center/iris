@@ -9,13 +9,6 @@ import flask
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 
-from iris.api.auth import auth_bp
-from iris.api.routes.images import images_bp
-from iris.api.routes.segmentation import segmentation_bp
-from iris.api.routes.users import users_bp
-from iris.api.routes.admin import admin_bp
-from iris.api.routes.monitoring import monitoring_bp
-from iris.api.routes.feature_flags import feature_flags_bp
 from iris.api.routes.config import config_bp
 
 __all__ = ['create_api_blueprint', 'init_api_extensions', 'register_api_error_handlers']
@@ -61,13 +54,6 @@ def create_api_blueprint():
             }), 503
     
     # Register sub-blueprints
-    api_bp.register_blueprint(auth_bp, url_prefix='/auth')
-    api_bp.register_blueprint(images_bp, url_prefix='/images')
-    api_bp.register_blueprint(segmentation_bp, url_prefix='/segmentation')
-    api_bp.register_blueprint(users_bp, url_prefix='/users')
-    api_bp.register_blueprint(admin_bp, url_prefix='/admin')
-    api_bp.register_blueprint(monitoring_bp, url_prefix='/monitoring')
-    api_bp.register_blueprint(feature_flags_bp, url_prefix='/feature-flags')
     api_bp.register_blueprint(config_bp, url_prefix='/config')
     
     return api_bp
