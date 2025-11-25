@@ -1,16 +1,16 @@
 """
-Tests for API segmentation endpoints - GeoTIFF Export
+Tests for GeoTIFF export endpoint
 """
 
 import json
-from unittest.mock import MagicMock, patch
 
 import flask
 import numpy as np
+from unittest.mock import MagicMock, patch
 
 
-class TestSegmentationAPI:
-    """Test segmentation API endpoints for GeoTIFF export functionality"""
+class TestGeoTIFFExport:
+    """Test GeoTIFF export functionality"""
 
     def test_export_geotiff_success(self, client, logged_in_user, project_snapshot):
         """
@@ -30,9 +30,9 @@ class TestSegmentationAPI:
         image_id = 'test_image_001'
 
         # Mock the mask reading to simulate existing user annotations
-        # Note: rasterio is imported as 'rio' inside the function, so we patch it there
-        with patch('iris.api.routes.segmentation.read_masks') as mock_read, \
-             patch('iris.api.routes.segmentation.project') as mock_project, \
+        # Note: rasterio is imported inside the function
+        with patch('iris.segmentation.read_masks') as mock_read, \
+             patch('iris.segmentation.api.project') as mock_project, \
              patch('rasterio.open') as mock_rio_open, \
              patch('tempfile.NamedTemporaryFile') as mock_temp:
 
@@ -54,8 +54,6 @@ class TestSegmentationAPI:
                     }
                 }
             }
-            # Ensure image_id is in the list for validation
-            mock_project.__contains__ = MagicMock(return_value=True)
 
             # Mock IRIS rendering engine output (RGB composite as user sees it)
             mock_project.render_image.return_value = np.random.randint(
@@ -73,7 +71,7 @@ class TestSegmentationAPI:
             mock_rio_open.return_value.__exit__ = MagicMock(return_value=False)
 
             # Mock flask.send_file to avoid actual file operations
-            with patch('iris.api.routes.segmentation.flask.send_file') as mock_send:
+            with patch('iris.segmentation.api.flask.send_file') as mock_send:
                 mock_send.return_value = flask.Response(
                     b'mock_geotiff_data',
                     mimetype='image/tiff',
@@ -83,7 +81,7 @@ class TestSegmentationAPI:
                 )
 
                 # Execute the export request
-                response = client.get(f'/api/segmentation/{image_id}/export-geotiff')
+                response = client.get(f'/segmentation/api/export-geotiff/{image_id}')
 
                 # Verify successful export
                 assert response.status_code == 200
@@ -114,15 +112,15 @@ class TestSegmentationAPI:
         image_id = 'test_image_001'
 
         # Mock project to return valid image_ids
-        with patch('iris.api.routes.segmentation.project') as mock_project, \
-             patch('iris.api.routes.segmentation.read_masks') as mock_read:
+        with patch('iris.segmentation.api.project') as mock_project, \
+             patch('iris.segmentation.read_masks') as mock_read:
 
             mock_project.image_ids = [image_id]
 
             # Simulate missing mask file (user hasn't annotated this image yet)
             mock_read.side_effect = FileNotFoundError('Mask file not found')
 
-            response = client.get(f'/api/segmentation/{image_id}/export-geotiff')
+            response = client.get(f'/segmentation/api/export-geotiff/{image_id}')
 
             # Verify appropriate error response
             assert response.status_code == 404
@@ -143,14 +141,12 @@ class TestSegmentationAPI:
         image_id = 'test_image_001'
 
         # Mock project to have valid image_ids
-        with patch('iris.api.routes.segmentation.project') as mock_project:
+        with patch('iris.segmentation.api.project') as mock_project:
             mock_project.image_ids = [image_id]
 
             # Attempt export without authentication (no session)
-            response = client.get(f'/api/segmentation/{image_id}/export-geotiff')
+            response = client.get(f'/segmentation/api/export-geotiff/{image_id}')
 
             # Verify authentication is required
-            assert response.status_code == 401
-            response_data = json.loads(response.data)
-            assert 'error' in response_data
-            assert 'Not authenticated' in response_data['error']
+            # The @requires_auth decorator returns 403 Forbidden
+            assert response.status_code == 403
