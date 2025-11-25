@@ -6,6 +6,11 @@ const ViewsSection = forwardRef<any, {}>((_props, ref) => {
 
   useImperativeHandle(ref, () => ({
     getData: () => editorRef.current?.getData() || {},
+    setData: (data: any) => {
+      if (editorRef.current?.setData) {
+        editorRef.current.setData(data);
+      }
+    },
   }));
 
   return (

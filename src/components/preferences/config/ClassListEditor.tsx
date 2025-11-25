@@ -44,8 +44,27 @@ const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
     });
   };
 
+  const setData = (data: any[]) => {
+    if (!Array.isArray(data)) {
+      return;
+    }
+    
+    const loadedClasses = data.map((cls, index) => ({
+      id: index + 1,
+      name: cls.name || '',
+      description: cls.description || '',
+      colour: cls.colour || [255, 255, 255, 0],
+      hasUserColour: !!cls.user_colour,
+      userColour: cls.user_colour || [0, 255, 255, 70],
+    }));
+    
+    setClasses(loadedClasses);
+    setNextId(loadedClasses.length + 1);
+  };
+
   useImperativeHandle(ref, () => ({
     getData,
+    setData,
   }));
 
   const addClass = () => {

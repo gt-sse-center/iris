@@ -66,8 +66,55 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
     }, {} as Record<string, any>);
   };
 
+  const setData = (data: Record<string, any>) => {
+    if (typeof data !== 'object' || data === null) {
+      return;
+    }
+    
+    const loadedViews = Object.entries(data).map(([key, viewData], index) => {
+      // Determine UI type from config type and data structure
+      let uiType = 'Monochrome';
+      if (viewData.type === 'bingmap') {
+        uiType = 'Bing Map';
+      } else if (Array.isArray(viewData.data) && viewData.data.length === 3) {
+        uiType = 'RGB';
+      } else if (Array.isArray(viewData.data) && viewData.data.length === 1) {
+        // Backend sometimes wraps monochrome data in single-element array
+        uiType = 'Monochrome';
+      }
+      
+      // Extract data based on type
+      let monochromeData = '';
+      if (typeof viewData.data === 'string') {
+        monochromeData = viewData.data;
+      } else if (Array.isArray(viewData.data) && viewData.data.length === 1) {
+        // Unwrap single-element array for monochrome
+        monochromeData = viewData.data[0] || '';
+      }
+      
+      return {
+        id: index + 1,
+        key,
+        type: uiType,
+        description: viewData.description || '',
+        data: monochromeData,
+        dataR: Array.isArray(viewData.data) && viewData.data.length === 3 ? viewData.data[0] || '' : '',
+        dataG: Array.isArray(viewData.data) && viewData.data.length === 3 ? viewData.data[1] || '' : '',
+        dataB: Array.isArray(viewData.data) && viewData.data.length === 3 ? viewData.data[2] || '' : '',
+        cmap: viewData.cmap || '',
+        clip: viewData.clip !== undefined ? String(viewData.clip) : '',
+        vmin: viewData.vmin !== undefined ? String(viewData.vmin) : '',
+        vmax: viewData.vmax !== undefined ? String(viewData.vmax) : '',
+      };
+    });
+    
+    setViews(loadedViews);
+    setNextId(loadedViews.length + 1);
+  };
+
   useImperativeHandle(ref, () => ({
     getData,
+    setData,
   }));
 
   const addView = () => {
@@ -118,7 +165,7 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-            <strong>newKey</strong>
+            <strong>{view.key || '(unnamed view)'}</strong>
             <button
               onClick={() => removeView(view.id)}
               style={{

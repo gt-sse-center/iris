@@ -22,8 +22,24 @@ const ViewGroupListEditor = forwardRef<any, ViewGroupListEditorProps>(({ getAvai
     }, {} as Record<string, string[]>);
   };
 
+  const setData = (data: Record<string, string[]>) => {
+    if (typeof data !== 'object' || data === null) {
+      return;
+    }
+    
+    const loadedGroups = Object.entries(data).map(([key, views], index) => ({
+      id: index + 1,
+      key,
+      views: Array.isArray(views) ? views : [],
+    }));
+    
+    setGroups(loadedGroups);
+    setNextId(loadedGroups.length + 1);
+  };
+
   useImperativeHandle(ref, () => ({
     getData,
+    setData,
   }));
 
   const addGroup = () => {

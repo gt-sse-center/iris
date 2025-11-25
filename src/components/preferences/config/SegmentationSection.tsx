@@ -64,8 +64,68 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
     };
   };
 
+  const setData = (data: any) => {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+    
+    // Basic fields
+    if (data.path !== undefined) {
+      setPath(data.path);
+    }
+    if (data.mask_encoding !== undefined) {
+      setMaskEnum(data.mask_encoding);
+    }
+    if (data.score !== undefined) {
+      setScoreEnum(data.score);
+    }
+    if (data.prioritise_unmarked_images !== undefined) {
+      setPrioritiseUnmarked(data.prioritise_unmarked_images);
+    }
+    
+    // Mask area
+    if (data.mask_area !== undefined) {
+      if (data.mask_area === null) {
+        setMaskAreaEnabled(false);
+        setMaskAreaCoords([0, 0, 0, 0]);
+      } else if (Array.isArray(data.mask_area) && data.mask_area.length === 4) {
+        setMaskAreaEnabled(true);
+        setMaskAreaCoords(data.mask_area);
+      }
+    }
+    
+    // AI Model
+    if (data.ai_model !== undefined) {
+      if (data.ai_model === false) {
+        setAiModelEnabled(false);
+      } else if (typeof data.ai_model === 'object' && data.ai_model !== null) {
+        setAiModelEnabled(true);
+        
+        const aiModel = data.ai_model;
+        setAiConfig({
+          unverifiedThreshold: data.unverified_threshold !== undefined ? data.unverified_threshold : 1,
+          aiModel: 'IrisSegAIModel*',
+          bands: aiModel.bands !== null ? String(aiModel.bands) : '',
+          trainRatio: aiModel.train_ratio !== undefined ? aiModel.train_ratio : 0.8,
+          maxTrainPixels: aiModel.max_train_pixels !== undefined ? aiModel.max_train_pixels : 20000,
+          nEstimators: aiModel.n_estimators !== undefined ? aiModel.n_estimators : 20,
+          maxDepth: aiModel.max_depth !== undefined ? aiModel.max_depth : 10,
+          nLeaves: aiModel.n_leaves !== undefined ? aiModel.n_leaves : 10,
+          suppressionThreshold: aiModel.suppression_threshold !== undefined ? aiModel.suppression_threshold : 0,
+          suppressionFilterSize: aiModel.suppression_filter_size !== undefined ? aiModel.suppression_filter_size : 5,
+          suppressionDefaultClass: aiModel.suppression_default_class !== undefined ? aiModel.suppression_default_class : 0,
+          useEdgeFilter: aiModel.use_edge_filter !== undefined ? aiModel.use_edge_filter : false,
+          useSuperpixels: aiModel.use_superpixels !== undefined ? aiModel.use_superpixels : false,
+          useMeshgrid: aiModel.use_meshgrid !== undefined ? aiModel.use_meshgrid : false,
+          meshgridCells: aiModel.meshgrid_cells !== undefined ? aiModel.meshgrid_cells : '3x3',
+        });
+      }
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     getData,
+    setData,
   }));
 
   const handleSubmit = () => {
