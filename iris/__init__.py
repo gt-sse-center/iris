@@ -253,11 +253,6 @@ def register_extensions(app):
     app.register_blueprint(help_app, url_prefix="/help")
     from iris.user import user_app
     app.register_blueprint(user_app, url_prefix="/user")
-    
-    # Register REST API blueprint
-    from iris.api import create_api_blueprint
-    api_bp = create_api_blueprint()
-    app.register_blueprint(api_bp)
 
 # Decide whether to parse CLI args. If help is requested or the first token
 # Module-level initialization for when IRIS is imported (not run as CLI)

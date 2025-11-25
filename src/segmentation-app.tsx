@@ -26,7 +26,7 @@ const SegmentationApp: React.FC = () => {
       const w = window as any;
       if (w.show_message) w.show_message('Exporting GeoTIFF...');
 
-      const response = await fetch(`/api/segmentation/${imageId}/export-geotiff`, {
+      const response = await fetch(`/segmentation/api/export-geotiff/${imageId}`, {
         method: 'GET',
         credentials: 'same-origin'  // Include session cookies
       });
