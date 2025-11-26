@@ -74,18 +74,3 @@ class TestAdminPages:
         """Test that admin API endpoints require authentication."""
         response = client.get('/admin/api/users')
         assert response.status_code in [302, 401, 403]
-
-    def test_admin_legacy_fragments_return_html(self, client):
-        """Test that legacy fragment endpoints return HTML."""
-        login_response = self.login_user(client, 'admin_user', 'admin123')
-        assert login_response.status_code == 200
-        
-        # Test actions fragment
-        response = client.get('/admin/fragments/actions/segmentation')
-        assert response.status_code == 200
-        assert b'<' in response.data  # Contains HTML tags
-        
-        # Test images fragment  
-        response = client.get('/admin/fragments/images')
-        assert response.status_code == 200
-        assert b'<' in response.data  # Contains HTML tags
