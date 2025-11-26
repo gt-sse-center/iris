@@ -1,32 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { Action, ActionsApiResponse } from '../types/iris';
+
+// Declare global function from base.html
+declare global {
+  interface Window {
+    goto_image: (mode: string, imageId: string) => void;
+  }
+}
 
 const ActionsPage: React.FC = () => {
   const params = useParams();
-  const type = params.type;
-  const [htmlContent, setHtmlContent] = useState<string>('');
+  const type = params.type || 'segmentation';
+  const [actions, setActions] = useState<Action[]>([]);
+  const [imageStats, setImageStats] = useState({ processed: 0, total: 0 });
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [orderBy, setOrderBy] = useState<string>('last_modification');
+  const [isAscending, setIsAscending] = useState<boolean>(false);
 
-  useEffect(() => {
-    console.log('🚀 React Actions page loaded (legacy content)');
-    fetchLegacyContent();
-  }, [type]);
-
-  const fetchLegacyContent = async (): Promise<void> => {
+  const fetchActions = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      // Fetch the legacy HTML content from Flask
-      const response = await fetch(`/admin/fragments/actions/${type || 'segmentation'}`);
+      const response = await fetch(
+        `/admin/api/actions/${type}?order_by=${orderBy}&ascending=${isAscending}`
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.text();
-      setHtmlContent(data);
+      const data: ActionsApiResponse = await response.json();
+      setActions(data.actions);
+      setImageStats(data.image_stats);
     } catch (error) {
-      console.error('Error fetching actions content:', error);
-      setHtmlContent('<p>Error loading actions data</p>');
+      console.error('Error fetching actions:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('🚀 React Actions page loaded (full React)');
+    fetchActions();
+  }, [type, orderBy, isAscending]);
+
+  const handleGotoImage = (imageId: string) => {
+    if (window.goto_image) {
+      window.goto_image('segmentation', imageId);
     }
   };
 
@@ -34,22 +52,104 @@ const ActionsPage: React.FC = () => {
     return <div>Loading actions...</div>;
   }
 
+  const progressPercentage = imageStats.total > 0 
+    ? Math.round((imageStats.processed / imageStats.total) * 100) 
+    : 0;
+
   return (
     <div>
-      {/* Legacy Content Indicator */}
+      {/* TypeScript Version Indicator */}
       <div style={{
-        backgroundColor: '#fff3cd',
-        border: '2px solid #ffc107',
+        backgroundColor: '#e3f2fd',
+        border: '2px solid #2196f3',
         padding: '10px',
         margin: '10px 0',
         borderRadius: '5px',
         textAlign: 'center'
       }}>
-        ⚠️ <strong>Legacy Content</strong> - This page shows Flask-rendered content (to be converted to TypeScript React)
+        🚀 <strong>TypeScript React Actions Page</strong> - Fully migrated from legacy templates!
       </div>
 
-      {/* Render legacy HTML content */}
-      <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      {/* Progress Bar */}
+      {imageStats.processed > 0 && (
+        <div style={{ margin: '20px 0' }}>
+          <div className="progress-bar">
+            <div className="progress" style={{ width: `${progressPercentage}%` }}>
+              {progressPercentage}% done!
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sorting Controls */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '400px',
+        margin: '20px 0'
+      }}>
+        <span style={{ width: '150px' }}>Order by:</span>
+        <select
+          value={orderBy}
+          onChange={(e) => setOrderBy(e.target.value)}
+          className="with-arrow"
+        >
+          <option value="last_modification">Last modification</option>
+          <option value="user_id">User</option>
+          <option value="score">Score</option>
+          <option value="difficulty">Difficulty</option>
+          <option value="complete">Active status</option>
+          <option value="unverified">Unverified</option>
+          <option value="time_spent">Time spent</option>
+        </select>
+
+        <label style={{ marginLeft: '10px' }}>
+          <input
+            type="checkbox"
+            checked={isAscending}
+            onChange={(e) => setIsAscending(e.target.checked)}
+          />
+          Ascending?
+        </label>
+      </div>
+
+      {/* Actions Table */}
+      <table className="striped" style={{ width: '100%' }}>
+        <thead>
+          <tr style={{ fontWeight: 'bold' }}>
+            <td>Image</td>
+            <td>User</td>
+            <td>Completion status</td>
+            <td>Score</td>
+            <td>Difficulty</td>
+            <td>Last modification</td>
+            <td>Time spent</td>
+            <td>Notes</td>
+          </tr>
+        </thead>
+        <tbody>
+          {actions.map((action) => (
+            <tr key={action.id}>
+              <td>
+                <button onClick={() => handleGotoImage(action.image_id)}>
+                  {action.image_id}
+                </button>
+              </td>
+              <td>{action.username}</td>
+              <td>{action.complete ? 'complete' : 'incomplete'}</td>
+              <td>
+                {action.unverified ? 'Needs more users' : action.score}
+              </td>
+              <td>{action.difficulty}</td>
+              <td>{new Date(action.last_modification).toLocaleString()}</td>
+              <td>{action.time_spent}</td>
+              <td>{action.notes || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
