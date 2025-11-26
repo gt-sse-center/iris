@@ -60,6 +60,29 @@ export interface ImageStats {
 export interface ActionsApiResponse {
   actions: Action[];
   image_stats: ImageStats;
+  order_by: string;
+  ascending: boolean;
+}
+
+// Images API types
+export interface ImageTypeStats {
+  score: number;
+  count: number;
+  difficulty: number;
+  time_spent: number;
+}
+
+export interface ImageData {
+  image_id: string;
+  types: {
+    [key: string]: ImageTypeStats;
+  };
+}
+
+export interface ImagesApiResponse {
+  images: ImageData[];
+  order_by: string;
+  ascending: boolean;
 }
 
 // Preferences/Config Types
