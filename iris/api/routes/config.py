@@ -11,7 +11,6 @@ Endpoints:
 """
 
 import flask
-from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
 import os
 import traceback
@@ -30,26 +29,16 @@ def config_health():
 
 def require_admin():
     """
-    Check if current user has admin privileges.
-    
-    Supports dual authentication:
-    - JWT tokens (for React frontend and API clients)
-    - Flask sessions (for legacy Jinja2 template UI)
+    Check if current user has admin privileges via Flask session.
     
     Returns:
         User object if admin, or tuple (error_response, status_code) if not authorized
     """
-    # Try JWT first (for React frontend)
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-    except:
-        # Fall back to Flask session (for legacy frontend)
-        if 'user_id' not in flask.session:
-            return flask.jsonify({'error': 'Not authenticated'}), 401
-        
-        current_user_id = flask.session['user_id']
-        user = User.query.get(current_user_id)
+    if 'user_id' not in flask.session:
+        return flask.jsonify({'error': 'Not authenticated'}), 401
+    
+    current_user_id = flask.session['user_id']
+    user = User.query.get(current_user_id)
     
     if not user:
         return flask.jsonify({'error': 'User not found'}), 401

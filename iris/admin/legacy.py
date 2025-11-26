@@ -33,7 +33,7 @@ def actions(type):
         actions = actions.order_by(getattr(Action, order_by).desc()).all()
 
     actions_json = [
-        {**action.to_json(), 'username': action.user.name}
+        {**action.to_json(), 'username': action.user.name if action.user else 'Unknown User'}
         for action in actions
     ]
     image_stats = {

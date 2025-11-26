@@ -13,6 +13,57 @@ declare global {
 const SegmentationApp: React.FC = () => {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
 
+  // Export GeoTIFF function
+  const exportGeoTIFF = async () => {
+    try {
+      const imageId = window.vars?.image_id;
+      if (!imageId) {
+        alert('No image loaded');
+        return;
+      }
+
+      // Show loading message
+      const w = window as any;
+      if (w.show_message) w.show_message('Exporting GeoTIFF...');
+
+      const response = await fetch(`/segmentation/api/export-geotiff/${imageId}`, {
+        method: 'GET',
+        credentials: 'same-origin'  // Include session cookies
+      });
+
+      if (response.ok) {
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${imageId}_annotated.tif`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        if (w.show_message) w.show_message('GeoTIFF exported successfully', 2000);
+      } else {
+        const error = await response.json();
+        const errorMsg = error.message || error.error || 'Export failed';
+        if (w.show_dialogue) {
+          w.show_dialogue('error', `<p>Could not export GeoTIFF: ${errorMsg}</p>`);
+        } else {
+          alert(`Export failed: ${errorMsg}`);
+        }
+      }
+    } catch (error) {
+      const w = window as any;
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      if (w.show_dialogue) {
+        w.show_dialogue('error', `<p>Could not export GeoTIFF: ${errorMsg}</p>`);
+      } else {
+        alert(`Export failed: ${errorMsg}`);
+      }
+    }
+  };
+
   useEffect(() => {
     const isDebugMode = window.location.search.includes('debug=1') || window.location.hostname === 'localhost';
     
@@ -78,6 +129,9 @@ const SegmentationApp: React.FC = () => {
           if (w.save_mask) w.save_mask();
         }}>
           <img src="/segmentation/static/icons/save_mask.png" className="icon" />
+        </li>
+        <li className="toolbutton icon_button" id='tb_export_geotiff' onClick={exportGeoTIFF} title="Export GeoTIFF">
+          <img src="/segmentation/static/icons/export.png" className="icon" />
         </li>
         <li className="toolbutton icon_button" id='tb_undo' onClick={() => {
           const w = window as any;

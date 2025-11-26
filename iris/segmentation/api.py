@@ -46,3 +46,150 @@ def save_user_config():
     project.save_user_config(user_id, user_config)
     
     return flask.jsonify({'message': 'Saved user config successfully!'})
+
+
+
+@api_bp.route('/export-geotiff/<image_id>', methods=['GET'])
+@requires_auth
+def export_geotiff(image_id):
+    """Export image with mask as GeoTIFF."""
+    import tempfile
+    from os.path import join
+
+    import numpy as np
+    import rasterio as rio
+
+    try:
+        user_id = flask.session['user_id']
+
+        if image_id not in project.image_ids:
+            return flask.jsonify({'error': 'Image not found'}), 404
+
+        # Get the original image path
+        image_path = project.get_image_path(image_id)
+
+        # Handle multi-source images - prefer Sentinel2 over Sentinel1 for better RGB
+        if isinstance(image_path, dict):
+            # Prefer Sentinel2 (optical) over Sentinel1 (radar) for visual quality
+            if 'Sentinel2' in image_path:
+                image_path = image_path['Sentinel2']
+            elif 'Sentinel-2' in image_path:
+                image_path = image_path['Sentinel-2']
+            else:
+                # Fall back to first available source
+                image_path = list(image_path.values())[0]
+
+        # Load user's mask
+        try:
+            from iris.segmentation import read_masks
+            final_mask, user_mask = read_masks(image_id, user_id)
+        except FileNotFoundError:
+            return flask.jsonify({
+                'error': 'No mask data available',
+                'message': 'Please save a mask before exporting'
+            }), 404
+
+        # Use IRIS's rendering engine to create RGB composite
+        # This matches what the user sees in the interface
+        try:
+            # Get the default RGB view from config
+            rgb_view = None
+            if 'views' in project.config:
+                # Look for RGB view
+                if 'RGB' in project.config['views']:
+                    rgb_view = project.config['views']['RGB']
+                elif 'NRGB' in project.config['views']:
+                    rgb_view = project.config['views']['NRGB']
+
+            if rgb_view:
+                # Render the RGB image using IRIS's rendering engine
+                rendered_rgb = project.render_image(image_id, rgb_view)
+            else:
+                # Fallback: open original GeoTIFF
+                with rio.open(image_path) as src:
+                    original_data = src.read()
+                    # Create simple RGB from first 3 bands
+                    if original_data.shape[0] >= 3:
+                        rendered_rgb = np.stack([
+                            original_data[0],
+                            original_data[1],
+                            original_data[2]
+                        ], axis=-1)
+                    else:
+                        # Grayscale
+                        rendered_rgb = np.stack([original_data[0]]*3, axis=-1)
+
+                    # Normalize to 0-255
+                    rendered_rgb = ((rendered_rgb - rendered_rgb.min()) /
+                                   (rendered_rgb.max() - rendered_rgb.min()) * 255).astype(np.uint8)
+        except Exception as e:
+            return flask.jsonify({
+                'error': 'Failed to render image',
+                'message': str(e)
+            }), 500
+
+        # Fix dimensions if needed
+        correct_height, correct_width = final_mask.shape
+
+        # Create profile for output GeoTIFF
+        profile = {
+            'driver': 'GTiff',
+            'dtype': 'uint8',
+            'width': correct_width,
+            'height': correct_height,
+            'count': 4,  # RGB + mask
+            'crs': None,
+            'transform': rio.transform.from_bounds(0, 0, correct_width, correct_height,
+                                                   correct_width, correct_height)
+        }
+
+        # Create temporary file for export
+        # Note: delete=False is intentional - flask.send_file will handle cleanup
+        temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+            delete=False,
+            suffix='.tif',
+            prefix=f'{image_id}_annotated_'
+        )
+        temp_path = temp_file.name
+        temp_file.close()
+
+        # Write new GeoTIFF with RGB bands + mask
+        with rio.open(temp_path, 'w', **profile) as dst:
+            # Resize rendered RGB if needed
+            if rendered_rgb.shape[:2] != (correct_height, correct_width):
+                from skimage.transform import resize
+                rendered_rgb = resize(
+                    rendered_rgb,
+                    (correct_height, correct_width),
+                    order=1,
+                    preserve_range=True,
+                    anti_aliasing=True
+                ).astype(np.uint8)
+
+            # Write RGB bands
+            dst.write(rendered_rgb[:, :, 0], 1)  # Red
+            dst.write(rendered_rgb[:, :, 1], 2)  # Green
+            dst.write(rendered_rgb[:, :, 2], 3)  # Blue
+
+            # Write mask as the 4th band
+            dst.write(final_mask.astype(np.uint8), 4)
+
+            # Add band descriptions
+            dst.set_band_description(1, 'Red')
+            dst.set_band_description(2, 'Green')
+            dst.set_band_description(3, 'Blue')
+            dst.set_band_description(4, 'Segmentation Mask')
+
+        # Send file to user
+        return flask.send_file(
+            temp_path,
+            as_attachment=True,
+            download_name=f'{image_id}_annotated.tif',
+            mimetype='image/tiff'
+        )
+
+    except Exception as e:
+        return flask.jsonify({
+            'error': 'Failed to export GeoTIFF',
+            'message': str(e)
+        }), 500

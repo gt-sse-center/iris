@@ -6,12 +6,10 @@ enabling React frontend communication through JSON responses.
 """
 
 import flask
-from flask_jwt_extended import JWTManager
-from flask_cors import CORS
 
 from iris.api.routes.config import config_bp
 
-__all__ = ['create_api_blueprint', 'init_api_extensions', 'register_api_error_handlers']
+__all__ = ['create_api_blueprint', 'register_api_error_handlers']
 
 def create_api_blueprint():
     """Create and configure the main API blueprint"""
@@ -57,54 +55,6 @@ def create_api_blueprint():
     api_bp.register_blueprint(config_bp, url_prefix='/config')
     
     return api_bp
-
-def init_api_extensions(app):
-    """Initialize API-specific Flask extensions"""
-    # Configure JWT
-    from datetime import timedelta
-    app.config['JWT_SECRET_KEY'] = app.config.get('SECRET_KEY')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # 24 hour expiry
-    jwt = JWTManager(app)
-    
-    # JWT error handlers
-    @jwt.invalid_token_loader
-    def invalid_token_callback(error_string):
-        return flask.jsonify({
-            'error': 'Invalid token',
-            'message': error_string
-        }), 422
-    
-    @jwt.unauthorized_loader
-    def unauthorized_callback(error_string):
-        return flask.jsonify({
-            'error': 'Missing authorization',
-            'message': error_string
-        }), 401
-    
-    @jwt.expired_token_loader
-    def expired_token_callback(jwt_header, jwt_payload):
-        return flask.jsonify({
-            'error': 'Token expired',
-            'message': 'The token has expired'
-        }), 401
-    
-    @jwt.revoked_token_loader
-    def revoked_token_callback(jwt_header, jwt_payload):
-        return flask.jsonify({
-            'error': 'Token revoked',
-            'message': 'The token has been revoked'
-        }), 401
-    
-    # Configure CORS
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": ["http://localhost:3000", "http://localhost:5173"],  # React dev servers
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
-    
-    return jwt
 
 # API error handlers
 def register_api_error_handlers(app):
