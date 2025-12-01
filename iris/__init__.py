@@ -87,12 +87,23 @@ def handle_launch_command(folder_name: str) -> Path:
         print(f"Creating new project '{folder_name}' from demo...")
         shutil.copytree(demo_path, folder_path, ignore=shutil.ignore_patterns("cloud-segmentation.iris"))
 
-        config_file = folder_path / "cloud-segmentation.json"
+        config_file_from_demo = folder_path / "cloud-segmentation.json"
+        config_file = folder_path / f"{folder_name}.json"
+        config_file_from_demo.rename(config_file)
         if not config_file.exists():
-            raise RuntimeError("Failed to create project: cloud-segmentation.json not found in copied demo.")
+            raise RuntimeError(f"Failed to create project: {config_file} not found in copied demo.")
+
+        try:
+            dconfig = json.loads(config_file.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            print(f"Error: Invalid JSON in {config_file}")
+        dconfig["name"] = folder_name
+        with config_file.open("w", encoding="utf-8") as fp:
+            json.dump(dconfig, fp, indent=4)
 
         print(f"Project '{folder_name}' created successfully!")
         return config_file.resolve()
+
 
 def handle_rm_command(folder_name: str, force: bool = False) -> None:
     """Handle the rm command - remove project folder with confirmation.
@@ -160,7 +171,6 @@ def start_server(
     # db.create_all() ran at module import time for the demo project only,
     # which caused a race when launching a newly copied project folder:
     # the DB file for the new project didn't exist and queries failed.
-    from iris import db
     with flask_app.app_context():
         db.create_all()
         db.session.commit()
