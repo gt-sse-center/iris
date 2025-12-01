@@ -85,7 +85,7 @@ def handle_launch_command(folder_name: str) -> Path:
             raise FileNotFoundError("Demo folder not found! Cannot create new project.")
 
         print(f"Creating new project '{folder_name}' from demo...")
-        shutil.copytree(demo_path, folder_path)
+        shutil.copytree(demo_path, folder_path, ignore=shutil.ignore_patterns("cloud-segmentation.iris"))
 
         config_file = folder_path / "cloud-segmentation.json"
         if not config_file.exists():
@@ -154,7 +154,17 @@ def start_server(
     
     # Register all blueprints
     register_extensions(flask_app)
-    
+
+    # Ensure database tables exist for this project's DB file before
+    # attempting any queries (e.g. creating default admin). Previously
+    # db.create_all() ran at module import time for the demo project only,
+    # which caused a race when launching a newly copied project folder:
+    # the DB file for the new project didn't exist and queries failed.
+    from iris import db
+    with flask_app.app_context():
+        db.create_all()
+        db.session.commit()
+
     # Ensure default admin exists
     create_default_admin(flask_app, admin_user, admin_password)
     
