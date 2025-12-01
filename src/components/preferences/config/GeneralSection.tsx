@@ -1,11 +1,7 @@
 import { useState, useImperativeHandle, forwardRef, useRef } from 'react';
 import PathListEditor from './PathListEditor';
 
-interface GeneralSectionProps {
-  onDataChange?: (data: any) => void;
-}
-
-const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, ref) => {
+const GeneralSection = forwardRef<any, {}>((_props, ref) => {
   const [name, setName] = useState('');
   const [port, setPort] = useState(5000);
   const [host, setHost] = useState('127.0.0.1');
@@ -87,13 +83,6 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
     setData,
   }));
 
-  const handleSave = () => {
-    const data = getData();
-    console.log('General Section Data:', JSON.stringify(data, null, 2));
-    if (onDataChange) {
-      onDataChange(data);
-    }
-  };
   return (
     <>
       <div
@@ -119,7 +108,7 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
                   Optional name for this project. (e.g., <code style={{ color: '#d63384' }}>cloud-segmentation</code>)
                 </small>
               </td>
-              <td style={{ width: '300px' }}>
+              <td style={{ width: '300px', paddingRight: '20px' }}>
                 <input
                   type="text"
                   placeholder="cloud-segmentation"
@@ -140,7 +129,7 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
                   Set the port on which IRIS is served. Example: <code style={{ color: '#d63384' }}>6060</code>
                 </small>
               </td>
-              <td>
+              <td style={{ paddingRight: '20px' }}>
                 <input
                   type="number"
                   value={port}
@@ -161,7 +150,7 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
                   to 0.0.0.0 and adjusting your router / consulting with your network administrators accordingly.
                 </small>
               </td>
-              <td>
+              <td style={{ paddingRight: '20px' }}>
                 <input
                   type="text"
                   value={host}
@@ -261,38 +250,40 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
               </td>
             </tr>
             <tr>
-              <td colSpan={2}>
+              <td colSpan={2} style={{ paddingRight: '20px' }}>
                 <h4 style={{ marginBottom: '12px' }}>Shape</h4>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '4px' }}>
-                      <strong>Shape-1 *</strong>
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="512"
-                      value={shape1}
-                      onChange={(e) => setShape1(e.target.value)}
-                      style={{ width: '100%', padding: '6px' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '4px' }}>
-                      <strong>Shape-2 *</strong>
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="512"
-                      value={shape2}
-                      onChange={(e) => setShape2(e.target.value)}
-                      style={{ width: '100%', padding: '6px' }}
-                    />
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', gap: '32px', maxWidth: '400px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '4px' }}>
+                        <strong>Shape-1 *</strong>
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="512"
+                        value={shape1}
+                        onChange={(e) => setShape1(e.target.value)}
+                        style={{ width: '100%', padding: '6px' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '4px' }}>
+                        <strong>Shape-2 *</strong>
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="512"
+                        value={shape2}
+                        onChange={(e) => setShape2(e.target.value)}
+                        style={{ width: '100%', padding: '6px' }}
+                      />
+                    </div>
                   </div>
                 </div>
               </td>
             </tr>
             <tr>
-              <td colSpan={2}>
+              <td colSpan={2} style={{ paddingRight: '20px' }}>
                 <h4 style={{ marginTop: '20px', marginBottom: '8px' }}>Thumbnails</h4>
                 <small style={{ color: '#666', display: 'block', marginBottom: '12px' }}>
                   Optional thumbnail files for the images. Path must contain a placeholder{' '}
@@ -328,7 +319,7 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
               </td>
             </tr>
             <tr>
-              <td colSpan={2}>
+              <td colSpan={2} style={{ paddingRight: '20px' }}>
                 <h4 style={{ marginTop: '20px', marginBottom: '8px' }}>Metadata</h4>
                 <small style={{ color: '#666', display: 'block', marginBottom: '12px', lineHeight: '1.5' }}>
                   Optional metadata for the images. Path must contain a placeholder{' '}
@@ -378,26 +369,6 @@ const GeneralSection = forwardRef<any, GeneralSectionProps>(({ onDataChange }, r
                     <small style={{ color: '#666', display: 'block' }}>Optional metadata file (json/yaml).</small>
                   </>
                 )}
-              </td>
-            </tr>
-            <tr>
-              <td colSpan={2}>
-                <button
-                  onClick={handleSave}
-                  style={{
-                    marginTop: '20px',
-                    padding: '10px 24px',
-                    background: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  Save Configuration
-                </button>
               </td>
             </tr>
           </tbody>

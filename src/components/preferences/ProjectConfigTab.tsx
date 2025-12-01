@@ -284,9 +284,6 @@ const ProjectConfigTab: React.FC = () => {
         >
           {saving ? 'Saving...' : 'Save Complete Configuration'}
         </button>
-        <small style={{ display: 'block', marginTop: '8px', color: '#666', textAlign: 'center' }}>
-          {saving ? 'Validating and saving to backend...' : 'This will validate and save the configuration to the backend'}
-        </small>
       </div>
     </div>
   );
