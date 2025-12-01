@@ -89,14 +89,16 @@ def handle_launch_command(folder_name: str) -> Path:
 
         config_file_from_demo = folder_path / "cloud-segmentation.json"
         config_file = folder_path / f"{folder_name}.json"
-        config_file_from_demo.rename(config_file)
+        config_file_from_demo.replace(config_file)
+        if config_file_from_demo.exists():
+            raise RuntimeError(f"Failed to create project: {config_file_from_demo} not replaced.")
         if not config_file.exists():
             raise RuntimeError(f"Failed to create project: {config_file} not found in copied demo.")
 
         try:
             dconfig = json.loads(config_file.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            print(f"Error: Invalid JSON in {config_file}")
+            raise RuntimeError(f"Error: Invalid JSON in {config_file}")
         dconfig["name"] = folder_name
         with config_file.open("w", encoding="utf-8") as fp:
             json.dump(dconfig, fp, indent=4)
