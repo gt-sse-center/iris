@@ -97,3 +97,36 @@ def project_snapshot():
         # restore
         for k, v in saved.items():
             setattr(project, k, deepcopy(v))
+
+
+@pytest.fixture
+def restore_config_file():
+    """Snapshot and restore the project config file on disk.
+    
+    This fixture saves the config file content before the test and restores it
+    after, ensuring tests that modify the config file don't affect other tests.
+    Also cleans up any backup files created during testing.
+    """
+    from iris.project import project
+    import json
+    
+    config_file = project.file
+    backup_file = config_file + '.backup'
+    
+    # Save original config content
+    with open(config_file, 'r') as f:
+        original_content = f.read()
+    
+    try:
+        yield config_file
+    finally:
+        # Restore original config file
+        with open(config_file, 'w') as f:
+            f.write(original_content)
+        
+        # Clean up backup file if it was created
+        if os.path.exists(backup_file):
+            os.remove(backup_file)
+        
+        # Reload project to ensure consistency
+        project.load_from(config_file)
