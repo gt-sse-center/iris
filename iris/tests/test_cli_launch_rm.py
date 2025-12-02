@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import json
 import pytest
 
 from iris import find_config_file, handle_launch_command, handle_rm_command
@@ -30,12 +31,12 @@ class TestLaunchCommand:
         result = handle_launch_command("new-project")
 
         new_project_dir = tmp_path / "new-project"
-        expected_config = new_project_dir / "cloud-segmentation.json"
+        expected_config = new_project_dir / "new-project.json"
         assert new_project_dir.exists()
         assert expected_config.exists()
         assert result == expected_config.resolve()
-
-
+        dconfig = json.loads(expected_config.read_text(encoding="utf-8"))
+        assert dconfig["name"] == "new-project"
 
 
 class TestRmCommand:

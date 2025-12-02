@@ -100,7 +100,7 @@ def launch(
     
     try:
         config_file = handle_launch_command(folder)
-        typer.echo(f"Launching project '{folder}'...")
+        typer.echo(f"Launching project '{folder}' with config '{config_file}'...")
         start_server(project_file=str(config_file), debug=False, production=False)
     except (ValueError, FileNotFoundError, RuntimeError) as e:
         typer.echo(f"Error: {e}", err=True)
