@@ -98,11 +98,13 @@ const ImagesPage: React.FC = () => {
             <td>Avg Score</td>
             <td>Avg Difficulty</td>
             <td>Avg Time (hours)</td>
+            <td>Export</td>
           </tr>
         </thead>
         <tbody>
           {images.map((image) => {
             const segData = image.types.segmentation;
+            const hasAnnotations = segData && segData.count > 0;
             return (
               <tr key={image.image_id}>
                 <td>
@@ -114,6 +116,19 @@ const ImagesPage: React.FC = () => {
                 <td>{segData ? segData.score.toFixed(2) : 'N/A'}</td>
                 <td>{segData ? segData.difficulty.toFixed(2) : 'N/A'}</td>
                 <td>{segData ? segData.time_spent.toFixed(2) : 'N/A'}</td>
+                <td>
+                  {hasAnnotations ? (
+                    <a
+                      href={`/admin/api/export-merged-geotiff/${image.image_id}`}
+                      download={`${image.image_id}_merged.tif`}
+                      style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                      GeoTIFF
+                    </a>
+                  ) : (
+                    <span style={{ color: '#999' }}>N/A</span>
+                  )}
+                </td>
               </tr>
             );
           })}

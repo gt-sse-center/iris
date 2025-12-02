@@ -105,23 +105,23 @@ def read_masks(image_id, user_id):
     user_mask = np.load(user_mask_file)
     return final_mask, user_mask
 
-def merge_masks(image_id):
-    """Combine the masks of all users to a resulting mask"""
-    final_mask_paths = get_mask_filenames(image_id, user_id="*")[0]
-    users, final_masks = zip(*[
-        [basename(path).split('_')[0], np.argmax(np.load(path), axis=-1)]
-        for path in glob(final_mask_paths)
-    ])
-    final_masks = np.dstack(final_masks)
-
-    # Time to merge the masks, i.e. we are going to count which class is the
-    # most often:
-
+def compute_merged_mask(final_masks):
+    """
+    Compute merged mask from multiple user masks using voting system.
+    
+    Args:
+        final_masks: 3D numpy array of shape (height, width, n_users) containing
+                    class indices for each user's mask
+    
+    Returns:
+        2D numpy array of shape (height, width) with merged class indices
+    """
     # Unfortunately, there is no fast standard solution for mode in numpy or
     # scipy (scipy.stats.mode is not optimised for our case):
     classes = dict(enumerate(np.unique(final_masks)))
     class_votes = np.zeros((*final_masks.shape[:-1], len(classes)))
-    for u in range(len(users)):
+    
+    for u in range(final_masks.shape[-1]):
         for i, klass in classes.items():
             # We collect the votes for each class for each pixel.
             # Instead of increasing by 1, we could also use the user's rank or
@@ -134,6 +134,21 @@ def merge_masks(image_id):
     # Retranslate to original classes (we initialised class_votes not with the
     # original class indices):
     merged_mask = np.vectorize(classes.__getitem__, otypes=[np.uint8])(winner_indices)
+    
+    return merged_mask
+
+
+def merge_masks(image_id):
+    """Combine the masks of all users to a resulting mask"""
+    final_mask_paths = get_mask_filenames(image_id, user_id="*")[0]
+    users, final_masks = zip(*[
+        [basename(path).split('_')[0], np.argmax(np.load(path), axis=-1)]
+        for path in glob(final_mask_paths)
+    ])
+    final_masks = np.dstack(final_masks)
+
+    # Compute merged mask using voting system
+    merged_mask = compute_merged_mask(final_masks)
 
     # Update the database for all users
     for u, user_id in enumerate(users):
