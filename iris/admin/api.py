@@ -354,17 +354,9 @@ def export_merged_geotiff(image_id):
 
         final_masks = np.dstack(final_masks)
 
-        # Merge masks using voting system (same as merge_masks function)
-        classes = dict(enumerate(np.unique(final_masks)))
-        class_votes = np.zeros((*final_masks.shape[:-1], len(classes)))
-
-        for u in range(final_masks.shape[-1]):
-            for i, klass in classes.items():
-                class_votes[final_masks[..., u] == klass, i] += 1
-
-        # Create final merged mask from most voted class
-        winner_indices = np.argmax(class_votes, axis=-1)
-        merged_mask = np.vectorize(classes.__getitem__, otypes=[np.uint8])(winner_indices)
+        # Merge masks using voting system (reuses compute_merged_mask function)
+        from iris.segmentation import compute_merged_mask
+        merged_mask = compute_merged_mask(final_masks)
 
         # Render RGB image using IRIS's rendering engine
         try:
