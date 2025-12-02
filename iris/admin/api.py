@@ -14,9 +14,10 @@ from collections import defaultdict
 from datetime import timedelta
 
 import flask
-from iris.user import requires_auth
-from iris.models import User, Action
+
+from iris.models import Action, User
 from iris.project import project
+from iris.user import requires_admin, requires_auth
 
 api_bp = flask.Blueprint(
     'admin_api', __name__,
@@ -29,13 +30,13 @@ api_bp = flask.Blueprint(
 def users():
     """
     Get list of users as JSON for the React UsersPage component.
-    
+
     This endpoint supports sorting and ordering to match the legacy template functionality.
-    
+
     Query Parameters:
         order_by (str): Column to sort by (id, name, admin, created). Default: 'id'
         ascending (str): 'true' or 'false' for sort direction. Default: 'true'
-    
+
     Returns:
         JSON response with format:
         {
@@ -54,7 +55,7 @@ def users():
                 ...
             ]
         }
-    
+
     Note:
         - Preserves exact functionality from legacy admin/templates/admin/users.html
         - User.to_json() includes segmentation statistics automatically
@@ -62,7 +63,7 @@ def users():
     # Parse query parameters for sorting
     order_by = flask.request.args.get('order_by', 'id')
     ascending = flask.request.args.get('ascending', 'true')
-    ascending = True if ascending == 'true' else False
+    ascending = ascending == 'true'
 
     # Query users with sorting
     users = User.query
@@ -73,7 +74,7 @@ def users():
 
     # Convert to JSON (includes segmentation stats via User.to_json())
     users_json = [user.to_json() for user in users]
-    
+
     return flask.jsonify({'users': users_json})
 
 
@@ -82,18 +83,18 @@ def users():
 def actions(type):
     """
     Get list of actions (annotations) as JSON for the React ActionsPage component.
-    
+
     This endpoint provides action/annotation data with user information and progress statistics.
     Replaces the legacy admin/fragments/actions/<type> HTML endpoint.
-    
+
     URL Parameters:
         type (str): Action type to filter by (e.g., 'segmentation', 'classification', 'detection')
-    
+
     Query Parameters:
         order_by (str): Column to sort by (user_id, score, difficulty, last_modification, etc.)
                        Default: 'user_id'
         ascending (str): 'true' or 'false' for sort direction. Default: 'true'
-    
+
     Returns:
         JSON response with format:
         {
@@ -121,7 +122,7 @@ def actions(type):
             "order_by": "user_id",
             "ascending": true
         }
-    
+
     Note:
         - Preserves exact functionality from legacy admin/templates/admin/actions.html
         - Joins username from User table for display
@@ -130,7 +131,7 @@ def actions(type):
     # Parse query parameters for sorting
     order_by = flask.request.args.get('order_by', 'user_id')
     ascending = flask.request.args.get('ascending', 'true')
-    ascending = True if ascending == 'true' else False
+    ascending = ascending == 'true'
 
     # Query actions filtered by type (e.g., 'segmentation') with sorting
     actions = Action.query.filter_by(type=type)
@@ -145,12 +146,12 @@ def actions(type):
         {**action.to_json(), 'username': action.user.name if action.user else 'Unknown User'}
         for action in actions
     ]
-    
+
     # Calculate image statistics for progress bar
     # - processed: count of unique images that have been annotated
     # - total: total number of images in the project
     image_stats = {
-        "processed": len(set(action.image_id for action in actions)),
+        "processed": len({action.image_id for action in actions}),
         "total": len(project.image_ids)
     }
 
@@ -167,15 +168,15 @@ def actions(type):
 def images():
     """
     Get image statistics with aggregated action data for the React ImagesPage component.
-    
+
     This endpoint aggregates all actions (annotations) per image and calculates statistics
-    like average score, difficulty, and time spent. Replaces the legacy 
+    like average score, difficulty, and time spent. Replaces the legacy
     admin/fragments/images HTML endpoint.
-    
+
     Query Parameters:
         order_by (str): Column to sort by (currently only 'image_id' supported). Default: 'image_id'
         ascending (str): 'true' or 'false' for sort direction. Default: 'true'
-    
+
     Returns:
         JSON response with format:
         {
@@ -197,7 +198,7 @@ def images():
             "order_by": "image_id",
             "ascending": true
         }
-    
+
     Algorithm:
         1. For each image in the project:
            - Group all actions by action type (segmentation, classification, etc.)
@@ -206,7 +207,7 @@ def images():
         2. Calculate averages (sum / count)
         3. Convert time from timedelta to hours (float)
         4. Round values for display
-    
+
     Note:
         - Preserves exact functionality from legacy admin/templates/admin/images.html
         - Uses same aggregation logic as legacy code for consistency
@@ -215,13 +216,13 @@ def images():
     # Parse query parameters for sorting
     order_by = flask.request.args.get('order_by', 'image_id')
     ascending = flask.request.args.get('ascending', 'true')
-    ascending = True if ascending == 'true' else False
+    ascending = ascending == 'true'
 
     # Build image statistics using same algorithm as legacy code
     # Structure: images_data[image_id][action_type] = {score, count, difficulty, time_spent}
     images_data = defaultdict(dict)
     actions = Action.query.all()
-    
+
     # Default statistics structure for each image/type combination
     default_stats = {
         'score': 0,
@@ -229,7 +230,7 @@ def images():
         'difficulty': 0,
         'time_spent': timedelta(),
     }
-    
+
     # Iterate through all images in the project
     for image_id in project.image_ids:
         # For each image, aggregate all actions
@@ -279,3 +280,186 @@ def images():
         'order_by': order_by,
         'ascending': ascending
     })
+
+
+@api_bp.route('/export-merged-geotiff/<image_id>', methods=['GET'])
+@requires_admin
+def export_merged_geotiff(image_id):
+    """
+    Export merged mask as GeoTIFF (admin-only).
+
+    This endpoint creates a GeoTIFF with RGB bands from the original image
+    and the merged mask from all users as the 4th band. Only administrators
+    can access this endpoint.
+
+    URL Parameters:
+        image_id (str): ID of the image to export
+
+    Returns:
+        GeoTIFF file download with format:
+        - Band 1-3: RGB composite of original image
+        - Band 4: Merged segmentation mask from all users
+
+    Security:
+        - Admin-only access via @requires_admin decorator (403 if not admin)
+        - Validates image_id exists in project
+        - Uses merged mask (voting system across all user annotations)
+
+    Note:
+        - Similar to segmentation export but uses merged masks instead of single user
+        - Merged mask combines all user annotations via voting system
+        - Useful for exporting final consensus annotations
+    """
+    import tempfile
+    from glob import glob
+
+    import numpy as np
+    import rasterio as rio
+
+    # Validate image exists
+    if image_id not in project.image_ids:
+        return flask.jsonify({'error': 'Image not found'}), 404
+
+    try:
+        # Get the original image path
+        image_path = project.get_image_path(image_id)
+
+        # Handle multi-source images - prefer Sentinel2 over Sentinel1
+        if isinstance(image_path, dict):
+            if 'Sentinel2' in image_path:
+                image_path = image_path['Sentinel2']
+            elif 'Sentinel-2' in image_path:
+                image_path = image_path['Sentinel-2']
+            else:
+                image_path = list(image_path.values())[0]
+
+        # Load merged mask by reading all user masks and merging them
+        from iris.segmentation import get_mask_filenames
+
+        final_mask_paths = get_mask_filenames(image_id, user_id="*")[0]
+        mask_files = glob(final_mask_paths)
+
+        if not mask_files:
+            return flask.jsonify({
+                'error': 'No mask data available',
+                'message': 'No users have annotated this image yet'
+            }), 404
+
+        # Load all user masks and merge them using voting system
+        final_masks = []
+        for path in mask_files:
+            mask_data = np.load(path)
+            # Convert from one-hot encoding to class indices
+            final_masks.append(np.argmax(mask_data, axis=-1))
+
+        final_masks = np.dstack(final_masks)
+
+        # Merge masks using voting system (same as merge_masks function)
+        classes = dict(enumerate(np.unique(final_masks)))
+        class_votes = np.zeros((*final_masks.shape[:-1], len(classes)))
+
+        for u in range(final_masks.shape[-1]):
+            for i, klass in classes.items():
+                class_votes[final_masks[..., u] == klass, i] += 1
+
+        # Create final merged mask from most voted class
+        winner_indices = np.argmax(class_votes, axis=-1)
+        merged_mask = np.vectorize(classes.__getitem__, otypes=[np.uint8])(winner_indices)
+
+        # Render RGB image using IRIS's rendering engine
+        try:
+            rgb_view = None
+            if 'views' in project.config:
+                if 'RGB' in project.config['views']:
+                    rgb_view = project.config['views']['RGB']
+                elif 'NRGB' in project.config['views']:
+                    rgb_view = project.config['views']['NRGB']
+
+            if rgb_view:
+                rendered_rgb = project.render_image(image_id, rgb_view)
+            else:
+                # Fallback: open original GeoTIFF
+                with rio.open(image_path) as src:
+                    original_data = src.read()
+                    if original_data.shape[0] >= 3:
+                        rendered_rgb = np.stack([
+                            original_data[0],
+                            original_data[1],
+                            original_data[2]
+                        ], axis=-1)
+                    else:
+                        rendered_rgb = np.stack([original_data[0]]*3, axis=-1)
+
+                    # Normalize to 0-255
+                    rendered_rgb = ((rendered_rgb - rendered_rgb.min()) /
+                                   (rendered_rgb.max() - rendered_rgb.min()) * 255).astype(np.uint8)
+        except Exception as e:
+            return flask.jsonify({
+                'error': 'Failed to render image',
+                'message': str(e)
+            }), 500
+
+        # Get correct dimensions
+        correct_height, correct_width = merged_mask.shape
+
+        # Create profile for output GeoTIFF
+        profile = {
+            'driver': 'GTiff',
+            'dtype': 'uint8',
+            'width': correct_width,
+            'height': correct_height,
+            'count': 4,  # RGB + mask
+            'crs': None,
+            'transform': rio.transform.from_bounds(0, 0, correct_width, correct_height,
+                                                   correct_width, correct_height)
+        }
+
+        # Create temporary file for export
+        temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+            delete=False,
+            suffix='.tif',
+            prefix=f'{image_id}_merged_'
+        )
+        temp_path = temp_file.name
+        temp_file.close()
+
+        # Write GeoTIFF with RGB bands + merged mask
+        with rio.open(temp_path, 'w', **profile) as dst:
+            # Resize rendered RGB if needed
+            if rendered_rgb.shape[:2] != (correct_height, correct_width):
+                from skimage.transform import resize
+                rendered_rgb = resize(
+                    rendered_rgb,
+                    (correct_height, correct_width),
+                    order=1,
+                    preserve_range=True,
+                    anti_aliasing=True
+                ).astype(np.uint8)
+
+            # Write RGB bands
+            dst.write(rendered_rgb[:, :, 0], 1)  # Red
+            dst.write(rendered_rgb[:, :, 1], 2)  # Green
+            dst.write(rendered_rgb[:, :, 2], 3)  # Blue
+
+            # Write merged mask as 4th band
+            dst.write(merged_mask.astype(np.uint8), 4)
+
+            # Add band descriptions
+            dst.set_band_description(1, 'Red')
+            dst.set_band_description(2, 'Green')
+            dst.set_band_description(3, 'Blue')
+            dst.set_band_description(4, 'Merged Segmentation Mask')
+
+        # Send file to user
+        return flask.send_file(
+            temp_path,
+            as_attachment=True,
+            download_name=f'{image_id}_merged.tif',
+            mimetype='image/tiff'
+        )
+
+    except Exception as e:
+        return flask.jsonify({
+            'error': 'Failed to export merged GeoTIFF',
+            'message': str(e)
+        }), 500
