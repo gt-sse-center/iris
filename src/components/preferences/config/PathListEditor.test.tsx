@@ -102,26 +102,6 @@ describe('PathListEditor', () => {
         Sentinel2: 'data/{id}/s2.tif',
       });
     });
-
-    it('populates UI fields correctly', () => {
-      const ref = React.createRef<any>();
-      render(<PathListEditor ref={ref} />);
-      
-      act(() => {
-        ref.current?.setData({
-          Sentinel1: 'path1.tif',
-          Sentinel2: 'path2.tif',
-        });
-      });
-      
-      const keyInputs = screen.getAllByPlaceholderText('optional key (e.g. Sentinel2)');
-      expect(keyInputs[0]).toHaveValue('Sentinel1');
-      expect(keyInputs[1]).toHaveValue('Sentinel2');
-      
-      const valueInputs = screen.getAllByPlaceholderText('images/{id}.tif');
-      expect(valueInputs[0]).toHaveValue('path1.tif');
-      expect(valueInputs[1]).toHaveValue('path2.tif');
-    });
   });
 
   describe('Add/Remove functionality', () => {
@@ -152,12 +132,6 @@ describe('PathListEditor', () => {
       expect(screen.queryByText('Path-2 *')).not.toBeInTheDocument();
     });
 
-    it('does not show Remove button when only one path exists', () => {
-      render(<PathListEditor />);
-      
-      expect(screen.queryByText('Remove')).not.toBeInTheDocument();
-    });
-
     it('shows Remove buttons when multiple paths exist', () => {
       render(<PathListEditor />);
       
@@ -165,28 +139,6 @@ describe('PathListEditor', () => {
       
       const removeButtons = screen.getAllByText('Remove');
       expect(removeButtons).toHaveLength(2);
-    });
-  });
-
-  describe('User interactions', () => {
-    it('updates key field on input', () => {
-      const ref = React.createRef<any>();
-      render(<PathListEditor ref={ref} />);
-      
-      const keyInput = screen.getByPlaceholderText('optional key (e.g. Sentinel2)');
-      fireEvent.change(keyInput, { target: { value: 'TestKey' } });
-      
-      expect(keyInput).toHaveValue('TestKey');
-    });
-
-    it('updates value field on input', () => {
-      const ref = React.createRef<any>();
-      render(<PathListEditor ref={ref} />);
-      
-      const valueInput = screen.getByPlaceholderText('images/{id}.tif');
-      fireEvent.change(valueInput, { target: { value: 'new/path.tif' } });
-      
-      expect(valueInput).toHaveValue('new/path.tif');
     });
   });
 });

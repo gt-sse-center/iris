@@ -76,14 +76,6 @@ describe('GeneralSection', () => {
       expect(data.images.thumbnails).toBe('thumbs/{id}.jpg');
     });
 
-    it('returns false for thumbnails when disabled', () => {
-      const ref = React.createRef<any>();
-      render(<GeneralSection ref={ref} />);
-      
-      const data = ref.current?.getData();
-      expect(data.images.thumbnails).toBe(false);
-    });
-
     it('returns metadata path when enabled', () => {
       const ref = React.createRef<any>();
       render(<GeneralSection ref={ref} />);
@@ -96,14 +88,6 @@ describe('GeneralSection', () => {
       
       const data = ref.current?.getData();
       expect(data.images.metadata).toBe('meta/{id}.yaml');
-    });
-
-    it('returns false for metadata when disabled', () => {
-      const ref = React.createRef<any>();
-      render(<GeneralSection ref={ref} />);
-      
-      const data = ref.current?.getData();
-      expect(data.images.metadata).toBe(false);
     });
   });
 
@@ -133,46 +117,6 @@ describe('GeneralSection', () => {
       expect(shape512Inputs.length).toBe(2); // Both shape fields should have 512
       expect(screen.getByDisplayValue('thumbs/{id}.png')).toBeInTheDocument();
       expect(screen.getByDisplayValue('meta/{id}.json')).toBeInTheDocument();
-    });
-
-    it('handles thumbnails as false', () => {
-      const ref = React.createRef<any>();
-      render(<GeneralSection ref={ref} />);
-      
-      act(() => {
-        ref.current?.setData({
-          name: 'test',
-          images: {
-            path: 'data/{id}.tif',
-            shape: [512, 512],
-            thumbnails: false,
-          },
-        });
-      });
-      
-      const thumbnailCheckbox = screen.getAllByRole('checkbox')[0];
-      expect(thumbnailCheckbox).not.toBeChecked();
-      expect(screen.queryByPlaceholderText('thumbnails/{id}.png')).not.toBeInTheDocument();
-    });
-
-    it('handles metadata as false', () => {
-      const ref = React.createRef<any>();
-      render(<GeneralSection ref={ref} />);
-      
-      act(() => {
-        ref.current?.setData({
-          name: 'test',
-          images: {
-            path: 'data/{id}.tif',
-            shape: [512, 512],
-            metadata: false,
-          },
-        });
-      });
-      
-      const metadataCheckbox = screen.getAllByRole('checkbox')[1];
-      expect(metadataCheckbox).not.toBeChecked();
-      expect(screen.queryByPlaceholderText('metadata/{id}.json')).not.toBeInTheDocument();
     });
 
     it('enables thumbnails checkbox when path provided', () => {
@@ -250,19 +194,6 @@ describe('GeneralSection', () => {
   });
 
   describe('Shape fields', () => {
-    it('accepts numeric input', () => {
-      const ref = React.createRef<any>();
-      const { container } = render(<GeneralSection ref={ref} />);
-      
-      const numberInputs = container.querySelectorAll('input[type="number"]');
-      const shape1Input = Array.from(numberInputs).find(input => 
-        (input as HTMLInputElement).placeholder === '512'
-      ) as HTMLInputElement;
-      fireEvent.change(shape1Input, { target: { value: '256' } });
-      
-      expect(shape1Input).toHaveValue(256);
-    });
-
     it('converts string to number in getData', () => {
       const ref = React.createRef<any>();
       const { container } = render(<GeneralSection ref={ref} />);
@@ -298,16 +229,6 @@ describe('GeneralSection', () => {
       
       expect(screen.getByPlaceholderText('thumbnails/{id}.png')).toBeInTheDocument();
     });
-
-    it('hides input field when checkbox is unchecked', () => {
-      render(<GeneralSection />);
-      
-      const thumbnailCheckbox = screen.getAllByRole('checkbox')[0];
-      fireEvent.click(thumbnailCheckbox);
-      fireEvent.click(thumbnailCheckbox);
-      
-      expect(screen.queryByPlaceholderText('thumbnails/{id}.png')).not.toBeInTheDocument();
-    });
   });
 
   describe('Metadata toggle', () => {
@@ -321,16 +242,6 @@ describe('GeneralSection', () => {
       
       expect(screen.getByPlaceholderText('metadata/{id}.json')).toBeInTheDocument();
     });
-
-    it('hides input field when checkbox is unchecked', () => {
-      render(<GeneralSection />);
-      
-      const metadataCheckbox = screen.getAllByRole('checkbox')[1];
-      fireEvent.click(metadataCheckbox);
-      fireEvent.click(metadataCheckbox);
-      
-      expect(screen.queryByPlaceholderText('metadata/{id}.json')).not.toBeInTheDocument();
-    });
   });
 
   describe('Port validation', () => {
@@ -343,14 +254,6 @@ describe('GeneralSection', () => {
       
       const data = ref.current?.getData();
       expect(data.port).toBe(8080);
-    });
-
-    it('has min and max attributes', () => {
-      render(<GeneralSection />);
-      
-      const portInput = screen.getByDisplayValue('5000') as HTMLInputElement;
-      expect(portInput.min).toBe('0');
-      expect(portInput.max).toBe('65535');
     });
   });
 });

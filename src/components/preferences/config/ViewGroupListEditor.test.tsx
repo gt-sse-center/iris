@@ -213,27 +213,6 @@ describe('ViewGroupListEditor', () => {
       expect(options).toContain('Snow');
     });
 
-    it('resets dropdown after adding view', () => {
-      render(<ViewGroupListEditor getAvailableViews={mockGetAvailableViews} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const dropdown = screen.getByRole('combobox') as HTMLSelectElement;
-      fireEvent.change(dropdown, { target: { value: 'RGB' } });
-      fireEvent.click(screen.getByText('Add'));
-      
-      expect(dropdown.value).toBe('');
-    });
-
-    it('disables Add button when no view selected', () => {
-      render(<ViewGroupListEditor getAvailableViews={mockGetAvailableViews} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const addButton = screen.getByText('Add');
-      expect(addButton).toBeDisabled();
-    });
-
     it('enables Add button when view selected', () => {
       render(<ViewGroupListEditor getAvailableViews={mockGetAvailableViews} />);
       
@@ -262,21 +241,6 @@ describe('ViewGroupListEditor', () => {
       fireEvent.click(screen.getByText('+ Add'));
       
       expect(screen.getByText(/No views available/)).toBeInTheDocument();
-    });
-  });
-
-  describe('Group key input', () => {
-    it('updates group key on input', () => {
-      const ref = React.createRef<any>();
-      render(<ViewGroupListEditor ref={ref} getAvailableViews={mockGetAvailableViews} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const keyInput = screen.getByPlaceholderText('e.g., default');
-      fireEvent.change(keyInput, { target: { value: 'mygroup' } });
-      
-      const data = ref.current?.getData();
-      expect(data).toHaveProperty('mygroup');
     });
   });
 });

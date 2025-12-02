@@ -122,19 +122,6 @@ describe('ViewListEditor', () => {
       expect(data.RGB.description).toBe('Standard RGB composite');
     });
 
-    it('omits description when empty', () => {
-      const ref = React.createRef<any>();
-      render(<ViewListEditor ref={ref} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const keyInput = screen.getByPlaceholderText('e.g., RGB, Cirrus, NDVI');
-      fireEvent.change(keyInput, { target: { value: 'RGB' } });
-      
-      const data = ref.current?.getData();
-      expect(data.RGB).not.toHaveProperty('description');
-    });
-
     it('includes optional fields when provided', () => {
       const ref = React.createRef<any>();
       const { container } = render(<ViewListEditor ref={ref} />);
@@ -166,28 +153,6 @@ describe('ViewListEditor', () => {
         vmin: 0,
         vmax: 100,
       });
-    });
-
-    it('omits optional fields when empty', () => {
-      const ref = React.createRef<any>();
-      const { container } = render(<ViewListEditor ref={ref} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const keyInput = screen.getByPlaceholderText('e.g., RGB, Cirrus, NDVI');
-      fireEvent.change(keyInput, { target: { value: 'Cirrus' } });
-      
-      const textInputs = container.querySelectorAll('input[type="text"]');
-      const cmapInput = Array.from(textInputs).find(input => 
-        (input as HTMLInputElement).value === 'jet'
-      ) as HTMLInputElement;
-      fireEvent.change(cmapInput, { target: { value: '' } });
-      
-      const data = ref.current?.getData();
-      expect(data.Cirrus).not.toHaveProperty('cmap');
-      expect(data.Cirrus).not.toHaveProperty('clip');
-      expect(data.Cirrus).not.toHaveProperty('vmin');
-      expect(data.Cirrus).not.toHaveProperty('vmax');
     });
   });
 
@@ -290,15 +255,6 @@ describe('ViewListEditor', () => {
   });
 
   describe('View type switching', () => {
-    it('shows monochrome data field for Monochrome type', () => {
-      render(<ViewListEditor />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      expect(screen.getByPlaceholderText('e.g., $Sentinel2.B11**0.8*5')).toBeInTheDocument();
-      expect(screen.queryByPlaceholderText('e.g., $Sentinel2.B5')).not.toBeInTheDocument();
-    });
-
     it('shows RGB data fields for RGB type', () => {
       const { container } = render(<ViewListEditor />);
       

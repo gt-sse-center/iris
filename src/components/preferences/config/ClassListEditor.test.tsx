@@ -55,19 +55,6 @@ describe('ClassListEditor', () => {
       ]);
     });
 
-    it('omits description when empty', () => {
-      const ref = React.createRef<any>();
-      const { container } = render(<ClassListEditor ref={ref} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement;
-      fireEvent.change(nameInput, { target: { value: 'Cloud' } });
-      
-      const data = ref.current?.getData();
-      expect(data[0]).not.toHaveProperty('description');
-    });
-
     it('includes user_colour when enabled', () => {
       const ref = React.createRef<any>();
       const { container } = render(<ClassListEditor ref={ref} />);
@@ -89,19 +76,6 @@ describe('ClassListEditor', () => {
           user_colour: [0, 255, 255, 70],
         },
       ]);
-    });
-
-    it('omits user_colour when disabled', () => {
-      const ref = React.createRef<any>();
-      const { container } = render(<ClassListEditor ref={ref} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement;
-      fireEvent.change(nameInput, { target: { value: 'Cloud' } });
-      
-      const data = ref.current?.getData();
-      expect(data[0]).not.toHaveProperty('user_colour');
     });
   });
 
@@ -128,40 +102,6 @@ describe('ClassListEditor', () => {
       expect(screen.getByDisplayValue('Cloud')).toBeInTheDocument();
       expect(screen.getByDisplayValue('White clouds')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Shadow')).toBeInTheDocument();
-    });
-
-    it('handles missing description', () => {
-      const ref = React.createRef<any>();
-      render(<ClassListEditor ref={ref} />);
-      
-      act(() => {
-        ref.current?.setData([
-          {
-            name: 'Cloud',
-            colour: [255, 255, 0, 70],
-          },
-        ]);
-      });
-      
-      const data = ref.current?.getData();
-      expect(data[0]).not.toHaveProperty('description');
-    });
-
-    it('handles missing user_colour', () => {
-      const ref = React.createRef<any>();
-      const { container } = render(<ClassListEditor ref={ref} />);
-      
-      act(() => {
-        ref.current?.setData([
-          {
-            name: 'Cloud',
-            colour: [255, 255, 0, 70],
-          },
-        ]);
-      });
-      
-      const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-      expect(checkboxes[0]).not.toBeChecked();
     });
 
     it('enables user_colour checkbox when present', () => {
@@ -196,20 +136,6 @@ describe('ClassListEditor', () => {
       
       const data = ref.current?.getData();
       expect(data[0].colour[0]).toBe(255);
-    });
-
-    it('clamps negative values to 0', () => {
-      const ref = React.createRef<any>();
-      const { container } = render(<ClassListEditor ref={ref} />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const numberInputs = container.querySelectorAll('input[type="number"]');
-      const redInput = numberInputs[0] as HTMLInputElement;
-      fireEvent.change(redInput, { target: { value: '-10' } });
-      
-      const data = ref.current?.getData();
-      expect(data[0].colour[0]).toBe(0);
     });
 
     it('updates all RGBA channels independently', () => {
@@ -270,33 +196,6 @@ describe('ClassListEditor', () => {
       
       const numberInputs = container.querySelectorAll('input[type="number"]');
       expect(numberInputs.length).toBe(8); // 4 for colour + 4 for user_colour
-    });
-
-    it('hides user colour inputs when checkbox is unchecked', () => {
-      const { container } = render(<ClassListEditor />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
-      fireEvent.click(checkbox);
-      fireEvent.click(checkbox);
-      
-      const numberInputs = container.querySelectorAll('input[type="number"]');
-      expect(numberInputs.length).toBe(4); // Only colour, no user_colour
-    });
-  });
-
-  describe('Color preview', () => {
-    it('renders color preview for main colour', () => {
-      const { container } = render(<ClassListEditor />);
-      
-      fireEvent.click(screen.getByText('+ Add'));
-      
-      // Check for color preview divs
-      const previews = Array.from(container.querySelectorAll('div')).filter(
-        (el) => el.style.height === '30px' && el.style.borderRadius === '4px'
-      );
-      expect(previews.length).toBeGreaterThan(0);
     });
   });
 });

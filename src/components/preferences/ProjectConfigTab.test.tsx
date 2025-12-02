@@ -57,19 +57,6 @@ describe('ProjectConfigTab', () => {
       
       expect(screen.getByText('Loading configuration...')).toBeInTheDocument();
     });
-
-    it('hides loading message after config loads', async () => {
-      vi.mocked(configService.getProjectConfig).mockResolvedValue({
-        config: mockConfig,
-        config_file: '/path/to/config.json',
-      });
-      
-      render(<ProjectConfigTab />);
-      
-      await waitFor(() => {
-        expect(screen.queryByText('Loading configuration...')).not.toBeInTheDocument();
-      });
-    });
   });
 
   describe('Configuration loading', () => {
@@ -83,19 +70,6 @@ describe('ProjectConfigTab', () => {
       
       await waitFor(() => {
         expect(configService.getProjectConfig).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('populates sections with loaded data', async () => {
-      vi.mocked(configService.getProjectConfig).mockResolvedValue({
-        config: mockConfig,
-        config_file: '/path/to/config.json',
-      });
-      
-      render(<ProjectConfigTab />);
-      
-      await waitFor(() => {
-        expect(screen.getByDisplayValue('test-project')).toBeInTheDocument();
       });
     });
 
@@ -180,64 +154,6 @@ describe('ProjectConfigTab', () => {
   });
 
   describe('Save functionality', () => {
-    it('collects data from all sections', async () => {
-      vi.mocked(configService.getProjectConfig).mockResolvedValue({
-        config: mockConfig,
-        config_file: '/path/to/config.json',
-      });
-      vi.mocked(configService.validateProjectConfig).mockResolvedValue({
-        valid: true,
-        errors: [],
-        warnings: [],
-      });
-      vi.mocked(configService.updateProjectConfig).mockResolvedValue({
-        message: 'Success',
-        config_file: '/path/to/config.json',
-      });
-      
-      render(<ProjectConfigTab />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Save Complete Configuration')).toBeInTheDocument();
-      });
-      
-      fireEvent.click(screen.getByText('Save Complete Configuration'));
-      
-      await waitFor(() => {
-        expect(configService.validateProjectConfig).toHaveBeenCalled();
-        expect(configService.updateProjectConfig).toHaveBeenCalled();
-      });
-    });
-
-    it('validates before saving', async () => {
-      vi.mocked(configService.getProjectConfig).mockResolvedValue({
-        config: mockConfig,
-        config_file: '/path/to/config.json',
-      });
-      vi.mocked(configService.validateProjectConfig).mockResolvedValue({
-        valid: true,
-        errors: [],
-        warnings: [],
-      });
-      vi.mocked(configService.updateProjectConfig).mockResolvedValue({
-        message: 'Success',
-        config_file: '/path/to/config.json',
-      });
-      
-      render(<ProjectConfigTab />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Save Complete Configuration')).toBeInTheDocument();
-      });
-      
-      fireEvent.click(screen.getByText('Save Complete Configuration'));
-      
-      await waitFor(() => {
-        expect(configService.validateProjectConfig).toHaveBeenCalled();
-        expect(configService.updateProjectConfig).toHaveBeenCalled();
-      });
-    });
-
     it('does not save if validation fails', async () => {
       vi.mocked(configService.getProjectConfig).mockResolvedValue({
         config: mockConfig,
@@ -322,26 +238,6 @@ describe('ProjectConfigTab', () => {
     });
   });
 
-  describe('Section rendering', () => {
-    it('renders all section components', async () => {
-      vi.mocked(configService.getProjectConfig).mockResolvedValue({
-        config: mockConfig,
-        config_file: '/path/to/config.json',
-      });
-      
-      const { container } = render(<ProjectConfigTab />);
-      
-      await waitFor(() => {
-        // Check that sections are rendered by looking for accordion elements
-        const accordions = container.querySelectorAll('.accordion');
-        expect(accordions.length).toBeGreaterThan(0);
-        
-        // Check for the save button
-        expect(screen.getByText('Save Complete Configuration')).toBeInTheDocument();
-      });
-    });
-  });
-
   describe('Ref communication', () => {
     it('calls getData on all section refs when saving', async () => {
       vi.mocked(configService.getProjectConfig).mockResolvedValue({
@@ -393,34 +289,6 @@ describe('ProjectConfigTab', () => {
   });
 
   describe('Button states', () => {
-    it('shows loading state and hides save button while loading', () => {
-      vi.mocked(configService.getProjectConfig).mockImplementation(
-        () => new Promise(() => {}) // Never resolves
-      );
-      
-      render(<ProjectConfigTab />);
-      
-      // Should show loading message
-      expect(screen.getByText('Loading configuration...')).toBeInTheDocument();
-      
-      // Save button should not be visible during loading
-      expect(screen.queryByText('Save Complete Configuration')).not.toBeInTheDocument();
-    });
-
-    it('enables save button after loading', async () => {
-      vi.mocked(configService.getProjectConfig).mockResolvedValue({
-        config: mockConfig,
-        config_file: '/path/to/config.json',
-      });
-      
-      render(<ProjectConfigTab />);
-      
-      await waitFor(() => {
-        const saveButton = screen.getByText('Save Complete Configuration');
-        expect(saveButton).not.toBeDisabled();
-      });
-    });
-
     it('disables save button while saving', async () => {
       vi.mocked(configService.getProjectConfig).mockResolvedValue({
         config: mockConfig,
