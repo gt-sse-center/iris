@@ -146,11 +146,6 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
     setViews(views.map((v) => (v.id === id ? { ...v, [field]: value } : v)));
   };
 
-  const handleSubmit = () => {
-    const viewsData = getData();
-    console.log('Views Data:', JSON.stringify(viewsData, null, 2));
-  };
-
   return (
     <div>
       {views.map((view) => (
@@ -165,7 +160,7 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-            <strong>{view.key || '(unnamed view)'}</strong>
+            <strong>{view.key || 'New View'}</strong>
             <button
               onClick={() => removeView(view.id)}
               style={{
@@ -183,13 +178,19 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
           </div>
 
           <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px' }}>
+              <strong>View Name *</strong>
+            </label>
             <input
               type="text"
-              placeholder="newKey"
+              placeholder="e.g., RGB, Cirrus, NDVI"
               value={view.key}
               onChange={(e) => updateView(view.id, 'key', e.target.value)}
               style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+            <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+              Unique identifier for this view (used in view groups)
+            </small>
           </div>
 
           <div style={{ marginBottom: '12px' }}>
@@ -366,26 +367,9 @@ const ViewListEditor = forwardRef<any, {}>((_props, ref) => {
           borderRadius: '4px',
           cursor: 'pointer',
           fontSize: '14px',
-          marginBottom: '16px',
         }}
       >
         + Add
-      </button>
-
-      <button
-        onClick={handleSubmit}
-        style={{
-          padding: '10px 24px',
-          background: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
-        Submit
       </button>
     </div>
   );

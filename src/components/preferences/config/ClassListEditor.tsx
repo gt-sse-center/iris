@@ -125,11 +125,6 @@ const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
     setClasses(classes.map((c) => (c.id === id ? { ...c, hasUserColour: !c.hasUserColour } : c)));
   };
 
-  const handleSubmit = () => {
-    const classesData = getData();
-    console.log('Classes Data:', JSON.stringify(classesData, null, 2));
-  };
-
   return (
     <div>
       {classes.map((cls) => (
@@ -143,8 +138,7 @@ const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
             background: '#fafafa',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-            <strong>IrisSegClass *</strong>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
             <button
               onClick={() => removeClass(cls.id)}
               style={{
@@ -160,7 +154,6 @@ const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
               Remove
             </button>
           </div>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>IrisSegClass*</h4>
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px' }}>
               <strong>Name *</strong>
@@ -346,25 +339,9 @@ const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
           borderRadius: '4px',
           cursor: 'pointer',
           fontSize: '14px',
-          marginBottom: '16px',
         }}
       >
         + Add
-      </button>
-      <button
-        onClick={handleSubmit}
-        style={{
-          padding: '10px 24px',
-          background: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
-        Submit
       </button>
     </div>
   );

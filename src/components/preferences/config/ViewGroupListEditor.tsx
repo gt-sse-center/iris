@@ -78,17 +78,8 @@ const ViewGroupListEditor = forwardRef<any, ViewGroupListEditorProps>(({ getAvai
     );
   };
 
-  const handleSubmit = () => {
-    const groupsData = getData();
-    console.log('View Groups Data:', JSON.stringify(groupsData, null, 2));
-  };
-
   return (
     <div>
-      <div style={{ marginBottom: '16px' }}>
-        <strong>newKey</strong>
-      </div>
-
       {groups.map((group, index) => (
         <div
           key={group.id}
@@ -250,22 +241,6 @@ const ViewGroupListEditor = forwardRef<any, ViewGroupListEditorProps>(({ getAvai
       <small style={{ display: 'block', color: '#666', marginBottom: '12px' }}>
         The 'default' group is required and will be shown first
       </small>
-
-      <button
-        onClick={handleSubmit}
-        style={{
-          padding: '10px 24px',
-          background: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
-        Submit
-      </button>
     </div>
   );
 });

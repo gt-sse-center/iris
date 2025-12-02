@@ -128,11 +128,6 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
     setData,
   }));
 
-  const handleSubmit = () => {
-    const data = getData();
-    console.log('Segmentation Data:', JSON.stringify(data, null, 2));
-  };
-
   return (
     <>
       <div
@@ -148,8 +143,6 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
       </div>
       <div className="panel" style={{ display: 'none' }}>
         <div style={{ padding: '16px' }}>
-          <h4 style={{ marginTop: 0, marginBottom: '12px' }}>IrisSegmentationConfig</h4>
-
           <FormInput
             label="Path"
             value={path}
@@ -211,22 +204,6 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
 
           {/* AI Model Configuration - Only show when enabled */}
           {aiModelEnabled && <AIModelConfig config={aiConfig} onChange={setAiConfig} />}
-
-          <button
-            onClick={handleSubmit}
-            style={{
-              padding: '10px 24px',
-              background: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-            }}
-          >
-            Submit
-          </button>
         </div>
       </div>
     </>
