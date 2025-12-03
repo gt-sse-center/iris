@@ -67,7 +67,6 @@ class Project:
                 self.config['images']['path'] = { 'pictures': self.config['images']['path'] }
         except Exception:
             # Non-fatal; leave config as-is on error
-            logger.warning(f"Failed to normalize images.path: {e}")
             pass
 
         self._init_paths_and_files(filename)
