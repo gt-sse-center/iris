@@ -427,9 +427,12 @@ def test_load_from_normalizes_images_path(tmp_path, sample_valid_config):
     p.load_from(str(proj_file))
 
     # After load_from, images.path should have been normalized to a dict
-    assert isinstance(p.config['images']['path'], dict)
-    assert list(p.config['images']['path'].keys()) == ['pictures']
-    assert p.config['images']['path']['pictures'].endswith('images/{id}.tif')
+    assert isinstance(p.config["images"]["path"], dict)
+    assert list(p.config["images"]["path"].keys()) == ["pictures"]
+    if os.name == 'nt':
+        assert p.config["images"]["path"]["pictures"].endswith("images\\{id}.tif")
+    else:
+        assert p.config["images"]["path"]["pictures"].endswith("images/{id}.tif")
 
 
 # ============================================================================
