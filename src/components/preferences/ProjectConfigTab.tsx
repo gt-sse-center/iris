@@ -19,6 +19,10 @@ export interface SectionRef {
   setData?: (data: any) => void;
 }
 
+interface ProjectConfigTabProps {
+  onStateChange?: (state: { hasUnsavedChanges: boolean }) => void;
+}
+
 /**
  * Project Configuration Tab Component
  * 
@@ -52,7 +56,7 @@ export interface SectionRef {
  * 
  * Only visible to admin users.
  */
-const ProjectConfigTab: React.FC = () => {
+const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) => {
   // Create refs for each section component
   // These are like "handles" we can use to call methods on the child components
   const generalRef = useRef<SectionRef>(null);
@@ -67,6 +71,8 @@ const ProjectConfigTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loadedConfig, setLoadedConfig] = useState<ProjectConfig | null>(null);
+  const [originalConfigJson, setOriginalConfigJson] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   /**
    * Load configuration from backend on mount
@@ -85,6 +91,30 @@ const ProjectConfigTab: React.FC = () => {
   }, [loading, loadedConfig]);
 
   /**
+   * Notify parent when unsaved changes state changes
+   */
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange({ hasUnsavedChanges });
+    }
+  }, [hasUnsavedChanges, onStateChange]);
+
+  /**
+   * Periodically check for changes while component is mounted
+   * This detects changes in form fields without needing onChange handlers on each section
+   */
+  useEffect(() => {
+    if (loading || !originalConfigJson) return;
+
+    // Check for changes every 500ms
+    const interval = setInterval(() => {
+      checkForChanges();
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [loading, originalConfigJson]);
+
+  /**
    * Load configuration from backend
    */
   const loadConfiguration = async () => {
@@ -97,6 +127,8 @@ const ProjectConfigTab: React.FC = () => {
       
       // Store config - it will be populated after components render
       setLoadedConfig(config);
+      setOriginalConfigJson(JSON.stringify(config));
+      setHasUnsavedChanges(false);
       setSuccess('Configuration loaded successfully');
       
       // Auto-dismiss success message
@@ -161,6 +193,42 @@ const ProjectConfigTab: React.FC = () => {
   };
 
   /**
+   * Check if current form data differs from original loaded config
+   */
+  const checkForChanges = () => {
+    if (!originalConfigJson) return;
+
+    try {
+      // Get current data from all sections
+      const generalData = generalRef.current?.getData();
+      const classesData = classesRef.current?.getData();
+      const viewsData = viewsRef.current?.getData();
+      const viewGroupsData = viewGroupsRef.current?.getData();
+      const segmentationData = segmentationRef.current?.getData();
+
+      const currentConfig: ProjectConfig = {
+        ...generalData,
+        classes: classesData,
+        views: viewsData,
+        view_groups: viewGroupsData,
+        segmentation: segmentationData,
+      };
+
+      const currentConfigJson = JSON.stringify(currentConfig);
+      const changed = currentConfigJson !== originalConfigJson;
+      
+      setHasUnsavedChanges(changed);
+      
+      // Notify parent component
+      if (onStateChange) {
+        onStateChange({ hasUnsavedChanges: changed });
+      }
+    } catch (err) {
+      console.error('[ProjectConfigTab] Error checking for changes:', err);
+    }
+  };
+
+  /**
    * handleSaveAll - Aggregates data from all sections and saves to backend
    * 
    * When user clicks "Save Complete Configuration":
@@ -205,6 +273,8 @@ const ProjectConfigTab: React.FC = () => {
       
       setSuccess(response.message || 'Configuration saved successfully');
       setLoadedConfig(config);
+      setOriginalConfigJson(JSON.stringify(config));
+      setHasUnsavedChanges(false);
       
       // Auto-dismiss success message
       setTimeout(() => setSuccess(null), 5000);
