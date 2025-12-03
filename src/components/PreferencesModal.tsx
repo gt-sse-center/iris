@@ -9,6 +9,10 @@ interface PreferencesModalProps {
   onClose: () => void;
 }
 
+interface ConfigTabState {
+  hasUnsavedChanges: boolean;
+}
+
 /**
  * Error boundary for the preferences modal
  */
@@ -58,12 +62,42 @@ class PreferencesErrorBoundary extends React.Component<
  */
 const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onClose }) => {
   const [config, setConfig] = useState<UserConfig | null>(null);
+  const [originalConfig, setOriginalConfig] = useState<UserConfig | null>(null);
   const [allBands, setAllBands] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'configuration' | 'segmentation-ai' | 'views'>('segmentation-ai');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState<boolean>(false);
+  const [configTabState, setConfigTabState] = useState<ConfigTabState>({ hasUnsavedChanges: false });
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useCallback(() => {
+    // Check Configuration tab state
+    if (activeTab === 'configuration' && configTabState.hasUnsavedChanges) {
+      return true;
+    }
+    
+    // Check other tabs (Segmentation AI, Views)
+    if (!config || !originalConfig) return false;
+    return JSON.stringify(config) !== JSON.stringify(originalConfig);
+  }, [config, originalConfig, activeTab, configTabState]);
+
+  // Handle close with unsaved changes check
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      setShowUnsavedWarning(true);
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose]);
+
+  // Force close without saving
+  const forceClose = useCallback(() => {
+    setShowUnsavedWarning(false);
+    onClose();
+  }, [onClose]);
 
   // Memoized fetch function to prevent unnecessary re-renders
   const fetchConfig = useCallback(async () => {
@@ -76,6 +110,7 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
       }
       const data: UserConfigApiResponse = await response.json();
       setConfig(data.config);
+      setOriginalConfig(JSON.parse(JSON.stringify(data.config))); // Deep copy
       setAllBands(data.all_bands);
       
       // Check if user is admin from the config response
@@ -100,6 +135,36 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
       fetchConfig();
     }
   }, [isOpen, fetchConfig]);
+
+  // Disable keyboard shortcuts when modal is open, re-enable when closed
+  useEffect(() => {
+    if (isOpen) {
+      // Save the original handlers
+      const originalKeyDownHandler = document.body.onkeydown;
+      const originalKeyUpHandler = document.body.onkeyup;
+      
+      // Disable the legacy keyboard shortcuts by replacing with a no-op
+      document.body.onkeydown = (event: KeyboardEvent) => {
+        // Allow Escape key to close the modal (with unsaved changes check)
+        if (event.code === 'Escape') {
+          handleClose();
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        // Block all other keyboard shortcuts while modal is open
+        return;
+      };
+      
+      // Also disable key_up handler
+      document.body.onkeyup = null;
+      
+      // Cleanup function to restore handlers when modal closes
+      return () => {
+        document.body.onkeydown = originalKeyDownHandler;
+        document.body.onkeyup = originalKeyUpHandler;
+      };
+    }
+  }, [isOpen, handleClose]);
 
   // Memoized save function with separate loading state
   const saveConfig = useCallback(async () => {
@@ -126,6 +191,8 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      // Update original config to match saved config
+      setOriginalConfig(JSON.parse(JSON.stringify(config)));
       onClose();
     } catch (error) {
       console.error('Error saving config:', error);
@@ -178,7 +245,7 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
     <div id="dialogue" className="dialogue" style={{ display: 'block' }} data-testid="preferences-modal">
       <div className="dialogue-content">
         <div className="dialogue-header">
-          <span className="dialogue-close" onClick={onClose}>
+          <span className="dialogue-close" onClick={handleClose}>
             &times;
           </span>
           <h2>Preferences</h2>
@@ -221,8 +288,48 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
                 </button>
               </div>
 
+              {/* Unsaved Changes Warning - Shown at top like other notifications */}
+              {showUnsavedWarning && (
+                <div style={{ 
+                  padding: '15px', 
+                  margin: '15px 0', 
+                  backgroundColor: '#fff3cd', 
+                  border: '1px solid #ffc107',
+                  borderRadius: '4px'
+                }}>
+                  <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>
+                    You have unsaved changes!
+                  </p>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    Are you sure you want to close without saving?
+                  </p>
+                  <button 
+                    onClick={forceClose} 
+                    style={{ marginRight: '10px' }}
+                    data-testid="discard-changes-button"
+                  >
+                    Discard Changes
+                  </button>
+                  <button 
+                    onClick={() => setShowUnsavedWarning(false)}
+                    data-testid="cancel-close-button"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {error && (
+                <p className="tag red" style={{ display: 'block' }} data-testid="preferences-error-message">
+                  {error}
+                </p>
+              )}
+
               {/* Tab Content */}
-              {activeTab === 'configuration' && isAdmin && <ProjectConfigTab />}
+              {activeTab === 'configuration' && isAdmin && (
+                <ProjectConfigTab onStateChange={setConfigTabState} />
+              )}
 
               {activeTab === 'segmentation-ai' && (
                 <SegmentationAITab
@@ -235,19 +342,15 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
 
               {activeTab === 'views' && <ViewsTab />}
 
-              {/* Error Display */}
-              {error && (
-                <p className="tag red" style={{ display: 'block' }} data-testid="preferences-error-message">
-                  {error}
-                </p>
-              )}
-
               {/* Action Buttons */}
               <p>
-                <button onClick={saveConfig} disabled={isLoading || isSaving} data-testid="save-preferences-button">
-                  {isSaving ? 'Saving...' : 'Save'}
-                </button>
-                <button onClick={onClose} disabled={isSaving} data-testid="close-preferences-button">
+                {/* Hide Save button when Configuration tab is active (it has its own save button) */}
+                {activeTab !== 'configuration' && (
+                  <button onClick={saveConfig} disabled={isLoading || isSaving} data-testid="save-preferences-button">
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                )}
+                <button onClick={handleClose} disabled={isSaving} data-testid="close-preferences-button">
                   Close
                 </button>
               </p>

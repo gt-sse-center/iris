@@ -128,14 +128,16 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
         // Try to save
         cy.get('[data-testid="save-preferences-button"]').click();
         
-        cy.wait(TIMEOUTS.VALIDATION_CHECK);
-        
         // Should show an error message (this is the key validation test)
-        cy.get('[data-testid="preferences-error-message"]')
+        // Use a longer timeout and scroll into view since modal might have overflow
+        cy.get('[data-testid="preferences-error-message"]', { timeout: TIMEOUTS.PAGE_RELOAD_WAIT })
+          .should('exist')
+          .scrollIntoView()
           .should('be.visible')
           .and('contain', '[Segmentation] Need at least one band as input!');
+        
+        // Modal should remain open when there's a validation error
+        cy.get('[data-testid="preferences-modal"]').should('be.visible');
       });
-    
-    cy.closePreferences();
   });
 });
