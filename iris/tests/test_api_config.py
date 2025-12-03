@@ -9,6 +9,7 @@ import pytest
 
 from iris.models import User, db
 from iris.project import project
+from iris.project import Project
 
 
 @pytest.fixture
@@ -397,6 +398,38 @@ def test_put_config_requires_admin(app, client):
     )
 
     assert response.status_code == 403
+
+
+def test_load_from_normalizes_images_path(tmp_path, sample_valid_config):
+    """Ensure Project.load_from() converts single-string images.path into a dict"""
+    # Prepare a temporary project directory with an images subfolder and a dummy file
+    proj_dir = tmp_path / "proj"
+    proj_dir.mkdir()
+    images_dir = proj_dir / "images"
+    images_dir.mkdir()
+    # Create a dummy image file that matches the pattern
+    dummy = images_dir / "0001.tif"
+    dummy.write_bytes(b"")
+
+    # Prepare config: images.path is a single string (relative to project file)
+    cfg = dict(sample_valid_config)
+    cfg['images'] = dict(cfg['images'])
+    cfg['images']['path'] = 'images/{id}.tif'
+    cfg['segmentation']['mask_area'] = [10, 10, 20, 20]
+
+    # Write config file into proj_dir
+    proj_file = proj_dir / 'project.json'
+    with open(proj_file, 'w') as f:
+        json.dump(cfg, f)
+
+    # Load using a fresh Project instance so we don't mutate global state
+    p = Project()
+    p.load_from(str(proj_file))
+
+    # After load_from, images.path should have been normalized to a dict
+    assert isinstance(p.config['images']['path'], dict)
+    assert list(p.config['images']['path'].keys()) == ['pictures']
+    assert p.config['images']['path']['pictures'].endswith('images/{id}.tif')
 
 
 # ============================================================================

@@ -170,47 +170,13 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                 <strong>Path *</strong>
                 <br />
                 <small style={{ color: '#666', display: 'block', marginTop: '4px', lineHeight: '1.5' }}>
-                  The input path to the images. Can be either a string containing an existing path with the placeholder{' '}
-                  <code style={{ color: '#d63384' }}>{'{id}'}</code> or a dictionary of paths with the placeholder{' '}
-                  <code style={{ color: '#d63384' }}>{'{id}'}</code> (see examples below). The placeholder will be
-                  replaced by the unique id of the current image. IRIS can load standard image formats (like *png* or
+                  The input path(s) to the images. Paths should use the placeholder{' '}
+                  <code style={{ color: '#d63384' }}>{'{id}'}</code>, which will be
+                  replaced by the unique id of the current image (see examples below). IRIS can load standard image formats (like *png* or
                   *tif*), theoretically all kind of files that can be opened by GDAL/rasterio (like *geotiff* or *vrt*)
-                  and numpy files (*.npy*). The arrays inside the numpy files should have the shape HxWxC. Examples:
+                  and numpy files (*.npy*). The arrays inside the numpy files should have the shape HxWxC.
+                  If you used a single file path for images, it has been assigned key 'pictures' here.
                 </small>
-                <div style={{ marginTop: '8px', marginBottom: '8px' }}>
-                  <small style={{ color: '#666' }}>
-                    When you have one folder <code style={{ color: '#d63384' }}>images</code> containing your images in
-                    *tif* format:
-                  </small>
-                  <pre
-                    style={{
-                      background: '#f5f5f5',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    "path": "images/{'{id}'}.tif"
-                  </pre>
-                </div>
-                <div style={{ marginBottom: '8px' }}>
-                  <small style={{ color: '#666' }}>
-                    When you have one folder <code style={{ color: '#d63384' }}>images</code> containing subfolders with
-                    your images in *tif* format:
-                  </small>
-                  <pre
-                    style={{
-                      background: '#f5f5f5',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    "path": "images/{'{id}'}/image.tif"
-                  </pre>
-                </div>
                 <div style={{ marginBottom: '12px' }}>
                   <small style={{ color: '#666' }}>
                     When you have your data distributed over multiple files (e.g. coming from Sentinel-1 and
@@ -224,11 +190,12 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                       borderRadius: '4px',
                       fontSize: '12px',
                       marginTop: '4px',
+                      textAlign: 'left',
                     }}
                   >
                     {`"path": {
     "Sentinel1": "images/{id}/S1.tif",
-    "Sentinel2": "images/{id}/S2.tif"
+    "Sentinel2": "images/S2-{id}.tif"
 }`}
                   </pre>
                 </div>

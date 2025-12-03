@@ -59,6 +59,16 @@ class Project:
         if 'name' not in self.config:
             self.config['name'] = ".".join(basename(filename).split(".")[:-1])
 
+        # Normalise images.path: if a single string was provided in the
+        # project JSON, convert it into a dictionary so downstream code that
+        # expects a mapping will work consistently (use key 'pictures').
+        try:
+            if 'images' in self.config and isinstance(self.config['images'].get('path', None), str):
+                self.config['images']['path'] = { 'pictures': self.config['images']['path'] }
+        except Exception:
+            # Non-fatal; leave config as-is on error
+            pass
+
         self._init_paths_and_files(filename)
 
         # Default seed
