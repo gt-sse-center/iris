@@ -73,6 +73,8 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     });
     delete (window as any).init_segmentation;
     delete (window as any).vars;
+    delete (window as any).openLogin;
+    delete (window as any).openUserProfile;
   });
 
   it('opens preferences modal when openPreferences=true in URL', async () => {
@@ -112,6 +114,62 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     await waitFor(() => {
       const modal = getByTestId('preferences-modal');
       expect(modal).toHaveAttribute('data-open', 'false');
+    });
+  });
+
+  it('exposes window.openLogin function for legacy JS', async () => {
+    // Mock window.location
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalLocation,
+      search: '',
+      pathname: '/segmentation',
+      hostname: 'localhost',
+    };
+
+    // Render the component
+    const { getByTestId } = render(<SegmentationApp />);
+
+    // Wait for the component to initialize and expose the function
+    await waitFor(() => {
+      expect(window.openLogin).toBeDefined();
+      expect(typeof window.openLogin).toBe('function');
+    });
+
+    // Call the function and verify login form appears
+    window.openLogin!();
+    
+    await waitFor(() => {
+      const loginForm = getByTestId('login-form');
+      expect(loginForm).toBeInTheDocument();
+    });
+  });
+
+  it('exposes window.openUserProfile function for legacy JS', async () => {
+    // Mock window.location
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalLocation,
+      search: '',
+      pathname: '/segmentation',
+      hostname: 'localhost',
+    };
+
+    // Render the component
+    const { getByTestId } = render(<SegmentationApp />);
+
+    // Wait for the component to initialize and expose the function
+    await waitFor(() => {
+      expect(window.openUserProfile).toBeDefined();
+      expect(typeof window.openUserProfile).toBe('function');
+    });
+
+    // Call the function and verify profile modal appears
+    window.openUserProfile!('test-user-123');
+    
+    await waitFor(() => {
+      const profileModal = getByTestId('user-profile-modal');
+      expect(profileModal).toHaveAttribute('data-open', 'true');
     });
   });
 });

@@ -87,11 +87,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="dialogue-background">
-      <div className="dialogue">
-        <div className="dialogue-content">
+    <div className="dialogue" style={{ display: 'block' }}>
+      <div className="dialogue-content">
+        <div className="dialogue-header">
           <h2>{mode === 'login' ? 'Login' : 'Register'}</h2>
-          
+        </div>
+        <div className="dialogue-body">
           <form onSubmit={handleSubmit}>
             <table style={{ border: '0px' }}>
               <tbody>

@@ -95,6 +95,15 @@ function dialogue_config_exclude_bands(){
 }
 
 function dialogue_login(){
+    // Use React LoginForm if available
+    if (window.openLogin) {
+        console.log("✅ Using React LoginForm");
+        window.openLogin();
+        return;
+    }
+
+    // Fallback to legacy implementation
+    console.log("⚠️ React not available, using legacy login");
     let content = `
     <table style="border: 0px;">
         <tr>
@@ -187,6 +196,15 @@ async function register(){
 }
 
 async function logout(next=null){
+    // Use React logout if available
+    if (window.reactLogout) {
+        console.log("✅ Using React logout");
+        await window.reactLogout(next);
+        return;
+    }
+
+    // Fallback to legacy implementation
+    console.log("⚠️ React not available, using legacy logout");
     await fetch(vars.url.user+"logout");
 
     if (next !== null){
