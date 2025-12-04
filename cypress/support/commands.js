@@ -54,13 +54,6 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
   
   cy.get('body').should('exist');
   
-  // Wait a bit for React to check authentication and potentially show login modal
-  cy.wait(TIMEOUTS.REACT_HYDRATION);
-  
-  // Check if login dialog is present (React LoginForm uses .dialogue class)
-  // Wait longer for React to check auth and potentially show the login modal
-  cy.wait(TIMEOUTS.PAGE_LOAD * 2);
-  
   // Try to find the login form directly
   cy.get('body').then($body => {
     // Check if login username field exists and is visible
@@ -88,7 +81,7 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
       
       // Wait for the page to reload (LoginForm calls window.location.reload())
       cy.url().should('include', '/segmentation');
-      cy.wait(TIMEOUTS.PAGE_LOAD * 2); // Extra time for reload
+      cy.wait(TIMEOUTS.PAGE_LOAD);
       
       // Wait for toolbar to appear after reload
       cy.get(SELECTORS.TOOLBAR, { timeout: TIMEOUTS.PAGE_LOAD * 10 })
