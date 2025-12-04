@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import PreferencesModal from './components/PreferencesModal';
+import { UserProfileModal } from './components/UserProfileModal';
 
 // Declare global functions that exist in the legacy JavaScript
 declare global {
   interface Window {
     init_segmentation: () => void;
     vars: any;
+    openUserProfile?: (userId?: string) => void;
   }
 }
 
 const SegmentationApp: React.FC = () => {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string>('current');
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Export GeoTIFF function
   const exportGeoTIFF = async () => {
@@ -64,7 +69,16 @@ const SegmentationApp: React.FC = () => {
     }
   };
 
+  // Mark auth as checked immediately - legacy JS handles authentication
   useEffect(() => {
+    setAuthChecked(true);
+  }, []);
+
+
+
+  useEffect(() => {
+    if (!authChecked) return;
+
     const isDebugMode = window.location.search.includes('debug=1') || window.location.hostname === 'localhost';
     
     if (isDebugMode) {
@@ -106,7 +120,14 @@ const SegmentationApp: React.FC = () => {
     (window as any).dialogue_config = () => {
       setIsPreferencesOpen(true);
     };
-  }, []);
+
+    // Expose function for legacy JS to open user profile
+    // This is checked by dialogue_user() in user.js
+    window.openUserProfile = (userId?: string) => {
+      setProfileUserId(userId || 'current');
+      setIsProfileOpen(true);
+    };
+  }, [authChecked]);
 
   return (
     <div>
@@ -326,6 +347,13 @@ const SegmentationApp: React.FC = () => {
       <PreferencesModal
         isOpen={isPreferencesOpen}
         onClose={() => setIsPreferencesOpen(false)}
+      />
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        userId={profileUserId}
       />
 
       {/* React Development Indicator - Shows in development or when ?debug=1 */}

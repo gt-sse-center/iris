@@ -14,6 +14,24 @@ vi.mock('./components/PreferencesModal', () => ({
   ),
 }));
 
+/**
+ * Mock the UserProfileModal component
+ */
+vi.mock('./components/UserProfileModal', () => ({
+  UserProfileModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+    <div data-testid="user-profile-modal" data-open={isOpen}>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
+/**
+ * Mock the LoginForm component
+ */
+vi.mock('./components/LoginForm', () => ({
+  LoginForm: () => <div data-testid="login-form">Login Form</div>,
+}));
+
 describe('SegmentationApp - URL Parameter Handling', () => {
   let originalLocation: Location;
 
@@ -28,6 +46,17 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     originalLocation = window.location;
     (window as any).init_segmentation = vi.fn();
     (window as any).vars = {};
+    
+    // Mock fetch for authentication check
+    global.fetch = vi.fn((url) => {
+      if (url === '/user/api/current') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ user: { id: 1, name: 'testuser', admin: false } })
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
+    }) as any;
   });
 
   /**

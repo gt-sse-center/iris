@@ -122,3 +122,33 @@ export interface UserConfigApiResponse {
   all_bands: string[];
   is_admin: boolean;
 }
+
+// User Profile Types
+export interface SegmentationMask {
+  image_id: string;
+  score: number;
+  score_unverified: boolean;
+  last_modification: string;
+  time_spent: string;
+}
+
+export interface UserProfile {
+  id: number;
+  name: string;
+  admin: boolean;
+  tested: boolean;
+  created: string;
+  image_seed: number;
+  segmentation: {
+    rank: number;
+    score: number;
+    score_unverified: number;
+    n_masks: number;
+    last_masks: SegmentationMask[];
+  };
+  is_current_user: boolean;
+}
+
+export interface CurrentUserResponse {
+  user: UserDto | null;
+}
