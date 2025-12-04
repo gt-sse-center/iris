@@ -24,7 +24,8 @@ def get_current_user():
     if user_id is None:
         return flask.jsonify({'user': None})
 
-    user = User.query.get(user_id)
+    # Use SQLAlchemy 2.0 compatible API
+    user = db.session.get(User, user_id)
     if user is None:
         return flask.jsonify({'user': None})
 
@@ -47,7 +48,8 @@ def get_profile(user_id):
     except (ValueError, TypeError):
         return flask.jsonify({'error': 'Invalid user ID'}), 400
 
-    user = User.query.get(user_id)
+    # Use SQLAlchemy 2.0 compatible API
+    user = db.session.get(User, user_id)
     if user is None:
         return flask.jsonify({'error': 'User not found'}), 404
 
@@ -69,11 +71,12 @@ def get_profile(user_id):
     else:
         user_data['segmentation']['rank'] = 1
 
-    # Get last 10 masks
+    # Get last masks (configurable limit)
+    LAST_MASKS_LIMIT = 10
     last_masks = Action.query \
         .filter_by(user=user, type="segmentation") \
         .order_by(Action.last_modification.desc()) \
-        .limit(10) \
+        .limit(LAST_MASKS_LIMIT) \
         .all()
 
     user_data['segmentation']['last_masks'] = [
