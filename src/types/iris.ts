@@ -140,7 +140,7 @@ export interface UserProfile {
   created: string;
   image_seed: number;
   segmentation: {
-    rank: number;
+    rank: number | null;
     score: number;
     score_unverified: number;
     n_masks: number;
@@ -151,4 +151,19 @@ export interface UserProfile {
 
 export interface CurrentUserResponse {
   user: UserDto | null;
+}
+
+// Global window interface for React-legacy JavaScript integration
+declare global {
+  interface Window {
+    openLogin?: () => void;
+    openRegister?: () => void;
+    openUserProfile?: (userId?: string) => void;
+    reactLogout?: (callback?: () => void) => Promise<void>;
+    irisReactApp?: {
+      openHelpModal?: () => void;
+      openUserProfile?: (userId?: string) => void;
+      openPreferences?: () => void;
+    };
+  }
 }

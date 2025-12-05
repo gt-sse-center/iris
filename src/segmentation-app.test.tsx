@@ -32,6 +32,17 @@ vi.mock('./components/LoginForm', () => ({
   LoginForm: () => <div data-testid="login-form">Login Form</div>,
 }));
 
+/**
+ * Mock the HelpModal component
+ */
+vi.mock('./components/HelpModal', () => ({
+  default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+    <div data-testid="help-modal" data-open={isOpen}>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
 describe('SegmentationApp - URL Parameter Handling', () => {
   let originalLocation: Location;
 
@@ -170,6 +181,35 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     await waitFor(() => {
       const profileModal = getByTestId('user-profile-modal');
       expect(profileModal).toHaveAttribute('data-open', 'true');
+    });
+  });
+
+  it('exposes window.irisReactApp.openHelpModal function for legacy JS', async () => {
+    // Mock window.location
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalLocation,
+      search: '',
+      pathname: '/segmentation',
+      hostname: 'localhost',
+    };
+
+    // Render the component
+    const { getByTestId } = render(<SegmentationApp />);
+
+    // Wait for the component to initialize and expose the function
+    await waitFor(() => {
+      expect(window.irisReactApp).toBeDefined();
+      expect(window.irisReactApp?.openHelpModal).toBeDefined();
+      expect(typeof window.irisReactApp?.openHelpModal).toBe('function');
+    });
+
+    // Call the function and verify help modal appears
+    window.irisReactApp!.openHelpModal!();
+    
+    await waitFor(() => {
+      const helpModal = getByTestId('help-modal');
+      expect(helpModal).toHaveAttribute('data-open', 'true');
     });
   });
 });

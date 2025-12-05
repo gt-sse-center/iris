@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client';
 import PreferencesModal from './components/PreferencesModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { LoginForm } from './components/LoginForm';
+import HelpModal from './components/HelpModal';
+import ConfirmDialog from './components/ConfirmDialog';
+import ClassSelectionModal from './components/ClassSelectionModal';
+import ImageInfoModal from './components/ImageInfoModal';
+import ConfusionMatrixModal from './components/ConfusionMatrixModal';
 
 // Declare global functions that exist in the legacy JavaScript
 declare global {
@@ -11,7 +16,13 @@ declare global {
     vars: any;
     openUserProfile?: (userId?: string) => void;
     openLogin?: () => void;
+    openRegister?: () => void;
     reactLogout?: (callback?: () => void) => Promise<void>;
+    irisReactApp?: {
+      openHelpModal?: () => void;
+      openUserProfile?: (userId?: string) => void;
+      openPreferences?: () => void;
+    };
   }
 }
 
@@ -20,6 +31,12 @@ const SegmentationApp: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string>('current');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isResetMaskOpen, setIsResetMaskOpen] = useState(false);
+  const [isClassSelectionOpen, setIsClassSelectionOpen] = useState(false);
+  const [isImageInfoOpen, setIsImageInfoOpen] = useState(false);
+  const [isConfusionMatrixOpen, setIsConfusionMatrixOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
   // Export GeoTIFF function
@@ -155,6 +172,16 @@ const SegmentationApp: React.FC = () => {
       // Hide the loader if it's showing (legacy JS may have triggered it)
       const w = window as any;
       if (w.hide_loader) w.hide_loader();
+      setLoginMode('login');
+      setIsLoginOpen(true);
+    };
+
+    // Expose function for legacy JS to open register modal
+    // This is checked by dialogue_register() in user.js
+    window.openRegister = () => {
+      const w = window as any;
+      if (w.hide_loader) w.hide_loader();
+      setLoginMode('register');
       setIsLoginOpen(true);
     };
 
@@ -168,6 +195,22 @@ const SegmentationApp: React.FC = () => {
         window.location.reload();
       }
     };
+
+    // Expose React functions for legacy JavaScript integration
+    window.irisReactApp = {
+      openHelpModal: () => setIsHelpOpen(true),
+      openUserProfile: (userId?: string) => {
+        setProfileUserId(userId || 'current');
+        setIsProfileOpen(true);
+      },
+      openPreferences: () => setIsPreferencesOpen(true),
+    };
+
+    // Override legacy dialogue functions to use React modals
+    (window as any).dialogue_reset_mask = () => setIsResetMaskOpen(true);
+    (window as any).dialogue_class_selection = () => setIsClassSelectionOpen(true);
+    (window as any).dialogue_image = () => setIsImageInfoOpen(true);
+    (window as any).dialogue_confusion_matrix = () => setIsConfusionMatrixOpen(true);
   }, [authChecked]);
 
   return (
@@ -208,10 +251,7 @@ const SegmentationApp: React.FC = () => {
           <img src="/segmentation/static/icons/redo.png" className="icon" />
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" id="tb_select_class" onClick={() => {
-          const w = window as any;
-          if (w.dialogue_class_selection) w.dialogue_class_selection();
-        }} style={{width: '200px'}}>
+        <li className="toolbutton icon_button" id="tb_select_class" onClick={() => setIsClassSelectionOpen(true)} style={{width: '200px'}}>
           <div>
             <img src="/segmentation/static/icons/class.png" className="icon" style={{float: 'left'}} />
           </div>
@@ -244,10 +284,7 @@ const SegmentationApp: React.FC = () => {
         }}>
           <img src="/segmentation/static/icons/eraser.png" className="icon" />
         </li>
-        <li className="toolbutton icon_button" id='tb_reset_mask' onClick={() => {
-          const w = window as any;
-          if (w.dialogue_reset_mask) w.dialogue_reset_mask();
-        }}>
+        <li className="toolbutton icon_button" id='tb_reset_mask' onClick={() => setIsResetMaskOpen(true)}>
           <img src="/segmentation/static/icons/reset_mask.png" className="icon" />
         </li>
         <li className="toolbutton icon_button" id='tb_predict_mask' onClick={() => {
@@ -331,10 +368,7 @@ const SegmentationApp: React.FC = () => {
           <img src="/segmentation/static/icons/reset_filters.png" className="icon" />
         </li>
         <li className="toolbar_separator"></li>
-        <li className="toolbutton icon_button" onClick={() => {
-          const w = window as any;
-          if (w.dialogue_help) w.dialogue_help();
-        }}>
+        <li className="toolbutton icon_button" onClick={() => setIsHelpOpen(true)}>
           <img src="/segmentation/static/icons/help.png" className="icon" />
         </li>
         <li className="toolbutton icon_button" data-testid="preferences-button" onClick={() => setIsPreferencesOpen(true)}>
@@ -347,19 +381,13 @@ const SegmentationApp: React.FC = () => {
       </div>
 
       <div id="statusbar" className='statusbar' style={{visibility: 'hidden', position: 'fixed', bottom: '10px', zIndex: 10}}>
-        <div className="statusbutton" onClick={() => {
-          const w = window as any;
-          if (w.dialogue_user) w.dialogue_user();
-        }} id="user-info">
+        <div className="statusbutton" onClick={() => setIsProfileOpen(true)} id="user-info">
           <div style={{float: 'left'}}>Login</div>
         </div>
         <div className="statusbutton" id="admin-button" onClick={() => window.open('/admin/', '_blank')}>
           <div style={{fontSize: '20px'}}>Admin</div>
         </div>
-        <div className="statusbutton" style={{minWidth: '150px'}} onClick={() => {
-          const w = window as any;
-          if (w.dialogue_image) w.dialogue_image();
-        }} id="image-info">
+        <div className="statusbutton" style={{minWidth: '150px'}} onClick={() => setIsImageInfoOpen(true)} id="image-info">
           <div className="info-box-top">{window.vars?.image_id || 'Loading...'}</div>
           <div className="info-box-bottom">image-ID</div>
         </div>
@@ -371,10 +399,7 @@ const SegmentationApp: React.FC = () => {
           <div id="drawn-pixels" className="info-box-top">0</div>
           <div className="info-box-bottom">Drawn pixels</div>
         </div>
-        <div className="statusbutton" onClick={() => {
-          const w = window as any;
-          if (w.dialogue_confusion_matrix) w.dialogue_confusion_matrix();
-        }}>
+        <div className="statusbutton" onClick={() => setIsConfusionMatrixOpen(true)}>
           <div id="ai-score" className="info-box-top">0</div>
           <div className="info-box-bottom">AI-Score</div>
         </div>
@@ -397,10 +422,48 @@ const SegmentationApp: React.FC = () => {
         userId={profileUserId}
       />
 
-      {/* Login Modal - onSuccess will reload the page */}
+      {/* Login/Register Modal - onSuccess will reload the page */}
       {isLoginOpen && (
-        <LoginForm />
+        <LoginForm initialMode={loginMode} />
       )}
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+      />
+
+      {/* Reset Mask Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isResetMaskOpen}
+        onClose={() => setIsResetMaskOpen(false)}
+        onConfirm={() => {
+          const w = window as any;
+          if (w.reset_mask) w.reset_mask();
+        }}
+        message="Are you sure you want to reset all your drawn pixels?"
+        confirmText="Reset"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* Class Selection Modal */}
+      <ClassSelectionModal
+        isOpen={isClassSelectionOpen}
+        onClose={() => setIsClassSelectionOpen(false)}
+      />
+
+      {/* Image Info Modal */}
+      <ImageInfoModal
+        isOpen={isImageInfoOpen}
+        onClose={() => setIsImageInfoOpen(false)}
+      />
+
+      {/* Confusion Matrix Modal */}
+      <ConfusionMatrixModal
+        isOpen={isConfusionMatrixOpen}
+        onClose={() => setIsConfusionMatrixOpen(false)}
+      />
 
       {/* React Development Indicator - Shows in development or when ?debug=1 */}
       {(window.location.search.includes('debug=1') || window.location.hostname === 'localhost') && (

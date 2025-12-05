@@ -123,7 +123,12 @@ function newuser_help_popup(){
         vars.just_logged_in = false;
     }
 }
-
+function save_config(config){
+    fetch(vars.url.user+'save_config', {
+        method: "POST",
+        body: JSON.stringify(config)
+    })
+}
 function init_views(){
     show_loader("Loading views...");
     vars.vm = new ViewManager(
@@ -835,13 +840,6 @@ function render_preview(){
     }
 }
 
-function dialogue_reset_mask(){
-    var content = "<p>Are you sure you want to reset all your drawn pixels?</p>";
-    content += "<button onclick='hide_dialogue();reset_mask();'>Reset</button>";
-    content += "<button onclick='hide_dialogue();'>Cancel</button>";
-    show_dialogue("warning", content);
-}
-
 function reset_mask(){
     vars.mask = new Uint8Array(vars.mask_shape[1]*vars.mask_shape[0]);
     vars.user_mask = new Uint8Array(vars.mask_shape[1]*vars.mask_shape[0]);
@@ -996,121 +994,6 @@ async function fetch_server_update(update_config=true){
 
     // Check every 15 seconds the current state on the server:
     setTimeout(fetch_server_update, 15000);
-}
-
-async function dialogue_image(){
-    let content = '<p><img src="'+vars.url.main+'thumbnail/'+vars.image_id+'?size=256x256" style="display: block; margin-left: auto; margin-right: auto;"/></p>';
-    let response = await fetch(
-        vars.url.main+'metadata/'+vars.image_id+'?safe_html=True'
-    );
-
-    content += '<div style="float: left;">';
-    if (response.status >= 400){
-        content += await response.text();
-    } else {
-        let metadata = await response.json();
-        content += '<table>';
-
-        // row and col are at the same the id for the row and column class, respectively
-        for (const attribute in metadata){
-            content += '<tr>';
-            content += '<td><b>'+attribute+'</b></td>';
-
-            if (attribute == "location"){
-                let location = metadata[attribute]
-                                .replace('[', '')
-                                .replace(']', '')
-                                .replace(' ', '')
-
-                content += '<td>' + metadata[attribute];
-                content += ' <a target="_blank" href="https://www.google.com/maps/search/?api=1&query='+location+'">Show on map</a></td>';
-            } else {
-                content += '<td>'+metadata[attribute]+'</td>';
-            }
-
-            content += '</tr>';
-        }
-        content += '</table>';
-    }
-    content += '</div>';
-
-    show_dialogue(
-        "info", content, false, "image: "+vars.image_id
-    );
-}
-
-function dialogue_confusion_matrix(){
-    if (vars.confusion_matrix === null){
-        show_dialogue(
-            "info",
-            "You need to train the AI first before you can see a confusion matrix",
-            false, "Confusion Matrix"
-        );
-        return;
-    }
-
-    let content = '<table class="confusion-matrix" style="float: left;">';
-    content += '<tr class="first"><td class="upper-left">Real / Prediction</td>';
-
-    for (let col_class of vars.classes){
-        content += '<td class="first">'+col_class.name+'</td>';
-    }
-
-    content += '</tr>';
-
-    // row and col are at the same the id for the row and column class, respectively
-    for (var row=0; row<vars.classes.length; row++){
-        content += '<tr>';
-        content += '<td class="first">'+vars.classes[row].name+'</td>';
-        for (var col=0; col<vars.classes.length; col++){
-            content += '<td>'+nice_number(vars.confusion_matrix[row][col])+'</td>';
-        }
-        content += '</tr>';
-    }
-    content += '</table>';
-
-    show_dialogue("info", content, false, "Confusion Matrix");
-}
-
-function dialogue_class_selection(){
-    var content = "<p>Here is an overview about all classes:</p>";
-    content += "<table>";
-    content += "<th><td>Drawn pixels by user</td><td>Description</td></th>";
-
-    for (var i=0; i<vars.classes.length; i++){
-        var c = vars.classes[i]
-        content += "<tr>";
-        content += "<td><button style='background-color: "+rgba2css(c.colour)+"; width: 100%;' ";
-        content += "onclick='set_current_class("+i+"); hide_dialogue();'>";
-        content += c.name+"</button></td>";
-        content += "<td style='text-align: center;'>"+vars.n_user_pixels[i]+"</td>";
-        content += "<td>"+c.description+"</td>";
-        content += "</tr>";
-    }
-
-    content += "</table>";
-
-    show_dialogue("info", content, false, "Class selection");
-}
-
-async function dialogue_help(){
-    let hotkeys = {};
-
-    for (command of Object.values(commands)){
-        if ("key" in command){
-            hotkeys[command.key] = command.description;
-        }
-    }
-    let response = await fetch(
-        vars.url.help, {
-            method: "POST",
-            body: JSON.stringify({
-                "hotkeys": hotkeys
-            })
-        }
-    );
-    let content = await response.text();
-    show_dialogue("info", content, false, title="Help");
 }
 
 async function load_mask(){

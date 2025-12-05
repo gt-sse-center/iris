@@ -109,7 +109,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   <tbody>
                     <tr>
                       <td>Rank:</td>
-                      <td>{profile.segmentation.rank}</td>
+                      <td>{profile.segmentation.rank ?? 'N/A'}</td>
                     </tr>
                     <tr>
                       <td>Score:</td>

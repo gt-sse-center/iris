@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 
 interface LoginFormProps {
   onSuccess?: () => void;
+  initialMode?: 'login' | 'register';
 }
 
 type FormMode = 'login' | 'register';
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
-  const [mode, setMode] = useState<FormMode>('login');
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, initialMode = 'login' }) => {
+  const [mode, setMode] = useState<FormMode>(initialMode);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordAgain, setPasswordAgain] = useState('');
