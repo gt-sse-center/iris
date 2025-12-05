@@ -223,7 +223,12 @@ function key_down(event){
     if (get_object('dialogue').style.display == "block"){
         // Don't allow any key events during an opened dialogue
     }else if (key == "Space"){
-        show_mask(!vars.show_mask);
+        // Use React store instead of vars
+        if (window.segmentationStore) {
+            window.segmentationStore.getState().toggleMask();
+        } else {
+            console.warn('Space key pressed but React store not available');
+        }
     } else if (key == "KeyS"){
         save_mask();
     } else if (key == "Enter"){
@@ -886,20 +891,15 @@ function reset_filters(){
 // }
 
 function show_mask(visible){
-    vars.show_mask = visible;
-    var state = "none";
-    if (vars.show_mask){
-        state = "block";
+    // MIGRATION COMPLETE: Use React store as source of truth
+    // The store syncs to DOM via React effect in segmentation-app.tsx
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setShowMask(visible);
+        return; // React handles everything
     }
-    for (let layer of vars.vm.getLayers("mask")){
-        layer.container.style.display = state;
-    }
-
-    if (vars.show_mask){
-        get_object("tb_toggle_mask").classList.add("checked");
-    } else {
-        get_object("tb_toggle_mask").classList.remove("checked");
-    }
+    
+    // FALLBACK: Should never reach here if React loaded properly
+    console.warn('show_mask() called but React store not available yet');
 }
 
 function login_finished(){

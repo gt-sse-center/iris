@@ -9,6 +9,7 @@ interface ToolButtonProps {
   style?: React.CSSProperties;
   testId?: string;
   children?: React.ReactNode;
+  checked?: boolean;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -19,7 +20,8 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   className = '',
   style,
   testId,
-  children
+  children,
+  checked = false
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,10 +29,12 @@ const ToolButton: React.FC<ToolButtonProps> = ({
     onClick();
   };
 
+  const buttonClassName = `toolbutton icon_button ${className} ${checked ? 'checked' : ''}`.trim();
+
   return (
     <li
       id={id}
-      className={`toolbutton icon_button ${className}`}
+      className={buttonClassName}
       onClick={handleClick}
       title={title}
       style={style}

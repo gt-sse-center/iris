@@ -420,8 +420,11 @@ class RGBLayer extends CanvasLayer{
             image, 0, 0, image.width, image.height
         );
 
-        // Set mask visibility based on current vars.show_mask
-        show_mask(vars.show_mask);
+        // Set mask visibility based on React store
+        if (window.segmentationStore) {
+            const showMask = window.segmentationStore.getState().showMask;
+            show_mask(showMask);
+        }
     }
 }
 
