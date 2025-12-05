@@ -14,6 +14,24 @@ vi.mock('./components/PreferencesModal', () => ({
   ),
 }));
 
+/**
+ * Mock the UserProfileModal component
+ */
+vi.mock('./components/UserProfileModal', () => ({
+  UserProfileModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+    <div data-testid="user-profile-modal" data-open={isOpen}>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
+/**
+ * Mock the LoginForm component
+ */
+vi.mock('./components/LoginForm', () => ({
+  LoginForm: () => <div data-testid="login-form">Login Form</div>,
+}));
+
 describe('SegmentationApp - URL Parameter Handling', () => {
   let originalLocation: Location;
 
@@ -28,6 +46,17 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     originalLocation = window.location;
     (window as any).init_segmentation = vi.fn();
     (window as any).vars = {};
+    
+    // Mock fetch for authentication check
+    global.fetch = vi.fn((url) => {
+      if (url === '/user/api/current') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ user: { id: 1, name: 'testuser', admin: false } })
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
+    }) as any;
   });
 
   /**
@@ -44,6 +73,8 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     });
     delete (window as any).init_segmentation;
     delete (window as any).vars;
+    delete (window as any).openLogin;
+    delete (window as any).openUserProfile;
   });
 
   it('opens preferences modal when openPreferences=true in URL', async () => {
@@ -83,6 +114,62 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     await waitFor(() => {
       const modal = getByTestId('preferences-modal');
       expect(modal).toHaveAttribute('data-open', 'false');
+    });
+  });
+
+  it('exposes window.openLogin function for legacy JS', async () => {
+    // Mock window.location
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalLocation,
+      search: '',
+      pathname: '/segmentation',
+      hostname: 'localhost',
+    };
+
+    // Render the component
+    const { getByTestId } = render(<SegmentationApp />);
+
+    // Wait for the component to initialize and expose the function
+    await waitFor(() => {
+      expect(window.openLogin).toBeDefined();
+      expect(typeof window.openLogin).toBe('function');
+    });
+
+    // Call the function and verify login form appears
+    window.openLogin!();
+    
+    await waitFor(() => {
+      const loginForm = getByTestId('login-form');
+      expect(loginForm).toBeInTheDocument();
+    });
+  });
+
+  it('exposes window.openUserProfile function for legacy JS', async () => {
+    // Mock window.location
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalLocation,
+      search: '',
+      pathname: '/segmentation',
+      hostname: 'localhost',
+    };
+
+    // Render the component
+    const { getByTestId } = render(<SegmentationApp />);
+
+    // Wait for the component to initialize and expose the function
+    await waitFor(() => {
+      expect(window.openUserProfile).toBeDefined();
+      expect(typeof window.openUserProfile).toBe('function');
+    });
+
+    // Call the function and verify profile modal appears
+    window.openUserProfile!('test-user-123');
+    
+    await waitFor(() => {
+      const profileModal = getByTestId('user-profile-modal');
+      expect(profileModal).toHaveAttribute('data-open', 'true');
     });
   });
 });

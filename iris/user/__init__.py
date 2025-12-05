@@ -16,6 +16,12 @@ user_app = flask.Blueprint(
     static_folder='static'
 )
 
+
+def register_user_api(app):
+    """Register user API blueprint."""
+    from iris.user.api import api_bp
+    app.register_blueprint(api_bp)
+
 @user_app.route('/')
 def index():
     pass

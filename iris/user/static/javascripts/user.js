@@ -1,7 +1,14 @@
 // This requires diaglogue.js and a valid login_finished function!
 // TODO: This is clearly not the way how one should do this. I should enforce a
 // better programming style here.
-async function dialogue_user(label_mode){
+async function dialogue_user(userId){
+    // Use React UserProfileModal if available
+    if (window.openUserProfile) {
+        window.openUserProfile(userId);
+        return;
+    }
+
+    // Fallback to legacy implementation
     let response = await fetch(vars.url.user+"show/current");
 
     if (response.status >= 400) {
@@ -88,6 +95,15 @@ function dialogue_config_exclude_bands(){
 }
 
 function dialogue_login(){
+    // Use React LoginForm if available
+    if (window.openLogin) {
+        console.log("✅ Using React LoginForm");
+        window.openLogin();
+        return;
+    }
+
+    // Fallback to legacy implementation
+    console.log("⚠️ React not available, using legacy login");
     let content = `
     <table style="border: 0px;">
         <tr>
@@ -180,6 +196,15 @@ async function register(){
 }
 
 async function logout(next=null){
+    // Use React logout if available
+    if (window.reactLogout) {
+        console.log("✅ Using React logout");
+        await window.reactLogout(next);
+        return;
+    }
+
+    // Fallback to legacy implementation
+    console.log("⚠️ React not available, using legacy logout");
     await fetch(vars.url.user+"logout");
 
     if (next !== null){

@@ -1,17 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import PreferencesModal from './components/PreferencesModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { LoginForm } from './components/LoginForm';
 
 // Declare global functions that exist in the legacy JavaScript
 declare global {
   interface Window {
     init_segmentation: () => void;
     vars: any;
+    openUserProfile?: (userId?: string) => void;
+    openLogin?: () => void;
+    reactLogout?: (callback?: () => void) => Promise<void>;
   }
 }
 
 const SegmentationApp: React.FC = () => {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string>('current');
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Export GeoTIFF function
   const exportGeoTIFF = async () => {
@@ -64,7 +73,16 @@ const SegmentationApp: React.FC = () => {
     }
   };
 
+  // Mark auth as checked immediately - legacy JS handles authentication
   useEffect(() => {
+    setAuthChecked(true);
+  }, []);
+
+
+
+  useEffect(() => {
+    if (!authChecked) return;
+
     const isDebugMode = window.location.search.includes('debug=1') || window.location.hostname === 'localhost';
     
     if (isDebugMode) {
@@ -81,16 +99,33 @@ const SegmentationApp: React.FC = () => {
       window.history.replaceState({}, '', newUrl);
     }
     
-    // Wait for legacy JavaScript to load, then initialize
+    // Wait for legacy JavaScript to load, then check auth and initialize
     const waitForLegacyScripts = setInterval(() => {
       if (window.init_segmentation) {
         clearInterval(waitForLegacyScripts);
         
-        if (isDebugMode) console.log('✅ Legacy scripts loaded, calling init_segmentation()');
+        if (isDebugMode) console.log('✅ Legacy scripts loaded');
         
-        // Initialize the existing segmentation functionality
-        // This will asynchronously fetch data and eventually call init_views() which creates vars.vm
-        window.init_segmentation();
+        // Check authentication BEFORE calling init_segmentation
+        // This prevents segmentation.js from calling dialogue_login()
+        fetch('/user/get/current')
+          .then(response => {
+            if (response.status === 403) {
+              // Not authenticated - show React login modal
+              if (isDebugMode) console.log('❌ Not authenticated, showing React login modal');
+              setIsLoginOpen(true);
+              // Don't call init_segmentation - wait for login
+            } else {
+              // Authenticated - proceed with initialization
+              if (isDebugMode) console.log('✅ Authenticated, calling init_segmentation()');
+              window.init_segmentation();
+            }
+          })
+          .catch(error => {
+            console.error('Auth check failed:', error);
+            // On error, try to initialize anyway
+            window.init_segmentation();
+          });
       }
     }, 50);
     
@@ -106,7 +141,34 @@ const SegmentationApp: React.FC = () => {
     (window as any).dialogue_config = () => {
       setIsPreferencesOpen(true);
     };
-  }, []);
+
+    // Expose function for legacy JS to open user profile
+    // This is checked by dialogue_user() in user.js
+    window.openUserProfile = (userId?: string) => {
+      setProfileUserId(userId || 'current');
+      setIsProfileOpen(true);
+    };
+
+    // Expose function for legacy JS to open login modal
+    // This is checked by dialogue_login() in user.js
+    window.openLogin = () => {
+      // Hide the loader if it's showing (legacy JS may have triggered it)
+      const w = window as any;
+      if (w.hide_loader) w.hide_loader();
+      setIsLoginOpen(true);
+    };
+
+    // Expose logout function for React
+    (window as any).reactLogout = async (callback?: () => void) => {
+      await fetch('/user/logout');
+      if (callback) {
+        callback();
+      } else {
+        // Default behavior: reload page to show login
+        window.location.reload();
+      }
+    };
+  }, [authChecked]);
 
   return (
     <div>
@@ -328,6 +390,18 @@ const SegmentationApp: React.FC = () => {
         onClose={() => setIsPreferencesOpen(false)}
       />
 
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        userId={profileUserId}
+      />
+
+      {/* Login Modal - onSuccess will reload the page */}
+      {isLoginOpen && (
+        <LoginForm />
+      )}
+
       {/* React Development Indicator - Shows in development or when ?debug=1 */}
       {(window.location.search.includes('debug=1') || window.location.hostname === 'localhost') && (
         <div style={{
@@ -354,12 +428,16 @@ const SegmentationApp: React.FC = () => {
 
 // Initialize React when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  const container = document.getElementById('react-segmentation-app');
-  if (container) {
-    const root = createRoot(container);
-    root.render(<SegmentationApp />);
-  } else {
-    console.error('❌ React mount container not found! Looking for #react-segmentation-app');
+  try {
+    const container = document.getElementById('react-segmentation-app');
+    if (container) {
+      const root = createRoot(container);
+      root.render(<SegmentationApp />);
+    } else {
+      console.error('❌ React mount container not found! Looking for #react-segmentation-app');
+    }
+  } catch (error) {
+    console.error('❌ Failed to mount React Segmentation App:', error);
   }
 });
 

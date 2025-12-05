@@ -273,8 +273,9 @@ def register_extensions(app):
     register_admin_blueprints(app)
     from iris.help import help_app
     app.register_blueprint(help_app, url_prefix="/help")
-    from iris.user import user_app
+    from iris.user import user_app, register_user_api
     app.register_blueprint(user_app, url_prefix="/user")
+    register_user_api(app)
     
     # Register REST API blueprint
     from iris.api import create_api_blueprint
