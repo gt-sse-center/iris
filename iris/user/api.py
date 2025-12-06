@@ -67,9 +67,14 @@ def get_profile(user_id):
 
     if top_users:
         usernames, scores = zip(*top_users)
-        user_data['segmentation']['rank'] = usernames.index(user.name) + 1
+        # Check if user is in the rankings (they may have no segmentation actions yet)
+        try:
+            user_data['segmentation']['rank'] = usernames.index(user.name) + 1
+        except ValueError:
+            # User not in rankings yet (no segmentation actions)
+            user_data['segmentation']['rank'] = None
     else:
-        user_data['segmentation']['rank'] = 1
+        user_data['segmentation']['rank'] = None
 
     # Get last masks (configurable limit)
     LAST_MASKS_LIMIT = 10

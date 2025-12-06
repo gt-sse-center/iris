@@ -186,3 +186,27 @@ def test_profile_rank_calculation(client, app):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data['segmentation']['rank'] == 3
+
+
+def test_profile_rank_for_new_user(client, app):
+    """Test that a new user with no actions has rank None."""
+    with app.app_context():
+        from iris import db
+
+        # Create a user with no actions
+        new_user = User(name='newuser', admin=False)
+        new_user.set_password('password')
+        db.session.add(new_user)
+        db.session.commit()
+
+    # Login as new user
+    client.post('/user/login', data=json.dumps({
+        'username': 'newuser',
+        'password': 'password'
+    }), content_type='application/json')
+
+    response = client.get('/user/api/profile/current')
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    # New user with no actions should have rank None
+    assert data['segmentation']['rank'] is None
