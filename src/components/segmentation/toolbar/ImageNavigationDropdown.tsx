@@ -3,34 +3,23 @@
  * 
  * Displays current image name and allows navigation to any image in the project.
  * Shows annotation status for each image.
+ * 
+ * Uses Zustand store as single source of truth for image list.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-
-interface ImageInfo {
-  image_id: string;
-  has_user_annotation: boolean;
-  has_any_annotation: boolean;
-  annotation_count: number;
-}
+import { useSegmentationStore } from '../../../stores/segmentationStore';
 
 interface ImageNavigationDropdownProps {
-  currentImageId: string;
   onNavigate: (imageId: string) => void;
 }
 
 export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = ({
-  currentImageId,
   onNavigate,
 }) => {
-  const [images, setImages] = useState<ImageInfo[]>([]);
+  const { images, currentImageId } = useSegmentationStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLLIElement>(null);
-
-  useEffect(() => {
-    fetchImages();
-  }, [currentImageId]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,25 +37,6 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
     };
   }, [isOpen]);
 
-  const fetchImages = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/segmentation/api/images/list?current_image_id=${encodeURIComponent(currentImageId)}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch images');
-      }
-      const data = await response.json();
-      console.log('Fetched images:', data.images);
-      setImages(data.images);
-    } catch (error) {
-      console.error('Error fetching images:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleImageSelect = (imageId: string) => {
     setIsOpen(false);
     if (imageId !== currentImageId) {
@@ -74,7 +44,7 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
     }
   };
 
-  const getStatusIcon = (image: ImageInfo) => {
+  const getStatusIcon = (image: { has_user_annotation: boolean; has_any_annotation: boolean }) => {
     if (image.has_user_annotation) {
       return '✓'; // User has annotated
     } else if (image.has_any_annotation) {
@@ -83,7 +53,7 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
     return ''; // No annotations
   };
 
-  const getStatusClass = (image: ImageInfo) => {
+  const getStatusClass = (image: { has_user_annotation: boolean; has_any_annotation: boolean }) => {
     if (image.has_user_annotation) {
       return 'image-status-user';
     } else if (image.has_any_annotation) {
@@ -123,9 +93,9 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
       </div>
 
       {isOpen && (
-        <div className="image-dropdown-menu" style={{ display: 'flex' }}>
-          {loading ? (
-            <div className="image-dropdown-loading">Loading images...</div>
+        <div className="image-dropdown-menu">
+          {images.length === 0 ? (
+            <div className="image-dropdown-loading">No images loaded</div>
           ) : (
             <>
               <div className="image-dropdown-header">
@@ -133,8 +103,8 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
                 <span>Status</span>
               </div>
               <div className="image-dropdown-list">
-                {images.map((image) => {
-                  console.log('Rendering image:', image.image_id);
+                {images.map((image, index) => {
+                  console.log(`🖼️ Rendering image ${index}:`, image.image_id, 'current:', image.image_id === currentImageId);
                   return (
                     <div
                       key={image.image_id}

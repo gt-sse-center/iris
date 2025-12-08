@@ -58,20 +58,38 @@
         });
 
         function next_image(){
-            // Check store first, fallback to vars during migration
-            const shouldShowDialogue = window.segmentationStore 
-                ? window.segmentationStore.getState().showDialogueBeforeNextImage
-                : vars.show_dialogue_before_next_image;
+            const store = window.segmentationStore?.getState();
+            if (!store) {
+                console.error('Store not available');
+                return;
+            }
             
+            const shouldShowDialogue = store.showDialogueBeforeNextImage;
             if (shouldShowDialogue){
                 dialogue_before_next_image();
             } else {
-                goto_url({{url_for('segmentation.next_image', image_id=image_id)|tojson}});
+                const nextImageId = store.getNextImageId();
+                if (nextImageId) {
+                    goto_url(`/segmentation/?image_id=${encodeURIComponent(nextImageId)}`);
+                } else {
+                    show_message('No more images');
+                }
             }
         }
 
         function prev_image(){
-            goto_url({{url_for('segmentation.previous_image', image_id=image_id)|tojson}});
+            const store = window.segmentationStore?.getState();
+            if (!store) {
+                console.error('Store not available');
+                return;
+            }
+            
+            const prevImageId = store.getPrevImageId();
+            if (prevImageId) {
+                goto_url(`/segmentation/?image_id=${encodeURIComponent(prevImageId)}`);
+            } else {
+                show_message('Already at first image');
+            }
         }
 
         // React will call init_segmentation when ready

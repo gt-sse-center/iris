@@ -362,6 +362,89 @@ class TestPreferencesIntegration:
             "suppression_default_class should be a valid class index"
 
 
+class TestImageNavigationAPI:
+    """
+    Test the image navigation API endpoints.
+    
+    These tests verify that the centralized image navigation system works correctly,
+    providing a single source of truth for image lists and navigation state.
+    """
+
+    def test_list_images_requires_auth(self, client):
+        """
+        Test that unauthenticated users cannot access image list.
+        
+        Why: Security - image lists may contain sensitive project information.
+        
+        Expected: 403 Forbidden response
+        """
+        response = client.get('/segmentation/api/images/list')
+        assert response.status_code == 403
+
+    def test_list_images_authenticated(self, client, logged_in_user):
+        """
+        Test that authenticated users can fetch the image list.
+        
+        Why: Core functionality - the navigation store needs to fetch all images
+        on initialization to provide prev/next navigation.
+        
+        Expected: 200 OK with JSON containing 'images' array
+        """
+        response = client.get('/segmentation/api/images/list?current_image_id=image_001')
+        assert response.status_code == 200
+        
+        data = response.get_json()
+        assert 'images' in data, "Response should contain images array"
+        assert 'current_image_id' in data, "Response should echo current_image_id"
+        assert isinstance(data['images'], list), "images should be a list"
+
+    def test_list_images_structure(self, client, logged_in_user):
+        """
+        Test that image list contains required fields.
+        
+        Why: Data integrity - the React store depends on these fields being present.
+        
+        Expected: Each image has image_id, has_user_annotation, has_any_annotation, annotation_count
+        """
+        response = client.get('/segmentation/api/images/list?current_image_id=image_001')
+        data = response.get_json()
+        
+        assert len(data['images']) > 0, "Should have at least one image"
+        
+        for image in data['images']:
+            assert 'image_id' in image, "Each image should have image_id"
+            assert 'has_user_annotation' in image, "Each image should have has_user_annotation"
+            assert 'has_any_annotation' in image, "Each image should have has_any_annotation"
+            assert 'annotation_count' in image, "Each image should have annotation_count"
+            
+            assert isinstance(image['image_id'], str), "image_id should be string"
+            assert isinstance(image['has_user_annotation'], bool), "has_user_annotation should be boolean"
+            assert isinstance(image['has_any_annotation'], bool), "has_any_annotation should be boolean"
+            assert isinstance(image['annotation_count'], int), "annotation_count should be integer"
+
+    def test_list_images_returns_all_project_images(self, client, logged_in_user):
+        """
+        Test that all project images are returned.
+        
+        Why: Completeness - the navigation store needs the complete list to provide
+        accurate prev/next navigation and show total image count.
+        
+        Expected: Number of images matches project.image_ids length
+        """
+        response = client.get('/segmentation/api/images/list?current_image_id=image_001')
+        data = response.get_json()
+        
+        # Should return all images from the project
+        assert len(data['images']) == len(project.image_ids), \
+            "Should return all project images"
+        
+        # All project images should be in the response
+        returned_ids = {img['image_id'] for img in data['images']}
+        project_ids = set(project.image_ids)
+        assert returned_ids == project_ids, \
+            "Returned image IDs should match project image IDs"
+
+
 class TestPreferencesErrorHandling:
     """
     Test error handling in preferences functionality.

@@ -5,9 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ImageNavigationDropdown } from './ImageNavigationDropdown';
-
-// Mock fetch
-global.fetch = vi.fn();
+import { useSegmentationStore } from '../../../stores/segmentationStore';
 
 describe('ImageNavigationDropdown', () => {
   const mockImages = [
@@ -33,9 +31,12 @@ describe('ImageNavigationDropdown', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => ({ images: mockImages, current_image_id: 'image_001' })
+    
+    // Set up store with test data
+    useSegmentationStore.setState({
+      images: mockImages,
+      currentImageId: 'image_001',
+      currentImageIndex: 0
     });
   });
 
@@ -43,7 +44,6 @@ describe('ImageNavigationDropdown', () => {
     const onNavigate = vi.fn();
     render(
       <ImageNavigationDropdown
-        currentImageId="image_001"
         onNavigate={onNavigate}
       />
     );
@@ -51,27 +51,22 @@ describe('ImageNavigationDropdown', () => {
     expect(screen.getByText('image_001')).toBeInTheDocument();
   });
 
-  it('should fetch images on mount', async () => {
+  it('should use images from store', () => {
     const onNavigate = vi.fn();
     render(
       <ImageNavigationDropdown
-        currentImageId="image_001"
         onNavigate={onNavigate}
       />
     );
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/segmentation/api/images/list')
-      );
-    });
+    // Images should be available from store, not fetched
+    expect(screen.getByText('image_001')).toBeInTheDocument();
   });
 
   it('should open dropdown when button is clicked', async () => {
     const onNavigate = vi.fn();
     render(
       <ImageNavigationDropdown
-        currentImageId="image_001"
         onNavigate={onNavigate}
       />
     );
@@ -89,7 +84,6 @@ describe('ImageNavigationDropdown', () => {
     const onNavigate = vi.fn();
     render(
       <ImageNavigationDropdown
-        currentImageId="image_001"
         onNavigate={onNavigate}
       />
     );
@@ -108,7 +102,6 @@ describe('ImageNavigationDropdown', () => {
     const onNavigate = vi.fn();
     render(
       <ImageNavigationDropdown
-        currentImageId="image_001"
         onNavigate={onNavigate}
       />
     );
@@ -128,7 +121,6 @@ describe('ImageNavigationDropdown', () => {
     const onNavigate = vi.fn();
     render(
       <ImageNavigationDropdown
-        currentImageId="image_001"
         onNavigate={onNavigate}
       />
     );
@@ -145,44 +137,23 @@ describe('ImageNavigationDropdown', () => {
     expect(screen.queryByText('Status')).not.toBeInTheDocument();
   });
 
-  it('should show loading state while fetching', () => {
-    (global.fetch as any).mockImplementation(
-      () => new Promise(resolve => setTimeout(resolve, 1000))
-    );
-
-    const onNavigate = vi.fn();
-    render(
-      <ImageNavigationDropdown
-        currentImageId="image_001"
-        onNavigate={onNavigate}
-      />
-    );
-
-    const dropdown = screen.getByText('image_001').closest('div');
-    fireEvent.click(dropdown!);
-
-    expect(screen.getByText('Loading images...')).toBeInTheDocument();
-  });
-
-  it('should handle fetch errors gracefully', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    (global.fetch as any).mockRejectedValue(new Error('Network error'));
-
-    const onNavigate = vi.fn();
-    render(
-      <ImageNavigationDropdown
-        currentImageId="image_001"
-        onNavigate={onNavigate}
-      />
-    );
-
-    await waitFor(() => {
-      expect(consoleError).toHaveBeenCalledWith(
-        'Error fetching images:',
-        expect.any(Error)
-      );
+  it('should show empty state when no images in store', () => {
+    useSegmentationStore.setState({
+      images: [],
+      currentImageId: null,
+      currentImageIndex: -1
     });
 
-    consoleError.mockRestore();
+    const onNavigate = vi.fn();
+    render(
+      <ImageNavigationDropdown
+        onNavigate={onNavigate}
+      />
+    );
+
+    const dropdown = screen.getByTitle('Select image to navigate');
+    fireEvent.click(dropdown);
+
+    expect(screen.getByText('No images loaded')).toBeInTheDocument();
   });
 });
