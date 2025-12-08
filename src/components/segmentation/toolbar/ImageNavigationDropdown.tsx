@@ -69,10 +69,7 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
       style={{ width: '200px', position: 'relative' }}
     >
       <div
-        onClick={() => {
-          console.log('Dropdown clicked, current state:', isOpen, 'images:', images.length);
-          setIsOpen(!isOpen);
-        }}
+        onClick={() => setIsOpen(!isOpen)}
         style={{
           cursor: 'pointer',
           display: 'flex',
@@ -103,9 +100,7 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
                 <span>Status</span>
               </div>
               <div className="image-dropdown-list">
-                {images.map((image, index) => {
-                  console.log(`🖼️ Rendering image ${index}:`, image.image_id, 'current:', image.image_id === currentImageId);
-                  return (
+                {images.map((image) => (
                     <div
                       key={image.image_id}
                       className={`image-dropdown-item ${
@@ -129,8 +124,7 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
                       )}
                     </span>
                     </div>
-                  );
-                })}
+                ))}
               </div>
             </>
           )}

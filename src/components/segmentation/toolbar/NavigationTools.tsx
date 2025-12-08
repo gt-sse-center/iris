@@ -21,26 +21,17 @@ const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) =>
       ? w.segmentationStore.getState().showDialogueBeforeNextImage
       : false;
     
-    console.log('🔍 Dropdown navigation:', {
-      targetImage: imageId,
-      shouldShowDialogue,
-      storeAvailable: !!w.segmentationStore,
-      dialogueFnAvailable: !!w.dialogue_before_next_image
-    });
-    
     if (shouldShowDialogue) {
       // User has unsaved changes - show confirmation dialog
       if (w.dialogue_before_next_image) {
         // Store the target image ID for after the dialog
         w.pendingNavigationImageId = imageId;
-        console.log('✅ Set pendingNavigationImageId:', imageId);
         w.dialogue_before_next_image();
       } else {
-        console.warn('⚠️ dialogue_before_next_image not available');
+        console.warn('dialogue_before_next_image not available');
       }
     } else {
       // No unsaved changes - navigate directly
-      console.log('➡️ Navigating directly (no unsaved changes)');
       const url = `/segmentation/?image_id=${encodeURIComponent(imageId)}`;
       if (w.goto_url) {
         w.goto_url(url);
