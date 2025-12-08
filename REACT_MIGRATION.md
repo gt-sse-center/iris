@@ -12,24 +12,6 @@ This guide documents the incremental migration of IRIS from Flask templates and 
 - **Build**: Vite builds React components into static assets
 - **Serving**: Flask serves built React assets
 
-## Migration Status
-
-### ✅ Completed
-- **Admin Interface**: Fully React (users, actions, images pages)
-- **Segmentation Modals**: Preferences, help, user profile, etc.
-- **Segmentation Toolbar/Status**: React components with legacy JS bridge
-- **State Management**: `vars.show_mask` migrated to Zustand (POC complete)
-
-### 🚧 In Progress
-- **Legacy JavaScript Migration**: Converting `vars` object to React store
-  - See `VARS_MIGRATION_ANALYSIS.md` for dependency mapping
-  - See `MIGRATION_POC_SUMMARY.md` for completed POC
-
-### 📋 Remaining
-- **Core Segmentation Logic**: Canvas drawing, mask manipulation (~1,378 lines)
-- **View Management System**: ViewManager, ViewPort, Layers (~600 lines)
-- **Utility Functions**: Canvas transforms, array utilities (~300 lines)
-
 ## Development Workflow
 
 ### 1. Setup Development Environment
@@ -267,16 +249,3 @@ describe('segmentationStore', () => {
   });
 });
 ```
-
-## Resources
-
-- **Zustand Documentation**: https://github.com/pmndrs/zustand
-- **React Testing Library**: https://testing-library.com/react
-- **Vite Documentation**: https://vitejs.dev/
-- **TypeScript Handbook**: https://www.typescriptlang.org/docs/
-
-## Related Documents
-
-- `VARS_MIGRATION_ANALYSIS.md` - Detailed dependency analysis for vars.show_mask
-- `MIGRATION_POC_SUMMARY.md` - Proof of concept results and lessons learned
-- `TODO.md` - Project-wide TODO list
