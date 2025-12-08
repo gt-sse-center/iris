@@ -1170,7 +1170,16 @@ function dialogue_before_next_image_save_and_continue(action_id){
         body: JSON.stringify(action_info)
     })
 
-    next_image();
+    // Check if there's a pending navigation from dropdown
+    if (window.pendingNavigationImageId) {
+        const imageId = window.pendingNavigationImageId;
+        window.pendingNavigationImageId = null; // Clear it
+        const url = `/segmentation/?image_id=${encodeURIComponent(imageId)}`;
+        goto_url(url);
+    } else {
+        // Normal next image navigation
+        next_image();
+    }
 }
 
 function save_mask(call_afterwards=null){

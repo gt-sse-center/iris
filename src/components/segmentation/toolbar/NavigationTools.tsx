@@ -12,13 +12,29 @@ const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) =>
   const handleNavigateToImage = (imageId: string) => {
     const w = window as any;
     console.log('Navigating to image:', imageId);
-    // Use goto_url (same tab) instead of goto_image (new tab)
-    const url = `/segmentation/?image_id=${encodeURIComponent(imageId)}`;
-    if (w.goto_url) {
-      w.goto_url(url);
+    
+    // Check if user has unsaved changes
+    const shouldShowDialogue = w.segmentationStore 
+      ? w.segmentationStore.getState().showDialogueBeforeNextImage
+      : false;
+    
+    if (shouldShowDialogue) {
+      // User has unsaved changes - show confirmation dialog
+      if (w.dialogue_before_next_image) {
+        // Store the target image ID for after the dialog
+        w.pendingNavigationImageId = imageId;
+        w.dialogue_before_next_image();
+      } else {
+        console.warn('dialogue_before_next_image not available');
+      }
     } else {
-      // Fallback: navigate directly
-      window.location.href = url;
+      // No unsaved changes - navigate directly
+      const url = `/segmentation/?image_id=${encodeURIComponent(imageId)}`;
+      if (w.goto_url) {
+        w.goto_url(url);
+      } else {
+        window.location.href = url;
+      }
     }
   };
 
