@@ -1,18 +1,17 @@
 import React from 'react';
 import ToolButton from './ToolButton';
+import { useSegmentationStore } from '../../../stores/segmentationStore';
 
 const MaskTools: React.FC = () => {
+  const { showMask, toggleMask } = useSegmentationStore();
+  
   return (
     <>
       <ToolButton
         id="tb_toggle_mask"
         icon="/segmentation/static/icons/show_mask.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.vars && w.show_mask) {
-            w.show_mask(!w.vars.show_mask);
-          }
-        }}
+        checked={showMask}
+        onClick={toggleMask}
       />
       <ToolButton
         id="tb_mask_final"

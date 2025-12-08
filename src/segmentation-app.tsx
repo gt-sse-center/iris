@@ -4,6 +4,7 @@ import SegmentationToolbar from './components/segmentation/SegmentationToolbar';
 import SegmentationStatusBar from './components/segmentation/SegmentationStatusBar';
 import SegmentationModals from './components/segmentation/SegmentationModals';
 import { useSegmentationSetup } from './components/segmentation/hooks/useSegmentationSetup';
+import { useSegmentationStore } from './stores/segmentationStore';
 
 // Declare global functions that exist in the legacy JavaScript
 declare global {
@@ -87,6 +88,35 @@ const SegmentationApp: React.FC = () => {
   // Mark auth as checked immediately - legacy JS handles authentication
   useEffect(() => {
     setAuthChecked(true);
+  }, []);
+
+  // Sync Zustand store with DOM (mask layer visibility)
+  // This updates the canvas layers when store changes
+  useEffect(() => {
+    const unsubscribe = useSegmentationStore.subscribe(
+      (state) => {
+        const showMask = state.showMask;
+        const w = window as any;
+        
+        // Update DOM directly (mask layer visibility)
+        // This replicates the behavior of legacy show_mask() function
+        if (w.vars?.vm) {
+          const displayState = showMask ? "block" : "none";
+          try {
+            const maskLayers = w.vars.vm.getLayers("mask");
+            for (let layer of maskLayers) {
+              if (layer.container) {
+                layer.container.style.display = displayState;
+              }
+            }
+          } catch (error) {
+            console.warn('Could not update mask layer visibility:', error);
+          }
+        }
+      }
+    );
+    
+    return unsubscribe;
   }, []);
 
   // Memoize callbacks to prevent unnecessary re-renders
