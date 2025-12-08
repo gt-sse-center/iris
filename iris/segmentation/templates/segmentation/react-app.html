@@ -58,7 +58,12 @@
         });
 
         function next_image(){
-            if (vars.show_dialogue_before_next_image){
+            // Check store first, fallback to vars during migration
+            const shouldShowDialogue = window.segmentationStore 
+                ? window.segmentationStore.getState().showDialogueBeforeNextImage
+                : vars.show_dialogue_before_next_image;
+            
+            if (shouldShowDialogue){
                 dialogue_before_next_image();
             } else {
                 goto_url({{url_for('segmentation.next_image', image_id=image_id)|tojson}});

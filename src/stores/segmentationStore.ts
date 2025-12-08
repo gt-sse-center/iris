@@ -5,7 +5,8 @@
  * During migration, the store syncs with legacy code via window bridge.
  * 
  * Migration Status:
- * - [x] showMask (vars.show_mask) - PROOF OF CONCEPT
+ * - [x] showMask (vars.show_mask) - COMPLETE
+ * - [x] showDialogueBeforeNextImage (vars.show_dialogue_before_next_image) - IN PROGRESS
  * - [ ] currentClass (vars.current_class)
  * - [ ] tool (vars.tool)
  * - [ ] config (vars.config)
@@ -20,6 +21,10 @@ interface SegmentationState {
   showMask: boolean;
   setShowMask: (visible: boolean) => void;
   toggleMask: () => void;
+
+  // Navigation Confirmation Dialog
+  showDialogueBeforeNextImage: boolean;
+  setShowDialogueBeforeNextImage: (show: boolean) => void;
 }
 
 export const useSegmentationStore = create<SegmentationState>((set) => ({
@@ -32,6 +37,13 @@ export const useSegmentationStore = create<SegmentationState>((set) => ({
   
   toggleMask: () => {
     set((state) => ({ showMask: !state.showMask }));
+  },
+
+  // Navigation Confirmation Dialog State
+  showDialogueBeforeNextImage: false,
+  
+  setShowDialogueBeforeNextImage: (show: boolean) => {
+    set({ showDialogueBeforeNextImage: show });
   },
 }));
 

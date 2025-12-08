@@ -203,10 +203,11 @@ function show_mask(visible) {
 ### Priority Order
 
 **Easy Wins** (Start here):
-1. `vars.show_mask` ✅ COMPLETE
-2. `vars.current_class` - Simple number
-3. `vars.tool.size` - Simple number
-4. `vars.mask_type` - String enum
+1. `vars.show_mask` ✅ COMPLETE - See MIGRATION_COMPLETE_show_mask.md
+2. `vars.show_dialogue_before_next_image` ✅ COMPLETE - See MIGRATION_COMPLETE_show_dialogue_before_next_image.md
+3. `vars.current_class` - Simple number
+4. `vars.tool.size` - Simple number
+5. `vars.mask_type` - String enum
 
 **Medium Complexity**:
 5. `vars.config` - Large object, mostly read-only

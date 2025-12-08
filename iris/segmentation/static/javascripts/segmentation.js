@@ -733,7 +733,12 @@ function user_draws_on_mask(){
     discard_future();
     update_history();
 
-    vars.show_dialogue_before_next_image = true;
+    // Set flag to show confirmation dialog before navigating away
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setShowDialogueBeforeNextImage(true);
+    } else {
+        vars.show_dialogue_before_next_image = true;
+    }
 }
 
 function reload_hidden_mask(){
@@ -856,7 +861,12 @@ function reset_mask(){
     render_mask();
     update_drawn_pixels();
 
-    vars.show_dialogue_before_next_image = true;
+    // Set flag to show confirmation dialog before navigating away
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setShowDialogueBeforeNextImage(true);
+    } else {
+        vars.show_dialogue_before_next_image = true;
+    }
 }
 
 function reset_filters(){
@@ -1093,7 +1103,12 @@ async function download(url, init=null, html_object=null){
 }
 
 async function dialogue_before_next_image(){
-    if (!vars.show_dialogue_before_next_image){
+    // Check store first, fallback to vars during migration
+    const shouldShowDialogue = window.segmentationStore 
+        ? window.segmentationStore.getState().showDialogueBeforeNextImage
+        : vars.show_dialogue_before_next_image;
+    
+    if (!shouldShowDialogue){
         return;
     }
 
@@ -1101,7 +1116,11 @@ async function dialogue_before_next_image(){
     let response = await fetch(`${vars.url.main}get_action_info/${vars.image_id}/segmentation`);
     if (response.status >= 400){
         // Continue without any dialogue
-        vars.show_dialogue_before_next_image=false;
+        if (window.segmentationStore) {
+            window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
+        } else {
+            vars.show_dialogue_before_next_image = false;
+        }
         next_image();
         return;
     }
@@ -1131,7 +1150,12 @@ async function dialogue_before_next_image(){
 }
 
 function dialogue_before_next_image_save_and_continue(action_id){
-    vars.show_dialogue_before_next_image=false;
+    // Clear the dialogue flag
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
+    } else {
+        vars.show_dialogue_before_next_image = false;
+    }
 
     action_info = {
         "complete": get_object('dbni-complete_action').checked,
