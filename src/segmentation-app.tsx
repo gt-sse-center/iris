@@ -90,6 +90,42 @@ const SegmentationApp: React.FC = () => {
     setAuthChecked(true);
   }, []);
 
+  // Initialize navigation store with image list
+  useEffect(() => {
+    const initializeNavigation = async () => {
+      try {
+        const currentImageId = window.vars?.image_id;
+        if (!currentImageId) {
+          console.warn('No current image ID found, skipping navigation initialization');
+          return;
+        }
+
+        const response = await fetch(
+          `/segmentation/api/images/list?current_image_id=${encodeURIComponent(currentImageId)}`,
+          { credentials: 'same-origin' }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch images: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Set images in store
+        useSegmentationStore.getState().setImages(data.images);
+
+        // Set current image
+        useSegmentationStore.getState().setCurrentImage(currentImageId);
+      } catch (error) {
+        console.error('Failed to initialize navigation:', error);
+      }
+    };
+
+    if (authChecked) {
+      initializeNavigation();
+    }
+  }, [authChecked]);
+
   // Sync Zustand store with DOM (mask layer visibility)
   // This updates the canvas layers when store changes
   useEffect(() => {
