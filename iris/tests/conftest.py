@@ -22,6 +22,9 @@ def app():
     test_project_dir = tempfile.mkdtemp(suffix='.iris')
     test_project_db = os.path.join(test_project_dir, 'iris.db')
     
+    # Create user_config subdirectory (needed for user preferences tests)
+    os.makedirs(os.path.join(test_project_dir, 'user_config'), exist_ok=True)
+    
     # Configure app for testing with isolated database
     iris_app.config['TESTING'] = True
     iris_app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{test_project_db}'
