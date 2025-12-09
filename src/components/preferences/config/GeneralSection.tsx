@@ -105,7 +105,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                 <strong>Name</strong>
                 <br />
                 <small style={{ color: '#666' }}>
-                  Optional name for this project. (e.g., <code style={{ color: '#d63384' }}>cloud-segmentation</code>)
+                  Optional name for this project. Example: <code style={{ color: '#d63384' }}>cloud-segmentation</code>
                 </small>
               </td>
               <td style={{ width: '300px', paddingRight: '20px' }}>
@@ -147,7 +147,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                 <small style={{ color: '#666' }}>
                   Set the host IP address for IRIS. The default value 127.0.0.1 means IRIS will only be visible on the
                   local machine. If you want to expose IRIS publicly as a web application, we recommend setting the host
-                  to 0.0.0.0 and adjusting your router / consulting with your network administrators accordingly.
+                  to 0.0.0.0 and adjusting your router or consulting with your network administrators accordingly.
                 </small>
               </td>
               <td style={{ paddingRight: '20px' }}>
@@ -169,23 +169,29 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
               <td colSpan={2}>
                 <strong>Path *</strong>
                 <br />
-                <small style={{ color: '#666', display: 'block', marginTop: '4px', lineHeight: '1.5' }}>
-                  The input path(s) to the images. Paths should use the placeholder{' '}
-                  <code style={{ color: '#d63384' }}>{'{id}'}</code>, which will be
-                  replaced by the unique id of the current image (see example below).
-                  <strong>Note:</strong> In the UI, the path must be provided as a <code>dictionary</code>.
-                  Legacy single-string paths are automatically converted when loading from JSON files.
-                  IRIS can load standard image formats (like *png* or
-                  *tif*), theoretically all kind of files that can be opened by GDAL/rasterio (like *geotiff* or *vrt*)
-                  and numpy files (*.npy*). The arrays inside the numpy files should have the shape HxWxC.
-                  If you used a single file path for images, it has been assigned key 'pictures' here.
+                <small style={{ color: '#666', display: 'block', marginTop: '4px', lineHeight: '1.5', textAlign: 'left' }}>
+                  Provide input image paths using the placeholder <code style={{ color: '#d63384' }}>{'{id}'}</code>.
+                  Use a dictionary to map single or multiple dataset identifiers or file types to their path templates.
+                  <ul style={{ marginTop: '8px', paddingLeft: '18px', textAlign: 'left' }}>
+                    <li style={{ marginBottom: '6px' }}>
+                      <strong>Placeholder:</strong> Include <code style={{ color: '#d63384' }}>{'{id}'}</code> in
+                      each path; it will be replaced by the current image id.
+                    </li>
+                    <li style={{ marginBottom: '6px' }}>
+                      <strong>Dictionary keys:</strong> Use meaningful identifiers (e.g. <code>Sentinel2</code>)
+                      as these are referenced to define Views (see Views panel).
+                    </li>
+                    <li style={{ marginBottom: '6px' }}>
+                      <strong>Supported formats:</strong> common raster formats (png, tif, GeoTIFF, VRT) and
+                      NumPy (*.npy*) arrays (HxWxC) are supported.
+                    </li>
+                    <li>
+                      <strong>Legacy behaviour:</strong> If you provided a single string path in JSON, it will appear
+                      as the <code style={{ color: '#d63384' }}>"pictures"</code> entry after loading.
+                    </li>
+                  </ul>
                 </small>
                 <div style={{ marginBottom: '12px' }}>
-                  <small style={{ color: '#666' }}>
-                    When you have your data distributed over multiple files (e.g. coming from Sentinel-1 and
-                    Sentinel-2), you can use a dictionary for each file type. The keys of the dictionary are file
-                    identifiers which are important for the [views](#views) configuration.
-                  </small>
                   <pre
                     style={{
                       background: '#f5f5f5',
@@ -198,7 +204,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                   >
                     {`"path": {
     "Sentinel1": "images/{id}/S1.tif",
-    "Sentinel2": "images/S2-{id}.tif"
+    "Sentinel2": "images/S2-{id}.png"
 }`}
                   </pre>
                 </div>
@@ -226,7 +232,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                   <div style={{ display: 'flex', gap: '32px', maxWidth: '400px' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '4px' }}>
-                        <strong>Shape-1 *</strong>
+                        <strong>Width *</strong>
                       </label>
                       <input
                         type="number"
@@ -238,7 +244,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', marginBottom: '4px' }}>
-                        <strong>Shape-2 *</strong>
+                        <strong>Height *</strong>
                       </label>
                       <input
                         type="number"

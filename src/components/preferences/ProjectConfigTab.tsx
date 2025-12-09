@@ -268,6 +268,15 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
         return;
       }
       
+      // Only log the full configuration if the project was started in debug mode
+      if (loadedConfig && (loadedConfig as any).debug) {
+        try {
+          console.log('Save Complete Configuration - full config:', JSON.stringify(config, null, 2));
+        } catch (e) {
+          console.log('Save Complete Configuration - full config (object):', config);
+        }
+      }
+
       // Save to backend
       const response = await updateProjectConfig(config);
       

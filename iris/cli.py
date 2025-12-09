@@ -85,6 +85,8 @@ def label(
 @app.command()
 def launch(
     folder: Annotated[str, typer.Argument(help="Project folder name to create or launch")],
+    debug: Annotated[bool, typer.Option("--debug", "-d", help="Start in debug mode")] = False,
+    production: Annotated[bool, typer.Option("--production", "-p", help="Use production WSGI server")] = False,
 ):
     """
     Create a new project from the demo template or launch an existing one.
@@ -101,7 +103,7 @@ def launch(
     try:
         config_file = handle_launch_command(folder)
         typer.echo(f"Launching project '{folder}' with config '{config_file}'...")
-        start_server(project_file=str(config_file), debug=False, production=False)
+        start_server(project_file=str(config_file), debug=debug, production=production)
     except (ValueError, FileNotFoundError, RuntimeError) as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1)

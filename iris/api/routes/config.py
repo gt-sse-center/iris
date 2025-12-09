@@ -79,6 +79,11 @@ def get_project_config():
             'name': project.config.get('name'),
             'host': project.config.get('host', '127.0.0.1'),
             'port': project.config.get('port', 5000),
+            # Expose whether the server/project was started in debug mode.
+            # This is set by start_server(..., debug=True) and stored on the
+            # project object, so the frontend can decide to enable verbose
+            # debug behavior such as pretty-printing the saved config.
+            'debug': getattr(project, 'debug', False),
             'images': {
                 'path': deepcopy(project.config['images']['path']),
                 'shape': deepcopy(project.config['images']['shape']),
