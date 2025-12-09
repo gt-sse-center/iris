@@ -172,7 +172,10 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                 <small style={{ color: '#666', display: 'block', marginTop: '4px', lineHeight: '1.5' }}>
                   The input path(s) to the images. Paths should use the placeholder{' '}
                   <code style={{ color: '#d63384' }}>{'{id}'}</code>, which will be
-                  replaced by the unique id of the current image (see examples below). IRIS can load standard image formats (like *png* or
+                  replaced by the unique id of the current image (see example below).
+                  <strong>Note:</strong> In the UI, the path must be provided as a <code>dictionary</code>.
+                  Legacy single-string paths are automatically converted when loading from JSON files.
+                  IRIS can load standard image formats (like *png* or
                   *tif*), theoretically all kind of files that can be opened by GDAL/rasterio (like *geotiff* or *vrt*)
                   and numpy files (*.npy*). The arrays inside the numpy files should have the shape HxWxC.
                   If you used a single file path for images, it has been assigned key 'pictures' here.
