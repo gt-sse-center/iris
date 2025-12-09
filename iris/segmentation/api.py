@@ -49,6 +49,55 @@ def save_user_config():
 
 
 
+@api_bp.route('/images/list', methods=['GET'])
+@requires_auth
+def list_images():
+    """
+    Get list of all images with their annotation status.
+    
+    Returns:
+        JSON response with format:
+        {
+            "images": [
+                {
+                    "image_id": "image_001",
+                    "has_user_annotation": true,
+                    "has_any_annotation": true,
+                    "annotation_count": 3
+                },
+                ...
+            ],
+            "current_image_id": "image_001"
+        }
+    """
+    from iris.models import Action
+    
+    user_id = flask.session['user_id']
+    current_image_id = flask.request.args.get('current_image_id')
+    
+    # Get all actions for this project
+    all_actions = Action.query.filter_by(type='segmentation').all()
+    
+    # Build image status map
+    images_data = []
+    for image_id in project.image_ids:
+        # Get actions for this image
+        image_actions = [a for a in all_actions if a.image_id == image_id]
+        user_actions = [a for a in image_actions if a.user_id == user_id]
+        
+        images_data.append({
+            'image_id': image_id,
+            'has_user_annotation': len(user_actions) > 0,
+            'has_any_annotation': len(image_actions) > 0,
+            'annotation_count': len(image_actions)
+        })
+    
+    return flask.jsonify({
+        'images': images_data,
+        'current_image_id': current_image_id
+    })
+
+
 @api_bp.route('/export-geotiff/<image_id>', methods=['GET'])
 @requires_auth
 def export_geotiff(image_id):

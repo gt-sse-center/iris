@@ -19,8 +19,7 @@
                 'help': {{url_for('help.index')|tojson}},
             },
             'config': null,
-            // Will be set to true if the user performed an action on this image:
-            'show_dialogue_before_next_image': false
+            // 'show_dialogue_before_next_image': MIGRATED to React store (segmentationStore)
         };
 
         function goto_url(url){

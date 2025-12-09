@@ -2,3 +2,118 @@ body {
     overflow: hidden;
     /* height: 100vh; */
 }
+
+/* Image Navigation Dropdown */
+/* Override toolbar overflow:hidden to allow dropdown to be visible */
+.toolbar {
+  overflow: visible !important;
+}
+
+.image-navigation-dropdown {
+  position: relative;
+  overflow: visible !important;
+}
+
+.image-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 2px solid black;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 300px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  line-height: normal !important;
+}
+
+.image-dropdown-loading {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.image-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  font-weight: bold;
+  font-size: 12px;
+  color: #333;
+}
+
+.image-dropdown-list {
+  overflow-y: auto;
+  max-height: 350px;
+}
+
+.image-dropdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s;
+  background: white;
+  line-height: 1.5 !important;
+}
+
+.image-dropdown-item:hover {
+  background: #f9f9f9;
+}
+
+.image-dropdown-item.current {
+  background: #e3f2fd;
+  font-weight: bold;
+}
+
+.image-dropdown-item.current:hover {
+  background: #bbdefb;
+}
+
+.image-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px !important;
+  color: #000 !important;
+  font-weight: normal !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.image-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  min-width: 60px;
+  justify-content: flex-end;
+}
+
+.annotation-count {
+  font-size: 11px;
+  color: #666;
+}
+
+/* Status colors */
+.image-status-user .image-status {
+  color: #4CAF50;
+}
+
+.image-status-others .image-status {
+  color: #FF9800;
+}
+
+.image-status-none .image-status {
+  color: #999;
+}

@@ -10,6 +10,7 @@ interface ToolButtonProps {
   testId?: string;
   children?: React.ReactNode;
   checked?: boolean;
+  disabled?: boolean;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -21,15 +22,17 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   style,
   testId,
   children,
-  checked = false
+  checked = false,
+  disabled = false
 }) => {
   const handleClick = (e: React.MouseEvent) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     onClick();
   };
 
-  const buttonClassName = `toolbutton icon_button ${className} ${checked ? 'checked' : ''}`.trim();
+  const buttonClassName = `toolbutton icon_button ${className} ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}`.trim();
 
   return (
     <li
@@ -37,7 +40,11 @@ const ToolButton: React.FC<ToolButtonProps> = ({
       className={buttonClassName}
       onClick={handleClick}
       title={title}
-      style={style}
+      style={{
+        ...style,
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer'
+      }}
       data-testid={testId}
     >
       <img src={icon} className="icon" alt="" />
