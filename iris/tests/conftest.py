@@ -71,17 +71,11 @@ def clean_db(app):
         db.drop_all()
         db.create_all()
         
-        # Ensure we're using the test database, not the demo database
-        # This is critical to prevent contaminating the demo database
+        # Ensure user_config directory exists in the project path
+        # This is needed for user preferences tests
         from iris.project import project
-        test_db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-        if not test_db_path.endswith('.iris/iris.db'):
-            # If the path doesn't look like a test path, force it
-            import tempfile
-            test_project_dir = tempfile.mkdtemp(suffix='.iris')
-            test_db_path = os.path.join(test_project_dir, 'iris.db')
-            app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{test_db_path}'
-            project.config['path'] = test_project_dir
+        user_config_dir = os.path.join(project.config['path'], 'user_config')
+        os.makedirs(user_config_dir, exist_ok=True)
         
         yield
         # Clean up after test
