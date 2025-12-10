@@ -264,10 +264,20 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       const validationResult = await validateProjectConfig(config);
       
       if (!validationResult.valid) {
-        setError(`Validation failed: ${validationResult.errors.join(', ')}`);
+        const msg = `Validation failed: ${validationResult.errors.join('\n')}`;
+        setError(msg);
         return;
       }
       
+      // Only log the full configuration if the project was started in debug mode
+      if (loadedConfig && (loadedConfig as any).debug) {
+        try {
+          console.log('Save Complete Configuration - full config:', JSON.stringify(config, null, 2));
+        } catch (e) {
+          console.log('Save Complete Configuration - full config (object):', config);
+        }
+      }
+
       // Save to backend
       const response = await updateProjectConfig(config);
       
@@ -281,7 +291,8 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       
     } catch (err: any) {
       console.error('[ProjectConfigTab] Failed to save configuration:', err);
-      setError(err.message || 'Failed to save configuration');
+      const msg = err?.message || 'Failed to save configuration';
+      setError(msg);
     } finally {
       setSaving(false);
     }
@@ -336,6 +347,19 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       <SegmentationSection ref={segmentationRef} />
       
       <div style={{ padding: '20px', borderTop: '2px solid #ddd', marginTop: '20px', background: '#f8f9fa' }}>
+        {/* Duplicate error banner near the Save button for better visibility */}
+        {error && (
+          <div style={{
+            padding: '10px 14px',
+            margin: '0 0 12px 0',
+            background: '#f8d7da',
+            color: '#721c24',
+            border: '1px solid #f5c6cb',
+            borderRadius: '4px',
+          }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         <button
           onClick={handleSaveAll}
           disabled={saving}

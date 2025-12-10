@@ -400,6 +400,17 @@ def test_put_config_requires_admin(app, client):
     assert response.status_code == 403
 
 
+def test_api_project_includes_debug(logged_in_admin):
+    """API should return a 'debug' flag reflecting server start mode"""
+    response = logged_in_admin.get('/api/config/project')
+    assert response.status_code == 200
+    data = response.json
+    assert 'config' in data
+    config = data['config']
+    assert 'debug' in config, "Expected 'debug' key in config payload"
+    assert isinstance(config['debug'], bool)
+
+
 def test_load_from_normalizes_images_path(tmp_path, sample_valid_config):
     """Ensure Project.load_from() converts single-string images.path into a dict"""
     # Prepare a temporary project directory with an images subfolder and a dummy file

@@ -79,6 +79,11 @@ def get_project_config():
             'name': project.config.get('name'),
             'host': project.config.get('host', '127.0.0.1'),
             'port': project.config.get('port', 5000),
+            # Expose whether the server/project was started in debug mode.
+            # This is set by start_server(..., debug=True) and stored on the
+            # project object, so the frontend can decide to enable verbose
+            # debug behavior such as pretty-printing the saved config.
+            'debug': getattr(project, 'debug', False),
             'images': {
                 'path': deepcopy(project.config['images']['path']),
                 'shape': deepcopy(project.config['images']['shape']),
@@ -320,6 +325,10 @@ def validate_project_config():
             elif isinstance(config_data['images']['path'], str):
                 if '{id}' not in config_data['images']['path'] and config_data['images']['path'] != '':
                     warnings.append('images.path should contain {id} placeholder')
+            elif isinstance(config_data['images']['path'], dict):
+                for k, v in config_data['images']['path'].items():
+                    if '{id}' not in v and v != '':
+                        warnings.append(f'images.path {k} should contain {{id}} placeholder')
             
             if 'shape' not in config_data['images']:
                 errors.append('images.shape is required')

@@ -116,7 +116,7 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
               placeholder="optional key (e.g. Sentinel2)"
               value={path.key}
               onChange={(e) => updatePath(path.id, 'key', e.target.value)}
-              style={{ flex: '0 0 300px', padding: '6px' }}
+              style={{ flex: '0 0 30%', maxWidth: '30%', padding: '6px' }}
             />
             <input
               type="text"
@@ -126,7 +126,7 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
               style={{ flex: 1, padding: '6px' }}
             />
           </div>
-          <small style={{ display: 'block', color: '#666', marginLeft: '308px' }}>
+          <small style={{ display: 'block', color: '#666', marginLeft: 'calc(30% + 8px)' }}>
             Full or relative path to set of image files. Must use "{'{id}'}" placeholder.
           </small>
         </div>

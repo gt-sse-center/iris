@@ -67,7 +67,6 @@ class Project:
                 self.config['images']['path'] = { 'pictures': self.config['images']['path'] }
         except Exception:
             # Non-fatal; leave config as-is on error
-            logger.warning(f"Failed to normalize images.path: {e}")
             pass
 
         self._init_paths_and_files(filename)
@@ -172,35 +171,39 @@ class Project:
             )
 
         if isinstance(self['images']['path'], dict):
-            image_paths = list(self['images']['path'].values())[0]
+            image_paths = list(self['images']['path'].values())
         else:
-            image_paths = self['images']['path']
+            image_paths = [self['images']['path']]
 
-        # We will need to extract the image id by using regex. Compile it here
-        # to get a better perfomance:
-        before, id_str, after = image_paths.partition("{id}")
-        if not id_str:
-            raise Exception('[CONFIG] images:path must contain exactly one placeholder "{id}"!')
-        escaped_path = re.escape(before)
-        escaped_path += "(?P<id>.+)"
-        escaped_path += re.escape(after)
-        regex_images = re.compile(escaped_path)
+        for ip_idx, image_path in enumerate(image_paths):
+            # We will need to extract the image id by using regex. Compile it here
+            # to get a better performance:
+            before, id_str, after = image_path.partition("{id}")
+            if not id_str:
+                raise Exception(f'[CONFIG] images:path {ip_idx+1} must contain exactly one placeholder "{{id}}"!')
+            escaped_path = re.escape(before)
+            escaped_path += "(?P<id>.+)"
+            escaped_path += re.escape(after)
+            regex_images = re.compile(escaped_path)
 
-        images = glob(image_paths.format(id="*"))
-        if not images:
-            raise Exception(
-                f"[CONFIG] No images found in '{image_paths.format(id='*')}'.\n"
-                "Did you set images:path to a valid, existing path?")
+            images = glob(image_path.format(id="*"))
+            if not images:
+                raise Exception(
+                    f"[CONFIG] No images found in '{image_path.format(id='*')}'.\n"
+                    "Did you set images:path to a valid, existing path?")
 
-        try:
-            self.image_ids = list(sorted([
-                regex_images.match(image_path).groups()[0]
-                for image_path in images
-            ]))
-        except Exception as error:
-            raise Exception(
-                f'[ERROR] Could not extract id\nfrom path"{image_paths}"\nwith regex "{regex_images}"!'
-            )
+            try:
+                image_ids = list(sorted([
+                    regex_images.match(image_path).groups()[0]
+                    for image_path in images
+                ]))
+            except Exception as error:
+                raise Exception(
+                    f'[ERROR] Could not extract id\nfrom path"{image_path}"\nwith regex "{regex_images}"!'
+                )
+            else:
+                if ip_idx == 0:
+                    self.image_ids = image_ids
 
 
     def make_absolute(self, path):
