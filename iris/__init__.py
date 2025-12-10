@@ -19,11 +19,12 @@ from iris.project import project
 
 
 def get_demo_file(example=None):
-    demo_file = join(
-        os.getcwd(), "demo", "cloud-segmentation.json"
-    )
+    demo_file_repo = Path(__file__).parent.parent / "demo" / "cloud-segmentation.json"
+    demo_file_installed = Path(__file__).parent / "demo" / "cloud-segmentation.json"
 
-    return demo_file
+    demo_file = demo_file_repo if demo_file_repo.exists() else demo_file_installed
+    return str(demo_file)
+
 
 def find_config_file(folder_path: Union[str, Path]) -> Union[Path, None]:
     """Find a suitable config file in the given folder.
