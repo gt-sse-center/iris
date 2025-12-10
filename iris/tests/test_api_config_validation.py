@@ -132,6 +132,26 @@ def test_validate_warns_missing_id_placeholder(logged_in_admin, sample_valid_con
     assert any('{id}' in warn.lower() or 'placeholder' in warn.lower() for warn in data['warnings'])
 
 
+def test_validate_warns_missing_id_placeholder_dict(logged_in_admin, sample_valid_config):
+    """Test that validation warns when images.path lacks {id} placeholder"""
+    sample_valid_config['images']['path'] = {
+        'Sent1': 'test/{id}/image.tif',
+        'Sent2': 'test/image.tif',  # No {id}
+    }
+
+    response = logged_in_admin.post('/api/config/project/validate',
+        json=sample_valid_config,
+        content_type='application/json'
+    )
+
+    assert response.status_code == 200
+    data = response.json
+    # Should be valid but with warning
+    print(data['warnings'])
+    assert any('{id}' in warn.lower() or 'placeholder' in warn.lower() for warn in data['warnings'])
+    assert any('sent2' in warn.lower() for warn in data['warnings'])
+
+
 def test_validate_detects_colour_value_out_of_range(logged_in_admin, sample_valid_config):
     """Test that validation detects colour values outside 0-255 range"""
     sample_valid_config['classes'][0]['colour'] = [256, 0, 0, 255]  # 256 is too high

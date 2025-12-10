@@ -325,6 +325,10 @@ def validate_project_config():
             elif isinstance(config_data['images']['path'], str):
                 if '{id}' not in config_data['images']['path'] and config_data['images']['path'] != '':
                     warnings.append('images.path should contain {id} placeholder')
+            elif isinstance(config_data['images']['path'], dict):
+                for k, v in config_data['images']['path'].items():
+                    if '{id}' not in v and v != '':
+                        warnings.append(f'images.path {k} should contain {{id}} placeholder')
             
             if 'shape' not in config_data['images']:
                 errors.append('images.shape is required')

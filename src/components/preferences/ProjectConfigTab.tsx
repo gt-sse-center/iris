@@ -264,7 +264,15 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       const validationResult = await validateProjectConfig(config);
       
       if (!validationResult.valid) {
-        setError(`Validation failed: ${validationResult.errors.join(', ')}`);
+        const msg = `Validation failed: ${validationResult.errors.join('\n')}`;
+        setError(msg);
+        // Make sure the user sees the validation errors immediately
+        try {
+          // eslint-disable-next-line no-alert
+          window.alert(msg);
+        } catch (e) {
+          // ignore if alerts are not available
+        }
         return;
       }
       
@@ -290,7 +298,14 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       
     } catch (err: any) {
       console.error('[ProjectConfigTab] Failed to save configuration:', err);
-      setError(err.message || 'Failed to save configuration');
+      const msg = err?.message || 'Failed to save configuration';
+      setError(msg);
+      try {
+        // eslint-disable-next-line no-alert
+        window.alert(msg);
+      } catch (e) {
+        // ignore if alerts are not available
+      }
     } finally {
       setSaving(false);
     }
