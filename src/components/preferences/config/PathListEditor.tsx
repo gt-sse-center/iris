@@ -126,7 +126,7 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
               style={{ flex: 1, padding: '6px' }}
             />
           </div>
-          <small style={{ display: 'block', color: '#666', marginLeft: 'calc(33% + 8px)' }}>
+          <small style={{ display: 'block', color: '#666', marginLeft: 'calc(30% + 8px)' }}>
             Full or relative path to set of image files. Must use "{'{id}'}" placeholder.
           </small>
         </div>
