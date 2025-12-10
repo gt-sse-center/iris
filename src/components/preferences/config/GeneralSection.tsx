@@ -263,7 +263,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                 <h4 style={{ marginTop: '20px', marginBottom: '8px' }}>Thumbnails</h4>
                 <small style={{ color: '#666', display: 'block', marginBottom: '12px', textAlign: 'left' }}>
                   Optional thumbnail files for the images. Path must contain a placeholder{' '}
-                  <code style={{ color: '#d63384' }}>{'{id}'}</code>. If you cannot provide any thumbnail, un-check to disable,
+                  <code style={{ color: '#d63384' }}>{'{id}'}</code>. If you cannot provide any thumbnail, uncheck to disable,
                   or set it to <code style={{ color: '#d63384' }}>False</code> in JSON. Example:{' '}
                   <code style={{ color: '#d63384' }}>thumbnails/{'{id}'}.png</code>
                 </small>
@@ -302,7 +302,7 @@ const GeneralSection = forwardRef<any, {}>((_props, ref) => {
                   <code style={{ color: '#d63384' }}>{'{id}'}</code>. Metadata files can be in json, yaml or another
                   text file format. json and yaml files will be parsed and made available via the GUI. If the metadata
                   contains the key <code style={{ color: '#d63384' }}>location</code> with a list of two floats
-                  (longitude and latitude), it can be used for a bingmap view. If you cannot provide any metadata, un-check
+                  (longitude and latitude), it can be used for a bingmap view. If you cannot provide any metadata, uncheck
                   to disable or set it to <code style={{ color: '#d63384' }}>false</code> in JSON. Example field:{' '}
                   <code style={{ color: '#d63384' }}>metadata/{'{id}'}.json</code>. Example file contents:
                 </small>

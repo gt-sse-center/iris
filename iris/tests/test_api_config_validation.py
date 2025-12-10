@@ -147,7 +147,6 @@ def test_validate_warns_missing_id_placeholder_dict(logged_in_admin, sample_vali
     assert response.status_code == 200
     data = response.json
     # Should be valid but with warning
-    print(data['warnings'])
     assert any('{id}' in warn.lower() or 'placeholder' in warn.lower() for warn in data['warnings'])
     assert any('sent2' in warn.lower() for warn in data['warnings'])
 

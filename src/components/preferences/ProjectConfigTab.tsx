@@ -266,13 +266,6 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       if (!validationResult.valid) {
         const msg = `Validation failed: ${validationResult.errors.join('\n')}`;
         setError(msg);
-        // Make sure the user sees the validation errors immediately
-        try {
-          // eslint-disable-next-line no-alert
-          window.alert(msg);
-        } catch (e) {
-          // ignore if alerts are not available
-        }
         return;
       }
       
@@ -300,12 +293,6 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       console.error('[ProjectConfigTab] Failed to save configuration:', err);
       const msg = err?.message || 'Failed to save configuration';
       setError(msg);
-      try {
-        // eslint-disable-next-line no-alert
-        window.alert(msg);
-      } catch (e) {
-        // ignore if alerts are not available
-      }
     } finally {
       setSaving(false);
     }
@@ -360,6 +347,19 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       <SegmentationSection ref={segmentationRef} />
       
       <div style={{ padding: '20px', borderTop: '2px solid #ddd', marginTop: '20px', background: '#f8f9fa' }}>
+        {/* Duplicate error banner near the Save button for better visibility */}
+        {error && (
+          <div style={{
+            padding: '10px 14px',
+            margin: '0 0 12px 0',
+            background: '#f8d7da',
+            color: '#721c24',
+            border: '1px solid #f5c6cb',
+            borderRadius: '4px',
+          }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         <button
           onClick={handleSaveAll}
           disabled={saving}

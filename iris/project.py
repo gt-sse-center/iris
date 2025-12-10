@@ -177,7 +177,7 @@ class Project:
 
         for ip_idx, image_path in enumerate(image_paths):
             # We will need to extract the image id by using regex. Compile it here
-            # to get a better perfomance:
+            # to get a better performance:
             before, id_str, after = image_path.partition("{id}")
             if not id_str:
                 raise Exception(f'[CONFIG] images:path {ip_idx+1} must contain exactly one placeholder "{{id}}"!')
@@ -193,7 +193,7 @@ class Project:
                     "Did you set images:path to a valid, existing path?")
 
             try:
-                self.image_ids = list(sorted([
+                image_ids = list(sorted([
                     regex_images.match(image_path).groups()[0]
                     for image_path in images
                 ]))
@@ -201,6 +201,9 @@ class Project:
                 raise Exception(
                     f'[ERROR] Could not extract id\nfrom path"{image_path}"\nwith regex "{regex_images}"!'
                 )
+            else:
+                if ip_idx == 0:
+                    self.image_ids = image_ids
 
 
     def make_absolute(self, path):
