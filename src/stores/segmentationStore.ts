@@ -8,6 +8,7 @@
  * - [x] showMask (vars.show_mask) - COMPLETE
  * - [x] showDialogueBeforeNextImage (vars.show_dialogue_before_next_image) - COMPLETE
  * - [x] Image Navigation (centralized image list and navigation) - IN PROGRESS
+ * - [x] Image Filters (vars.vm.filters) - IN PROGRESS
  * - [ ] currentClass (vars.current_class)
  * - [ ] tool (vars.tool)
  * - [ ] config (vars.config)
@@ -50,7 +51,34 @@ interface SegmentationState {
   getNextImageId: () => string | null;
   getPrevImageId: () => string | null;
   getCurrentImage: () => ImageInfo | null;
+
+  // Image Filters (replaces vars.vm.filters)
+  brightness: number;
+  saturation: number;
+  contrast: boolean;
+  invert: boolean;
+  
+  // Filter UI State
+  expandedFilterSlider: string | null; // Track which slider is currently expanded
+  
+  // Filter Actions
+  setBrightness: (value: number) => void;
+  setSaturation: (value: number) => void;
+  setContrast: (enabled: boolean) => void;
+  setInvert: (enabled: boolean) => void;
+  resetFilters: () => void;
+  changeBrightness: (up: boolean) => void;
+  changeSaturation: (up: boolean) => void;
+  setExpandedFilterSlider: (sliderId: string | null) => void;
 }
+
+// Helper function to trigger legacy rendering
+const triggerLegacyRender = () => {
+  const w = window as any;
+  if (w.vars?.vm?.render) {
+    w.vars.vm.render();
+  }
+};
 
 export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Mask Visibility State
@@ -69,6 +97,96 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   
   setShowDialogueBeforeNextImage: (show: boolean) => {
     set({ showDialogueBeforeNextImage: show });
+  },
+
+  // Image Filter State (replaces vars.vm.filters)
+  brightness: 100,
+  saturation: 100,
+  contrast: false,
+  invert: false,
+  
+  // Filter UI State
+  expandedFilterSlider: null,
+
+  setBrightness: (value: number) => {
+    const clampedValue = Math.max(0, Math.min(800, value));
+    set({ brightness: clampedValue });
+    
+    // Sync with legacy vars object during migration
+    const w = window as any;
+    if (w.vars?.vm?.filters) {
+      w.vars.vm.filters.brightness = clampedValue;
+    }
+    triggerLegacyRender();
+  },
+
+  setSaturation: (value: number) => {
+    const clampedValue = Math.max(0, Math.min(800, value));
+    set({ saturation: clampedValue });
+    
+    // Sync with legacy vars object during migration
+    const w = window as any;
+    if (w.vars?.vm?.filters) {
+      w.vars.vm.filters.saturation = clampedValue;
+    }
+    triggerLegacyRender();
+  },
+
+  setContrast: (enabled: boolean) => {
+    set({ contrast: enabled });
+    
+    // Sync with legacy vars object during migration
+    const w = window as any;
+    if (w.vars?.vm?.filters) {
+      w.vars.vm.filters.contrast = enabled;
+    }
+    triggerLegacyRender();
+  },
+
+  setInvert: (enabled: boolean) => {
+    set({ invert: enabled });
+    
+    // Sync with legacy vars object during migration
+    const w = window as any;
+    if (w.vars?.vm?.filters) {
+      w.vars.vm.filters.invert = enabled;
+    }
+    triggerLegacyRender();
+  },
+
+  resetFilters: () => {
+    set({ 
+      brightness: 100, 
+      saturation: 100, 
+      contrast: false, 
+      invert: false 
+    });
+    
+    // Sync with legacy vars object during migration
+    const w = window as any;
+    if (w.vars?.vm?.filters) {
+      w.vars.vm.filters.brightness = 100;
+      w.vars.vm.filters.saturation = 100;
+      w.vars.vm.filters.contrast = false;
+      w.vars.vm.filters.invert = false;
+    }
+    triggerLegacyRender();
+  },
+
+  changeBrightness: (up: boolean) => {
+    const { brightness, setBrightness } = get();
+    const newValue = up ? brightness + 10 : brightness - 10;
+    setBrightness(newValue);
+  },
+
+  changeSaturation: (up: boolean) => {
+    const { saturation, setSaturation } = get();
+    const newValue = up ? saturation + 20 : saturation - 20;
+    setSaturation(newValue);
+  },
+
+  setExpandedFilterSlider: (sliderId: string | null) => {
+    set({ expandedFilterSlider: sliderId });
   },
 
   // Image Navigation State
@@ -140,8 +258,23 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 }));
 
+// Initialize store from legacy vars if available
+const initializeFiltersFromLegacy = () => {
+  const w = window as any;
+  if (w.vars?.vm?.filters) {
+    const store = useSegmentationStore.getState();
+    store.setBrightness(w.vars.vm.filters.brightness || 100);
+    store.setSaturation(w.vars.vm.filters.saturation || 100);
+    store.setContrast(w.vars.vm.filters.contrast || false);
+    store.setInvert(w.vars.vm.filters.invert || false);
+  }
+};
+
 // Bridge for legacy JavaScript access during migration
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  
+  // Initialize from legacy vars when available
+  (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
 }
