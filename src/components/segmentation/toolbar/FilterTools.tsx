@@ -1,68 +1,72 @@
 import React from 'react';
 import ToolButton from './ToolButton';
+import FilterSlider from './FilterSlider';
+import { useSegmentationStore } from '../../../stores/segmentationStore';
 
 const FilterTools: React.FC = () => {
+  const {
+    brightness,
+    saturation,
+    contrast,
+    invert,
+    setBrightness,
+    setSaturation,
+    setContrast,
+    setInvert,
+    resetFilters,
+    changeBrightness,
+    changeSaturation,
+  } = useSegmentationStore();
+
   return (
     <>
-      <ToolButton
-        id="tb_brightness_up"
+      <FilterSlider
+        id="tb_brightness"
+        label="Brightness"
+        value={brightness}
+        min={0}
+        max={800}
+        step={10}
         icon="/segmentation/static/icons/brightness_up.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.change_brightness) w.change_brightness(true);
-        }}
+        onChange={setBrightness}
+        onIncrease={() => changeBrightness(true)}
+        onDecrease={() => changeBrightness(false)}
       />
-      <ToolButton
-        id="tb_brightness_down"
-        icon="/segmentation/static/icons/brightness_down.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.change_brightness) w.change_brightness(false);
-        }}
-      />
-      <ToolButton
-        id="tb_saturation_up"
+      
+      <FilterSlider
+        id="tb_saturation"
+        label="Saturation"
+        value={saturation}
+        min={0}
+        max={800}
+        step={20}
         icon="/segmentation/static/icons/saturation_up.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.change_saturation) w.change_saturation(true);
-        }}
+        onChange={setSaturation}
+        onIncrease={() => changeSaturation(true)}
+        onDecrease={() => changeSaturation(false)}
       />
-      <ToolButton
-        id="tb_saturation_down"
-        icon="/segmentation/static/icons/saturation_down.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.change_saturation) w.change_saturation(false);
-        }}
-      />
+      
       <ToolButton
         id="tb_toggle_contrast"
         icon="/segmentation/static/icons/contrast.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.vars?.vm?.filters && w.set_contrast) {
-            w.set_contrast(!w.vars.vm.filters.contrast);
-          }
-        }}
+        className={contrast ? 'checked' : ''}
+        onClick={() => setContrast(!contrast)}
+        title={`Contrast: ${contrast ? 'On' : 'Off'}`}
       />
+      
       <ToolButton
         id="tb_toggle_invert"
         icon="/segmentation/static/icons/invert.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.vars?.vm?.filters && w.set_invert) {
-            w.set_invert(!w.vars.vm.filters.invert);
-          }
-        }}
+        className={invert ? 'checked' : ''}
+        onClick={() => setInvert(!invert)}
+        title={`Invert: ${invert ? 'On' : 'Off'}`}
       />
+      
       <ToolButton
         id="tb_reset_filters"
         icon="/segmentation/static/icons/reset_filters.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.reset_filters) w.reset_filters();
-        }}
+        onClick={resetFilters}
+        title="Reset all filters"
       />
     </>
   );

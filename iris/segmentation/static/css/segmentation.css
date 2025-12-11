@@ -117,3 +117,126 @@ body {
 .image-status-none .image-status {
   color: #999;
 }
+/* Filter Slider Styles */
+.filter-slider-container {
+  position: relative;
+  display: inline-block;
+}
+
+.filter-slider-container .tool-button.expanded {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.filter-slider-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 2px solid black;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 200px;
+  padding: 8px;
+}
+
+.filter-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.filter-label {
+  color: #333;
+}
+
+.filter-value {
+  color: #666;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.filter-slider-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background: #e8e8e8;
+  border-color: #999;
+}
+
+.filter-btn:active {
+  background: #d8d8d8;
+  transform: translateY(1px);
+}
+
+.filter-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.filter-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #333;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.filter-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #333;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.filter-slider::-webkit-slider-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+}
+
+.filter-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  border: none;
+}

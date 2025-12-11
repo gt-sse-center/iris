@@ -292,6 +292,13 @@ function key_up(event){
 }
 
 function change_brightness(up){
+    // Use React store if available (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().changeBrightness(up);
+        return;
+    }
+    
+    // Fallback to legacy behavior
     if (up){
         vars.vm.filters.brightness += 10;
         vars.vm.filters.brightness = Math.min(800, vars.vm.filters.brightness);
@@ -302,6 +309,13 @@ function change_brightness(up){
     vars.vm.render();
 }
 function change_saturation(up){
+    // Use React store if available (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().changeSaturation(up);
+        return;
+    }
+    
+    // Fallback to legacy behavior
     if (up){
         vars.vm.filters.saturation += 20;
         vars.vm.filters.saturation = Math.min(800, vars.vm.filters.saturation);
@@ -324,6 +338,13 @@ function set_current_class(class_id){
 }
 
 function set_contrast(visible){
+    // Use React store if available (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setContrast(visible);
+        return;
+    }
+    
+    // Fallback to legacy behavior
     vars.vm.filters.contrast = visible;
 
     if (vars.vm.filters.contrast){
@@ -336,6 +357,13 @@ function set_contrast(visible){
 }
 
 function set_invert(visible){
+    // Use React store if available (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setInvert(visible);
+        return;
+    }
+    
+    // Fallback to legacy behavior
     vars.vm.filters.invert = visible;
 
     if (vars.vm.filters.invert){
@@ -870,6 +898,13 @@ function reset_mask(){
 }
 
 function reset_filters(){
+    // Use React store if available (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().resetFilters();
+        return;
+    }
+    
+    // Fallback to legacy behavior
     vars.vm.filters.brightness = 100;
     vars.vm.filters.saturation = 100;
     set_contrast(false);
