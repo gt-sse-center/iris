@@ -299,6 +299,7 @@ function change_brightness(up){
     }
     
     // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy brightness fallback, store not available');
     if (up){
         vars.vm.filters.brightness += 10;
         vars.vm.filters.brightness = Math.min(800, vars.vm.filters.brightness);
@@ -316,6 +317,7 @@ function change_saturation(up){
     }
     
     // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy saturation fallback, store not available');
     if (up){
         vars.vm.filters.saturation += 20;
         vars.vm.filters.saturation = Math.min(800, vars.vm.filters.saturation);
@@ -345,6 +347,7 @@ function set_contrast(visible){
     }
     
     // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy contrast fallback, store not available');
     vars.vm.filters.contrast = visible;
 
     if (vars.vm.filters.contrast){
@@ -364,6 +367,7 @@ function set_invert(visible){
     }
     
     // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy invert fallback, store not available');
     vars.vm.filters.invert = visible;
 
     if (vars.vm.filters.invert){
@@ -905,6 +909,7 @@ function reset_filters(){
     }
     
     // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy reset filters fallback, store not available');
     vars.vm.filters.brightness = 100;
     vars.vm.filters.saturation = 100;
     set_contrast(false);
