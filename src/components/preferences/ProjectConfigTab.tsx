@@ -87,6 +87,32 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
   useEffect(() => {
     if (!loading && loadedConfig) {
       populateSections(loadedConfig);
+      // Set original config snapshot AFTER sections are populated
+      // Use a delay to ensure all section state updates have completed
+      // Then capture the ACTUAL form state (not the loaded config)
+      setTimeout(() => {
+        try {
+          // Get current data from all sections
+          const generalData = generalRef.current?.getData();
+          const classesData = classesRef.current?.getData();
+          const viewsData = viewsRef.current?.getData();
+          const viewGroupsData = viewGroupsRef.current?.getData();
+          const segmentationData = segmentationRef.current?.getData();
+
+          const currentConfig: ProjectConfig = {
+            ...generalData,
+            classes: classesData,
+            views: viewsData,
+            view_groups: viewGroupsData,
+            segmentation: segmentationData,
+          };
+
+          setOriginalConfigJson(JSON.stringify(currentConfig));
+          setHasUnsavedChanges(false);
+        } catch (err) {
+          console.error('[ProjectConfigTab] Error capturing initial state:', err);
+        }
+      }, 200);
     }
   }, [loading, loadedConfig]);
 
@@ -126,8 +152,8 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       const config = response.config;
       
       // Store config - it will be populated after components render
+      // Don't set originalConfigJson here - wait until after sections are populated
       setLoadedConfig(config);
-      setOriginalConfigJson(JSON.stringify(config));
       setHasUnsavedChanges(false);
       setSuccess('Configuration loaded successfully');
       

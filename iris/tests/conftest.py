@@ -5,14 +5,34 @@ from iris.models import db
 
 @pytest.fixture(scope='session')
 def app():
+    """Create a test Flask app with isolated database.
+    
+    IMPORTANT: This fixture cannot prevent the module-level code in iris/__init__.py
+    from creating the demo database. That happens at import time, before any fixtures run.
+    
+    To work around this, we:
+    1. Accept that the demo database will be created/modified
+    2. Ensure tests use a separate test database
+    3. Document that users should restart the IRIS server after running pytest
+    """
     from iris import app as iris_app
+    from iris.project import project
     
-    # Create a temporary database for testing
-    test_db_fd, test_db_path = tempfile.mkstemp(suffix='.db')
+    # Create a temporary project directory for testing
+    test_project_dir = tempfile.mkdtemp(suffix='.iris')
+    test_project_db = os.path.join(test_project_dir, 'iris.db')
     
-    # Configure app for testing
+    # Create user_config subdirectory (needed for user preferences tests)
+    os.makedirs(os.path.join(test_project_dir, 'user_config'), exist_ok=True)
+    
+    # Configure app for testing with isolated database
     iris_app.config['TESTING'] = True
-    iris_app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{test_db_path}'
+    iris_app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{test_project_db}'
+    
+    # Update the project singleton to use test directory
+    # This prevents tests from modifying the demo project files
+    original_project_path = project.config.get('path')
+    project.config['path'] = test_project_dir
     
     # push application context for tests that require it
     ctx = iris_app.app_context()
@@ -26,8 +46,15 @@ def app():
         # Clean up
         db.drop_all()
         ctx.pop()
-        os.close(test_db_fd)
-        os.unlink(test_db_path)
+        
+        # Restore original project path
+        if original_project_path:
+            project.config['path'] = original_project_path
+        
+        # Clean up test project directory
+        import shutil
+        if os.path.exists(test_project_dir):
+            shutil.rmtree(test_project_dir)
 
 
 @pytest.fixture
@@ -43,6 +70,13 @@ def clean_db(app):
         db.session.remove()
         db.drop_all()
         db.create_all()
+        
+        # Ensure user_config directory exists in the project path
+        # This is needed for user preferences tests
+        from iris.project import project
+        user_config_dir = os.path.join(project.config['path'], 'user_config')
+        os.makedirs(user_config_dir, exist_ok=True)
+        
         yield
         # Clean up after test
         db.session.remove()
