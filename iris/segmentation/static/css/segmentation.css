@@ -121,9 +121,27 @@ body {
 .filter-slider-container {
   position: relative;
   display: inline-block;
+  /* Ensure container doesn't affect button dimensions */
+  width: auto;
+  height: auto;
 }
 
-.filter-slider-container .tool-button.expanded {
+/* Ensure filter slider buttons match other toolbar buttons */
+.filter-slider-container .toolbutton {
+  /* Force consistent dimensions with other toolbar buttons */
+  display: inline-block;
+  vertical-align: top;
+}
+
+/* Ensure icons inside filter buttons have consistent sizing */
+.filter-slider-container .toolbutton img.icon {
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+}
+
+.filter-slider-container .toolbutton.expanded {
   background-color: #e0e0e0;
   border-color: #999;
 }
