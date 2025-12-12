@@ -48,14 +48,16 @@ class TestAdminPages:
         assert login_response.status_code == 200
         
         response = client.get('/admin/')
-        assert response.status_code == 200
-        assert b'Only <b>admin</b> users can see this page' in response.data
+        # Regular users should be redirected to segmentation instead of seeing admin page
+        assert response.status_code == 302
+        assert response.location.endswith('/segmentation/')
 
     def test_admin_page_shows_login_for_unauthenticated_users(self, client):
-        """Test that unauthenticated users see login dialog."""
+        """Test that unauthenticated users are redirected to login."""
         response = client.get('/admin/')
-        assert response.status_code == 200
-        assert b'window.onload = dialogue_login' in response.data
+        # Unauthenticated users should be redirected to segmentation login instead of showing admin page
+        assert response.status_code == 302
+        assert response.location.endswith('/segmentation/')
 
     def test_admin_api_users_returns_data(self, client):
         """Test that /admin/api/users returns user data for authenticated users."""

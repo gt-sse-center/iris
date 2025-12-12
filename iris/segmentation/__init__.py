@@ -1,25 +1,25 @@
-from datetime import datetime, timedelta
-from glob import glob
 import json
 import os
-from os.path import basename, dirname, exists, join
 import time
+from datetime import datetime, timedelta
+from glob import glob
+from os.path import basename, dirname, exists, join
 from pprint import pprint
 
-import lightgbm as lgb
 import flask
+import lightgbm as lgb
 import numpy as np
-from scipy.ndimage import convolve, minimum_filter, maximum_filter
-from skimage.io import imread, imsave
-from skimage.filters import sobel
-from skimage.segmentation import felzenszwalb
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score, jaccard_score
 import yaml
+from scipy.ndimage import convolve, maximum_filter, minimum_filter
+from skimage.filters import sobel
+from skimage.io import imread, imsave
+from skimage.segmentation import felzenszwalb
+from sklearn.metrics import accuracy_score, f1_score, jaccard_score
+from sklearn.model_selection import train_test_split
 
-from iris.user import requires_auth
-from iris.models import db, User, Action
+from iris.models import Action, User, db
 from iris.project import project
+from iris.user import requires_auth
 
 segmentation_app = flask.Blueprint(
     'segmentation', __name__,
@@ -28,18 +28,19 @@ segmentation_app = flask.Blueprint(
 )
 
 # Import SPA and API blueprints
-from .spa import spa_bp
 from .api import api_bp
+from .spa import spa_bp
+
 
 def register_segmentation_blueprints(app):
     """
     Register all segmentation blueprints with the Flask app.
-    
+
     IMPORTANT: Registration order matters!
     1. segmentation_app: Handles API routes (/segmentation/next_image, /load_mask, etc.)
     2. api_bp: Handles JSON API routes (/segmentation/api/*)
     3. spa_bp: Handles main SPA route (/segmentation/) - registered last to take precedence
-    
+
     Both blueprints use /segmentation prefix but handle different route patterns.
     The SPA blueprint's / route overrides the removed segmentation_app.index route.
     """
@@ -108,11 +109,11 @@ def read_masks(image_id, user_id):
 def compute_merged_mask(final_masks):
     """
     Compute merged mask from multiple user masks using voting system.
-    
+
     Args:
         final_masks: 3D numpy array of shape (height, width, n_users) containing
                     class indices for each user's mask
-    
+
     Returns:
         2D numpy array of shape (height, width) with merged class indices
     """
@@ -120,7 +121,7 @@ def compute_merged_mask(final_masks):
     # scipy (scipy.stats.mode is not optimised for our case):
     classes = dict(enumerate(np.unique(final_masks)))
     class_votes = np.zeros((*final_masks.shape[:-1], len(classes)))
-    
+
     for u in range(final_masks.shape[-1]):
         for i, klass in classes.items():
             # We collect the votes for each class for each pixel.
@@ -134,7 +135,7 @@ def compute_merged_mask(final_masks):
     # Retranslate to original classes (we initialised class_votes not with the
     # original class indices):
     merged_mask = np.vectorize(classes.__getitem__, otypes=[np.uint8])(winner_indices)
-    
+
     return merged_mask
 
 
@@ -247,7 +248,7 @@ def load_mask(image_id):
         )
         response.headers.set('Content-Type', 'application/octet-stream')
         return response
-    except:
+    except Exception:
         return flask.make_response("No user mask available!", 404)
 
 @segmentation_app.route('/save_mask/<image_id>', methods=['POST'])

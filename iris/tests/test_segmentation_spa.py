@@ -105,7 +105,8 @@ def test_segmentation_spa_route_no_image_id(mock_project):
                 mock_render.assert_called_once_with(
                     'segmentation/react-app.html',  # React SPA template
                     image_id='default_image',       # The default image ID
-                    image_location=[10, 20]         # Location coordinates from metadata
+                    image_location=[10, 20],        # Location coordinates from metadata
+                    debug_mode=mock_project.debug   # Debug mode from project
                 )
 
 
@@ -160,7 +161,8 @@ def test_segmentation_spa_route_with_valid_image_id(mock_project):
                 mock_render.assert_called_once_with(
                     'segmentation/react-app.html',  # React SPA template
                     image_id='test_image',          # The requested image ID
-                    image_location=[30, 40]         # Location from image metadata
+                    image_location=[30, 40],        # Location from image metadata
+                    debug_mode=mock_project.debug   # Debug mode from project
                 )
 
 
@@ -266,7 +268,8 @@ def test_segmentation_spa_route_with_user_session_and_last_mask(mock_action, moc
                 mock_render.assert_called_once_with(
                     'segmentation/react-app.html',  # React SPA template
                     image_id='last_worked_image',   # User's last work (not default)
-                    image_location=[50, 60]         # Metadata for that image
+                    image_location=[50, 60],        # Metadata for that image
+                    debug_mode=mock_project.debug   # Debug mode from project
                 )
 
 
@@ -329,7 +332,8 @@ def test_segmentation_spa_route_with_user_session_no_last_mask(mock_action, mock
                 mock_render.assert_called_once_with(
                     'segmentation/react-app.html',  # React SPA template
                     image_id='default_image',       # Project default (no user history)
-                    image_location=[70, 80]         # Default image metadata
+                    image_location=[70, 80],        # Default image metadata
+                    debug_mode=mock_project.debug   # Debug mode from project
                 )
 
 
@@ -421,5 +425,6 @@ def test_segmentation_spa_route_metadata_without_location(mock_project):
                 mock_render.assert_called_once_with(
                     'segmentation/react-app.html',  # React SPA template
                     image_id='test_image',          # The image ID
-                    image_location=[0, 0]           # Safe fallback coordinates
+                    image_location=[0, 0],          # Safe fallback coordinates
+                    debug_mode=mock_project.debug   # Debug mode from project
                 )

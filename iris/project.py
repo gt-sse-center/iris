@@ -1,27 +1,26 @@
 """Take care of holding the current project's configurations
 
 """
+import json
+import os
+import re
 from copy import deepcopy
 from glob import glob
 from numbers import Number
-import os
 from os.path import basename, dirname, exists, getmtime, isabs, join, normpath
 from pprint import pprint
-import re
 
-import flask
 import markupsafe
-
-import json
-from matplotlib import cm
 import numpy as np
-from skimage.io import imread
-from skimage.filters import sobel
-from skimage.segmentation import felzenszwalb
-import yaml
 import rasterio as rio
+import yaml
+from matplotlib import cm
+from skimage.filters import sobel
+from skimage.io import imread
+from skimage.segmentation import felzenszwalb
 
 from iris.utils import merge_deep_dicts
+
 
 class Project:
     def __init__(self):
@@ -42,7 +41,7 @@ class Project:
 
         # Load the project config:
         try:
-            with open(filename, 'r') as stream:
+            with open(filename) as stream:
                 if filename.endswith('json'):
                     self.config = json.load(stream)
                 elif filename.endswith('yaml'):
@@ -65,10 +64,9 @@ class Project:
         try:
             if 'images' in self.config and isinstance(self.config['images'].get('path', None), str):
                 self.config['images']['path'] = { 'pictures': self.config['images']['path'] }
-        except Exception:
+        except Exception as e:
             # Non-fatal; leave config as-is on error
-            logger.warning(f"Failed to normalize images.path: {e}")
-            pass
+            print(f"Warning: Failed to normalize images.path: {e}")
 
         self._init_paths_and_files(filename)
 
@@ -148,11 +146,10 @@ class Project:
                 dirname(filename), self.config['name']+'.iris'
             )
 
-        if self.segmentation:
-            if not self['segmentation']['path']:
-                self.config['segmentation']['path'] = join(
-                    self['path'], 'segmentation', '{id}', 'mask.png'
-                )
+        if self.segmentation and not self['segmentation']['path']:
+            self.config['segmentation']['path'] = join(
+                self['path'], 'segmentation', '{id}', 'mask.png'
+            )
 
         # create the project path and the user configuration path
         os.makedirs(self['path'], exist_ok=True)
@@ -193,11 +190,11 @@ class Project:
                 "Did you set images:path to a valid, existing path?")
 
         try:
-            self.image_ids = list(sorted([
+            self.image_ids = sorted([
                 regex_images.match(image_path).groups()[0]
                 for image_path in images
-            ]))
-        except Exception as error:
+            ])
+        except Exception:
             raise Exception(
                 f'[ERROR] Could not extract id\nfrom path"{image_paths}"\nwith regex "{regex_images}"!'
             )
@@ -239,10 +236,7 @@ class Project:
         """
         # The user uses band identifiers (like 'B1', etc):
         if bands is not None:
-            bands = list(map(
-                lambda s: int(s.replace("$B", ""))-1,
-                bands
-            ))
+            bands = [int(s.replace("$B", ""))-1 for s in bands]
 
         if filename.lower().endswith('npy'):
             array = np.load(filename, mmap_mode='r', allow_pickle=False)
@@ -316,7 +310,7 @@ class Project:
         image = self.get_image(image_id)
 
         bands = []
-        for band in image.keys():
+        for band in image:
             if isinstance(image[band], dict):
                 bands.extend([f'${band}.{subband}' for subband in image[band]])
             else:
@@ -375,20 +369,25 @@ class Project:
             if 'vmin' in view or 'vmax' in view:
                 raise ValueError("Cannot specify both 'clip' and 'vmin'/'vmax' in view")
             clip = float(view['clip'])
-            linear_scale = lambda z: np.clip(
-                (z - np.percentile(z,clip))/(np.percentile(z,100-clip)-np.percentile(z,clip)),
-                0,
-                1
-                )
+            def linear_scale(z):
+                return np.clip(
+                            (z - np.percentile(z,clip))/(np.percentile(z,100-clip)-np.percentile(z,clip)),
+                            0,
+                            1
+                            )
         elif 'vmin' in view or 'vmax' in view:
             if 'vmin' in view and 'vmax' in view:
-                linear_scale = lambda z: np.clip((z - view['vmin'])/(view['vmax']-view['vmin']), 0, 1)
+                def linear_scale(z):
+                    return np.clip((z - view['vmin'])/(view['vmax']-view['vmin']), 0, 1)
             elif 'vmin' in view:
-                linear_scale = lambda z: np.clip((z - view['vmin'])/(z.max()-view['vmin']), 0, 1)
+                def linear_scale(z):
+                    return np.clip((z - view['vmin'])/(z.max()-view['vmin']), 0, 1)
             elif 'vmax' in view:
-                linear_scale = lambda z: np.clip((z - z.min())/(view['vmax']-z.min()), 0, 1)
+                def linear_scale(z):
+                    return np.clip((z - z.min())/(view['vmax']-z.min()), 0, 1)
         else:
-            linear_scale = lambda z: (z - z.min())/(z.max()-z.min())
+            def linear_scale(z):
+                return (z - z.min())/(z.max()-z.min())
         rgb_bands = list(map(linear_scale, rgb_bands))
 
         if len(rgb_bands) == 1:
@@ -400,7 +399,7 @@ class Project:
     def _get_render_environment(self, image):
         return {
             'max': np.max,
-            'max': np.min,
+            'min': np.min,
             'mean': np.mean,
             'median': np.median,
             'log': np.log,
@@ -433,7 +432,7 @@ class Project:
 
         filename = filename.format(id=image_id)
 
-        with open(filename, 'r') as stream:
+        with open(filename) as stream:
             if filename.endswith('json'):
                 metadata = json.load(stream)
             elif filename.endswith('yaml'):
@@ -457,7 +456,7 @@ class Project:
         # Only if the user config is newer the system's config file, we use it
         # for updates:
         if exists(filename) and getmtime(self.file) <= getmtime(filename):
-            with open(filename, 'r') as stream:
+            with open(filename) as stream:
                 user_config = json.load(stream)
 
             config = merge_deep_dicts(config, user_config)
@@ -528,7 +527,7 @@ class Project:
         return self.image_ids[self.image_order[index]]
 
     def get_previous_image(self, image_id):
-        original_index = self.image_ids.index(image_id);
+        original_index = self.image_ids.index(image_id)
 
         index = self.image_order.index(original_index)
         index = (index - 1) % len(self.image_order)
