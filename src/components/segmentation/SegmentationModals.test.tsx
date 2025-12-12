@@ -8,33 +8,30 @@ describe('SegmentationModals', () => {
     global.fetch = vi.fn((url) => {
       const urlString = typeof url === 'string' ? url : url.toString();
       if (urlString.includes('/segmentation/api/user-config')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            config: {
-              segmentation: {
-                ai_model: { 
-                  bands: ['B1'],
-                  n_estimators: 100,
-                  max_depth: 10,
-                  n_leaves: 31,
-                  post_process: true,
-                  suppress_threshold: 0.5,
-                  suppression_default_class: 0
-                }
-              },
-              classes: [
-                { name: 'Background', css_colour: '#000000' },
-                { name: 'Cloud', css_colour: '#ffffff' }
-              ]
+        return Promise.resolve(new Response(JSON.stringify({
+          config: {
+            segmentation: {
+              ai_model: { 
+                bands: ['B1'],
+                n_estimators: 100,
+                max_depth: 10,
+                n_leaves: 31,
+                post_process: true,
+                suppress_threshold: 0.5,
+                suppression_default_class: 0
+              }
             },
-            all_bands: ['B1', 'B2', 'B3', 'B4'], // Include all_bands to prevent undefined error
-            is_admin: false
-          })
-        });
+            classes: [
+              { name: 'Background', css_colour: '#000000' },
+              { name: 'Cloud', css_colour: '#ffffff' }
+            ]
+          },
+          all_bands: ['B1', 'B2', 'B3', 'B4'],
+          is_admin: false
+        }), { status: 200, statusText: 'OK' }));
       }
       return Promise.reject(new Error('Unknown URL'));
-    });
+    }) as typeof fetch;
   });
   const mockProps = {
     isPreferencesOpen: false,

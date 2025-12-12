@@ -4,8 +4,8 @@ import ReactBaseLayer from './ReactBaseLayer';
 
 const mockView = {
   name: 'test-view',
-  type: 'rgb',
-  bands: [1, 2, 3],
+  type: 'image' as const,
+  description: 'Test view for unit testing',
 };
 
 describe('ReactBaseLayer', () => {

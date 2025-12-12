@@ -4,8 +4,8 @@ import ReactViewPort from './ReactViewPort';
 
 const mockView = {
   name: 'test-view',
-  type: 'rgb',
-  bands: [1, 2, 3],
+  type: 'image' as const,
+  description: 'Test view for unit testing',
 };
 
 describe('ReactViewPort', () => {
@@ -25,18 +25,17 @@ describe('ReactViewPort', () => {
     expect(container.firstChild).toHaveStyle({ width: '400px', height: '300px' });
   });
 
-  it('applies custom className', () => {
+  it('renders with controls hidden', () => {
     const { container } = render(
       <ReactViewPort
         view={mockView}
         index={0}
         width={400}
         height={300}
-        showControls={true}
+        showControls={false}
         imageId="test-image"
         imageLocation={[0, 0]}
         onImageLocationChange={() => {}}
-        className="custom-class"
       />
     );
     expect(container.firstChild).toHaveStyle({ width: '400px', height: '300px' });
