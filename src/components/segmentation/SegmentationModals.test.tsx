@@ -1,8 +1,41 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import SegmentationModals from './SegmentationModals';
 
 describe('SegmentationModals', () => {
+  beforeEach(() => {
+    // Mock fetch to prevent URL parsing errors
+    global.fetch = vi.fn((url) => {
+      const urlString = typeof url === 'string' ? url : url.toString();
+      if (urlString.includes('/segmentation/api/user-config')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            config: {
+              segmentation: {
+                ai_model: { 
+                  bands: ['B1'],
+                  n_estimators: 100,
+                  max_depth: 10,
+                  n_leaves: 31,
+                  post_process: true,
+                  suppress_threshold: 0.5,
+                  suppression_default_class: 0
+                }
+              },
+              classes: [
+                { name: 'Background', css_colour: '#000000' },
+                { name: 'Cloud', css_colour: '#ffffff' }
+              ]
+            },
+            all_bands: ['B1', 'B2', 'B3', 'B4'], // Include all_bands to prevent undefined error
+            is_admin: false
+          })
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
+    });
+  });
   const mockProps = {
     isPreferencesOpen: false,
     onClosePreferences: vi.fn(),
@@ -24,18 +57,24 @@ describe('SegmentationModals', () => {
     onCloseConfusionMatrix: vi.fn(),
   };
 
-  it('renders without crashing', () => {
-    render(<SegmentationModals {...mockProps} />);
+  it('renders without crashing', async () => {
+    await act(async () => {
+      render(<SegmentationModals {...mockProps} />);
+    });
     expect(document.body).toBeInTheDocument();
   });
 
-  it('shows preferences modal when open', () => {
-    render(<SegmentationModals {...mockProps} isPreferencesOpen={true} />);
+  it('shows preferences modal when open', async () => {
+    await act(async () => {
+      render(<SegmentationModals {...mockProps} isPreferencesOpen={true} />);
+    });
     expect(screen.getByText('Preferences')).toBeInTheDocument();
   });
 
-  it('shows help modal when open', () => {
-    render(<SegmentationModals {...mockProps} isHelpOpen={true} />);
+  it('shows help modal when open', async () => {
+    await act(async () => {
+      render(<SegmentationModals {...mockProps} isHelpOpen={true} />);
+    });
     expect(screen.getByText('Help')).toBeInTheDocument();
   });
 });

@@ -24,17 +24,19 @@ def admin_spa(type=None):
         print(f"🚀 DEBUG: Admin SPA - user_id in session: {user_id}")
         
         if user_id is None:
-            print("🚀 DEBUG: No user logged in, rendering login template")
-            return flask.render_template('admin/react-app.html', user=None)
+            print("🚀 DEBUG: No user logged in, redirecting to segmentation login")
+            return flask.redirect('/segmentation/')
         
         user = User.query.get(user_id)
         if user is None:
-            print("🚀 DEBUG: User not found in database")
-            return flask.render_template('admin/react-app.html', user=None)
+            print("🚀 DEBUG: User not found in database, redirecting to segmentation login")
+            # Clear invalid session
+            flask.session.pop('user_id', None)
+            return flask.redirect('/segmentation/')
         
         if not user.admin:
-            print(f"🚀 DEBUG: User {user.name} is not admin")
-            return flask.render_template('admin/react-app.html', user=user)
+            print(f"🚀 DEBUG: User {user.name} is not admin, redirecting to segmentation")
+            return flask.redirect('/segmentation/')
         
         print(f"🚀 DEBUG: Rendering React Admin SPA for admin user: {user.name}")
         

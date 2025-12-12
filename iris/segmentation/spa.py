@@ -43,7 +43,8 @@ def segmentation_spa():
         return flask.render_template(
             'segmentation/react-app.html',
             image_id=image_id,
-            image_location=metadata.get("location", [0, 0])
+            image_location=metadata.get("location", [0, 0]),
+            debug_mode=project.debug
         )
     
     except Exception as e:

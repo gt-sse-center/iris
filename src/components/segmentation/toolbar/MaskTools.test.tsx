@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, act } from '@testing-library/react';
 import MaskTools from './MaskTools';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
 
@@ -37,11 +37,15 @@ describe('MaskTools', () => {
     
     // Click to hide
     const button = document.getElementById('tb_toggle_mask')!;
-    fireEvent.click(button);
+    act(() => {
+      fireEvent.click(button);
+    });
     expect(useSegmentationStore.getState().showMask).toBe(false);
     
     // Click to show again
-    fireEvent.click(button);
+    act(() => {
+      fireEvent.click(button);
+    });
     expect(useSegmentationStore.getState().showMask).toBe(true);
   });
 
@@ -53,12 +57,16 @@ describe('MaskTools', () => {
     expect(button).toHaveClass('checked');
     
     // Change store state
-    useSegmentationStore.getState().setShowMask(false);
+    act(() => {
+      useSegmentationStore.getState().setShowMask(false);
+    });
     rerender(<MaskTools />);
     expect(button).not.toHaveClass('checked');
     
     // Change back
-    useSegmentationStore.getState().setShowMask(true);
+    act(() => {
+      useSegmentationStore.getState().setShowMask(true);
+    });
     rerender(<MaskTools />);
     expect(button).toHaveClass('checked');
   });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, act } from '@testing-library/react';
 import SegmentationApp from './segmentation-app';
 
 /**
@@ -99,7 +99,11 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     };
 
     // Render the component
-    const { getByTestId } = render(<SegmentationApp />);
+    let getByTestId: any;
+    await act(async () => {
+      const result = render(<SegmentationApp />);
+      getByTestId = result.getByTestId;
+    });
 
     // Wait for the component to process the URL parameter and open the modal
     await waitFor(() => {
@@ -119,7 +123,11 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     };
 
     // Render the component
-    const { getByTestId } = render(<SegmentationApp />);
+    let getByTestId: any;
+    await act(async () => {
+      const result = render(<SegmentationApp />);
+      getByTestId = result.getByTestId;
+    });
 
     // Verify the modal stays closed
     await waitFor(() => {
@@ -139,7 +147,11 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     };
 
     // Render the component
-    const { getByTestId } = render(<SegmentationApp />);
+    let getByTestId: any;
+    await act(async () => {
+      const result = render(<SegmentationApp />);
+      getByTestId = result.getByTestId;
+    });
 
     // Wait for the component to initialize and expose the function
     await waitFor(() => {
@@ -167,7 +179,11 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     };
 
     // Render the component
-    const { getByTestId } = render(<SegmentationApp />);
+    let getByTestId: any;
+    await act(async () => {
+      const result = render(<SegmentationApp />);
+      getByTestId = result.getByTestId;
+    });
 
     // Wait for the component to initialize and expose the function
     await waitFor(() => {
@@ -176,7 +192,9 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     });
 
     // Call the function and verify profile modal appears
-    window.openUserProfile!('test-user-123');
+    await act(async () => {
+      window.openUserProfile!('test-user-123');
+    });
     
     await waitFor(() => {
       const profileModal = getByTestId('user-profile-modal');
@@ -195,7 +213,11 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     };
 
     // Render the component
-    const { getByTestId } = render(<SegmentationApp />);
+    let getByTestId: any;
+    await act(async () => {
+      const result = render(<SegmentationApp />);
+      getByTestId = result.getByTestId;
+    });
 
     // Wait for the component to initialize and expose the function
     await waitFor(() => {
@@ -205,7 +227,9 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     });
 
     // Call the function and verify help modal appears
-    window.irisReactApp!.openHelpModal!();
+    await act(async () => {
+      window.irisReactApp!.openHelpModal!();
+    });
     
     await waitFor(() => {
       const helpModal = getByTestId('help-modal');

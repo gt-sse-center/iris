@@ -11,33 +11,11 @@
 {% extends "base.html" %}
 {% block title %}admin{% endblock %}
 {% block head %}
-    {% if not user %}
-        <script type="text/javascript">
-            function login_finished(){
-                goto_url(vars.url.admin);
-            }
-            window.onload = dialogue_login;
-        </script>
-    {% elif not user.admin %}
-        <script type="text/javascript">
-            function login_finished(){
-                goto_url(vars.url.admin);
-            }
-            function dialogue_not_authenticated(){
-                let content = '<p>Only <b>admin</b> users can see this page. You, <i>{{user.name|tojson}}</i>, are not an admin.</p>';
-                content += '<button onclick="logout(dialogue_login);">Login as admin</button>';
-                show_dialogue('error', content, true);
-            }
-            window.onload = dialogue_not_authenticated;
-        </script>
-    {% else %}
-        <!-- Load React Admin SPA (TypeScript, built from src/) -->
-        <script type="module" src="{{ url_for('static', filename='dist/adminApp.js') }}"></script>
-    {% endif %}
+    <!-- Load React Admin SPA (TypeScript, built from src/) -->
+    <!-- Authentication is handled by Python redirects, so we only reach here if user is admin -->
+    <script type="module" src="{{ url_for('static', filename='dist/adminApp.js') }}"></script>
 {% endblock %}
 {% block content %}
-    {% if user and user.admin %}
-        <!-- React SPA mounts here and handles all admin navigation -->
-        <div id="react-admin-app"></div>
-    {% endif %}
+    <!-- React SPA mounts here and handles all admin navigation -->
+    <div id="react-admin-app"></div>
 {% endblock %}
