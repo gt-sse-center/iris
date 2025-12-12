@@ -4,7 +4,7 @@ React SPA routes for segmentation interface.
 Handles the main segmentation route that serves the React Single Page Application.
 """
 import flask
-from iris.models import User
+
 from iris.project import project
 
 spa_bp = flask.Blueprint(
@@ -38,7 +38,7 @@ def segmentation_spa():
             return flask.make_response('Unknown image id!', 404)
 
         metadata = project.get_metadata(image_id)
-        
+
         # Render the React SPA
         return flask.render_template(
             'segmentation/react-app.html',
@@ -46,7 +46,7 @@ def segmentation_spa():
             image_location=metadata.get("location", [0, 0]),
             debug_mode=project.debug
         )
-    
-    except Exception as e:
+
+    except Exception:
         flask.current_app.logger.exception("Error in segmentation SPA route")
         return flask.make_response("Internal server error", 500)

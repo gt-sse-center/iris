@@ -154,7 +154,7 @@ def start_server(
 ):
     """
     Start the IRIS server with the given configuration.
-    
+
     Args:
         project_file: Path to project configuration file
         debug: Enable debug mode
@@ -164,7 +164,7 @@ def start_server(
     """
     # Create Flask app
     flask_app = create_app(project_file, {'debug': debug})
-    
+
     # Register all blueprints
     register_extensions(flask_app)
 
@@ -179,7 +179,7 @@ def start_server(
 
     # Ensure default admin exists
     create_default_admin(flask_app, admin_user, admin_password)
-    
+
     # Start server
     if production:
         import gevent.pywsgi
@@ -273,10 +273,10 @@ def register_extensions(app):
     register_admin_blueprints(app)
     from iris.help import help_app
     app.register_blueprint(help_app, url_prefix="/help")
-    from iris.user import user_app, register_user_api
+    from iris.user import register_user_api, user_app
     app.register_blueprint(user_app, url_prefix="/user")
     register_user_api(app)
-    
+
     # Register REST API blueprint
     from iris.api import create_api_blueprint
     api_bp = create_api_blueprint()

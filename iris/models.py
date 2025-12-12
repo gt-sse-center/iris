@@ -5,6 +5,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from iris import db
 
+
 class JsonSerializable:
     def to_json(self):
         json = {
@@ -40,7 +41,7 @@ class User(JsonSerializable, db.Model):
     actions = db.relationship('Action', backref='user', lazy='dynamic')
 
     def __repr__(self):
-        return '<User {}>'.format(self.name)
+        return f'<User {self.name}>'
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

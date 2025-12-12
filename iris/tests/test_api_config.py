@@ -8,8 +8,7 @@ import os
 import pytest
 
 from iris.models import User, db
-from iris.project import project
-from iris.project import Project
+from iris.project import Project, project
 
 
 @pytest.fixture
@@ -632,33 +631,33 @@ def test_validate_multiple_errors_reported(logged_in_admin):
 def test_get_config_returns_relative_paths(app, logged_in_admin):
     """Test that GET /api/config/project returns relative paths, not absolute paths"""
     client = logged_in_admin
-    
+
     with app.app_context():
         # Get the config
         response = client.get('/api/config/project')
         assert response.status_code == 200
-        
+
         data = response.get_json()
         config = data['config']
-        
+
         # Check that image paths are relative (not absolute)
         images_path = config['images']['path']
         if isinstance(images_path, dict):
-            for key, path in images_path.items():
+            for _key, path in images_path.items():
                 assert not os.path.isabs(path), f"Image path '{path}' should be relative, not absolute"
         else:
             assert not os.path.isabs(images_path), f"Image path '{images_path}' should be relative, not absolute"
-        
+
         # Check thumbnails path if present
         if config['images'].get('thumbnails') and config['images']['thumbnails'] is not False:
             assert not os.path.isabs(config['images']['thumbnails']), \
-                f"Thumbnails path should be relative, not absolute"
-        
+                "Thumbnails path should be relative, not absolute"
+
         # Check metadata path if present
         if config['images'].get('metadata') and config['images']['metadata'] is not False:
             assert not os.path.isabs(config['images']['metadata']), \
-                f"Metadata path should be relative, not absolute"
-        
+                "Metadata path should be relative, not absolute"
+
         # Check segmentation path if present
         if 'segmentation' in config and 'path' in config['segmentation']:
             seg_path = config['segmentation']['path']

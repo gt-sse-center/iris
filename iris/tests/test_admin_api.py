@@ -5,10 +5,11 @@ These tests verify the new JSON API endpoints added for the React admin interfac
 The endpoints replace legacy HTML template rendering with JSON responses for client-side rendering.
 """
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
-from iris.models import User, Action, db
+
+from iris.models import Action, User, db
 
 
 class TestAdminAPIEndpoints:
@@ -326,7 +327,7 @@ class TestImagesAPIEndpoint(TestAdminAPIEndpoints):
         # But these may not be in the demo project's image list
         # So we just verify the structure is correct
         assert isinstance(data["images"], list)
-        
+
         # If there are images with actions, verify structure
         if data["images"]:
             image = data["images"][0]
@@ -339,14 +340,14 @@ class TestImagesAPIEndpoint(TestAdminAPIEndpoints):
         # This test needs images that actually exist in the project
         # Let's use the actual project images
         from iris.project import project
-        
+
         with app.app_context():
             # Get first image from project
             if not project.image_ids:
                 pytest.skip("No images in project")
-            
+
             test_image_id = project.image_ids[0]
-            
+
             # Create two actions for this image
             action1 = Action(
                 type="segmentation",
@@ -371,7 +372,7 @@ class TestImagesAPIEndpoint(TestAdminAPIEndpoints):
             db.session.add(action1)
             db.session.add(action2)
             db.session.commit()
-        
+
         self.login_admin(client)
         response = client.get("/admin/api/images")
         data = json.loads(response.data)
@@ -380,7 +381,7 @@ class TestImagesAPIEndpoint(TestAdminAPIEndpoints):
         test_image = next((img for img in data["images"] if img["image_id"] == test_image_id), None)
         if test_image and "segmentation" in test_image["types"]:
             seg_stats = test_image["types"]["segmentation"]
-            
+
             # Average score should be (80 + 90) / 2 = 85
             assert seg_stats["score"] == 85.0
             # Average difficulty should be (3 + 5) / 2 = 4
@@ -397,7 +398,7 @@ class TestImagesAPIEndpoint(TestAdminAPIEndpoints):
         assert "types" in image
 
         # Check that each type has all required stats
-        for action_type, stats in image["types"].items():
+        for _action_type, stats in image["types"].items():
             assert "score" in stats
             assert "count" in stats
             assert "difficulty" in stats
@@ -464,38 +465,39 @@ class TestExportMergedGeoTIFFEndpoint(TestAdminAPIEndpoints):
         """Test that only admins can export merged GeoTIFF."""
         # Login as regular user
         self.login_regular(client)
-        
+
         response = client.get("/admin/api/export-merged-geotiff/image_001")
         assert response.status_code == 403
-        
+
         # The @requires_admin decorator returns plain text, not JSON
         assert b"admin rights" in response.data
 
     def test_export_validates_image_exists(self, client):
         """Test that export validates image_id exists in project."""
         self.login_admin(client)
-        
+
         response = client.get("/admin/api/export-merged-geotiff/nonexistent_image")
         assert response.status_code == 404
-        
+
         data = json.loads(response.data)
         assert "error" in data
         assert "Image not found" in data["error"]
 
     def test_export_requires_mask_data(self, client, app):
         """Test that export fails if no masks exist for image."""
+        import os
+        from glob import glob
+
         from iris.project import project
         from iris.segmentation import get_mask_filenames
-        from glob import glob
-        import os
-        
+
         with app.app_context():
             if not project.image_ids:
                 pytest.skip("No images in project")
-            
+
             # Find an image that has no masks, or use a fake image ID
             test_image_id = "nonexistent_image_with_no_masks_12345"
-            
+
             # Make sure this image doesn't have masks
             if test_image_id in project.image_ids:
                 final_mask_paths = get_mask_filenames(test_image_id, user_id="*")[0]
@@ -503,10 +505,10 @@ class TestExportMergedGeoTIFFEndpoint(TestAdminAPIEndpoints):
                 for mask_file in mask_files:
                     if os.path.exists(mask_file):
                         os.remove(mask_file)
-        
+
         self.login_admin(client)
         response = client.get(f"/admin/api/export-merged-geotiff/{test_image_id}")
-        
+
         # Should return 404 - either image not found or no masks
         assert response.status_code == 404
         data = json.loads(response.data)
@@ -514,32 +516,34 @@ class TestExportMergedGeoTIFFEndpoint(TestAdminAPIEndpoints):
 
     def test_export_returns_geotiff_file(self, client, app, tmp_path):
         """Test that export returns a valid GeoTIFF file when masks exist."""
+        import os
+
         import numpy as np
+
         from iris.project import project
         from iris.segmentation import get_mask_filenames
-        import os
-        
+
         with app.app_context():
             if not project.image_ids:
                 pytest.skip("No images in project")
-            
+
             test_image_id = project.image_ids[0]
-            
+
             # Create mock mask files for testing
             final_mask_file, user_mask_file = get_mask_filenames(test_image_id, user_id=1)
             os.makedirs(os.path.dirname(final_mask_file), exist_ok=True)
-            
+
             # Create a simple one-hot encoded mask
             mask_shape = project['segmentation']['mask_shape']
             n_classes = len(project['classes'])
             mock_mask = np.zeros((*mask_shape[::-1], n_classes), dtype=bool)
             mock_mask[:, :, 0] = True  # All pixels are class 0
-            
+
             np.save(final_mask_file, mock_mask, allow_pickle=False)
-        
+
         self.login_admin(client)
         response = client.get(f"/admin/api/export-merged-geotiff/{test_image_id}")
-        
+
         # Should return a file download
         if response.status_code == 200:
             assert response.mimetype == "image/tiff"

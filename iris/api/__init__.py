@@ -14,7 +14,7 @@ __all__ = ['create_api_blueprint', 'register_api_error_handlers']
 def create_api_blueprint():
     """Create and configure the main API blueprint"""
     api_bp = flask.Blueprint('api', __name__, url_prefix='/api')
-    
+
     # Health check endpoint
     @api_bp.route('/health')
     def health_check():
@@ -22,10 +22,10 @@ def create_api_blueprint():
         try:
             # Basic health checks
             from iris.extensions import db
-            
+
             # Check database connection
             db.session.execute('SELECT 1')
-            
+
             # Check if React build exists (in production)
             import os
             react_build_exists = True
@@ -33,7 +33,7 @@ def create_api_blueprint():
                 build_dir = flask.current_app.config.get('REACT_BUILD_DIR')
                 if build_dir:
                     react_build_exists = os.path.exists(os.path.join(build_dir, 'index.html'))
-            
+
             return flask.jsonify({
                 'status': 'healthy',
                 'timestamp': flask.g.get('request_start_time', 0),
@@ -42,7 +42,7 @@ def create_api_blueprint():
                 'frontend': 'available' if react_build_exists else 'not_built',
                 'environment': flask.current_app.config.get('FLASK_ENV', 'unknown')
             }), 200
-            
+
         except Exception as e:
             flask.current_app.logger.error(f"Health check failed: {e}")
             return flask.jsonify({
@@ -50,16 +50,16 @@ def create_api_blueprint():
                 'error': str(e),
                 'timestamp': flask.g.get('request_start_time', 0)
             }), 503
-    
+
     # Register sub-blueprints
     api_bp.register_blueprint(config_bp, url_prefix='/config')
-    
+
     return api_bp
 
 # API error handlers
 def register_api_error_handlers(app):
     """Register API-specific error handlers"""
-    
+
     @app.errorhandler(400)
     def bad_request(error):
         return flask.jsonify({

@@ -6,8 +6,9 @@ Structure:
 - api.py: JSON API endpoints (/admin/api/*)
 """
 import flask
-from .spa import spa_bp
+
 from .api import api_bp
+from .spa import spa_bp
 
 # Main admin blueprint for template/static file serving
 admin_app = flask.Blueprint(
