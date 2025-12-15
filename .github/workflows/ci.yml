@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - testci
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches:
       - master
@@ -25,14 +27,14 @@ jobs:
           # Reduce matrix size - only test edge cases on all platforms
           - os: macos-latest
             python-version: "3.10"
-          - os: macos-latest  
+          - os: macos-latest
             python-version: "3.11"
           - os: macos-latest
             python-version: "3.12"
           - os: windows-latest
             python-version: "3.10"
           - os: windows-latest
-            python-version: "3.11" 
+            python-version: "3.11"
           - os: windows-latest
             python-version: "3.12"
 
@@ -56,7 +58,7 @@ jobs:
 
       - name: Verify UV installation
         run: uv --version
-          
+
       - name: Create virtual environment
         run: uv venv
 
@@ -106,8 +108,6 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
-
-
       - name: Verify React build artifacts
         working-directory: iris
         shell: bash
@@ -139,7 +139,7 @@ jobs:
           uv run iris demo --admin-user admin --admin-password 123 &
           SERVER_PID=$!
           echo "Started IRIS server with PID: $SERVER_PID"
-          
+
           # Wait for server to be ready (max 60 seconds)
           echo "Waiting for server to start..."
           for i in {1..60}; do
@@ -154,16 +154,55 @@ jobs:
             fi
             sleep 1
           done
-          
+
           # Run Cypress tests in headless mode (from iris/ subdirectory)
           echo "Running Cypress E2E tests..."
           cd iris
           npm run cypress:headless || TEST_EXIT_CODE=$?
-          
+
           # Stop the server
           echo "Stopping IRIS server..."
           kill $SERVER_PID 2>/dev/null || true
           wait $SERVER_PID 2>/dev/null || true
-          
+
           # Exit with test result
           exit ${TEST_EXIT_CODE:-0}
+
+      - name: Install pypa/build & build a binary wheel and a source tarball
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          uv pip install build --user
+          uv run python -m build
+
+      - name: Store the distribution packages
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-to-testpypi:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    needs:
+    - test
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/esa-iris
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v6
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        verbose: true
+        skip-existing: true
