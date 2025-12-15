@@ -1,6 +1,6 @@
+import json
 from unittest.mock import patch
 
-import json
 import pytest
 
 from iris import find_config_file, handle_launch_command, handle_rm_command

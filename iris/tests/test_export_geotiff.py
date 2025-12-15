@@ -3,10 +3,10 @@ Tests for GeoTIFF export endpoint
 """
 
 import json
+from unittest.mock import MagicMock, patch
 
 import flask
 import numpy as np
-from unittest.mock import MagicMock, patch
 
 
 class TestGeoTIFFExport:

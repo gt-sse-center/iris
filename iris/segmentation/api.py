@@ -3,10 +3,12 @@ JSON API endpoints for segmentation interface.
 
 Provides REST API endpoints that return JSON data for the React frontend.
 """
-import flask
 import json
-from iris.user import requires_auth
+
+import flask
+
 from iris.project import project
+from iris.user import requires_auth
 
 api_bp = flask.Blueprint(
     'segmentation_api', __name__,
@@ -19,7 +21,7 @@ api_bp = flask.Blueprint(
 def get_user_config():
     """Get current user configuration as JSON."""
     from iris.models import User
-    
+
     user_id = flask.session['user_id']
     user = User.query.get(user_id)
     config = project.get_user_config(user_id)
@@ -42,9 +44,9 @@ def save_user_config():
     """Save user configuration."""
     user_id = flask.session['user_id']
     user_config = json.loads(flask.request.data)
-    
+
     project.save_user_config(user_id, user_config)
-    
+
     return flask.jsonify({'message': 'Saved user config successfully!'})
 
 
@@ -54,7 +56,7 @@ def save_user_config():
 def list_images():
     """
     Get list of all images with their annotation status.
-    
+
     Returns:
         JSON response with format:
         {
@@ -71,27 +73,27 @@ def list_images():
         }
     """
     from iris.models import Action
-    
+
     user_id = flask.session['user_id']
     current_image_id = flask.request.args.get('current_image_id')
-    
+
     # Get all actions for this project
     all_actions = Action.query.filter_by(type='segmentation').all()
-    
+
     # Build image status map
     images_data = []
     for image_id in project.image_ids:
         # Get actions for this image
         image_actions = [a for a in all_actions if a.image_id == image_id]
         user_actions = [a for a in image_actions if a.user_id == user_id]
-        
+
         images_data.append({
             'image_id': image_id,
             'has_user_annotation': len(user_actions) > 0,
             'has_any_annotation': len(image_actions) > 0,
             'annotation_count': len(image_actions)
         })
-    
+
     return flask.jsonify({
         'images': images_data,
         'current_image_id': current_image_id
@@ -103,7 +105,6 @@ def list_images():
 def export_geotiff(image_id):
     """Export image with mask as GeoTIFF."""
     import tempfile
-    from os.path import join
 
     import numpy as np
     import rasterio as rio

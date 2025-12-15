@@ -1,7 +1,5 @@
-from functools import wraps
 import json
-import random
-from os.path import dirname, join
+from functools import wraps
 
 import flask
 from sqlalchemy import func
@@ -83,7 +81,7 @@ def set(user_id):
     if current_user_id != user_id and not current_user.admin:
         return flask.make_response("Permission denied!", 403)
 
-    user = User.query.get_or_404(user_id);
+    user = User.query.get_or_404(user_id)
 
     for k, v in json.loads(flask.request.data).items():
         if k == "admin":

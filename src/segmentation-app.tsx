@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client';
 import SegmentationToolbar from './components/segmentation/SegmentationToolbar';
 import SegmentationStatusBar from './components/segmentation/SegmentationStatusBar';
 import SegmentationModals from './components/segmentation/SegmentationModals';
+import ViewerComparison from './components/segmentation/ViewerComparison';
 import { useSegmentationSetup } from './components/segmentation/hooks/useSegmentationSetup';
 import { useSegmentationStore } from './stores/segmentationStore';
+import './utils/legacyBridge'; // Initialize legacy bridge functions
 
 // Declare global functions that exist in the legacy JavaScript
 declare global {
@@ -211,9 +213,7 @@ const SegmentationApp: React.FC = () => {
         onOpenPreferences={handleOpenPreferences}
       />
 
-      <div id="views-container" style={{ margin: '10px 0px', width: '100%' }}>
-        {/* This will be filled up by the ViewManager */}
-      </div>
+      <ViewerComparison showComparison={true} />
 
       <SegmentationStatusBar
         onOpenProfile={handleOpenProfile}

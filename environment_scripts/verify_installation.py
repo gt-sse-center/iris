@@ -4,8 +4,9 @@ Simple test script to verify IRIS installation is working correctly.
 Run this after installation to check if all dependencies are properly installed.
 """
 
-import sys
 import importlib
+import sys
+
 
 def test_import(module_name, description=""):
     """Test if a module can be imported successfully."""
@@ -26,7 +27,7 @@ def test_import(module_name, description=""):
 def main():
     print("Testing IRIS Installation")
     print("=" * 40)
-    
+
     # Test core dependencies
     modules_to_test = [
         ("iris", "- IRIS main module"),
@@ -40,15 +41,15 @@ def main():
         ("yaml", "- YAML parser"),
         ("gevent", "- WSGI server"),
     ]
-    
+
     failed_imports = []
-    
+
     for module, description in modules_to_test:
         if not test_import(module, description):
             failed_imports.append(module)
-    
+
     print("\n" + "=" * 40)
-    
+
     if not failed_imports:
         print("SUCCESS: All tests passed! IRIS is ready to use.")
         print("\nTry running:")

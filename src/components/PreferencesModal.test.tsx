@@ -17,9 +17,11 @@ describe('PreferencesModal - Keyboard Shortcuts', () => {
     originalKeyDownHandler = document.body.onkeydown;
     originalKeyUpHandler = document.body.onkeyup;
 
-    // Mock fetch
+    // Mock fetch with proper URL handling
     global.fetch = vi.fn((url) => {
-      if (url === '/segmentation/api/user-config') {
+      // Handle both relative and absolute URLs
+      const urlString = typeof url === 'string' ? url : url.toString();
+      if (urlString.includes('/segmentation/api/user-config')) {
         return Promise.resolve({
           ok: true,
           json: () =>

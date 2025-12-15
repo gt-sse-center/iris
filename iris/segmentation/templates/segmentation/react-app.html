@@ -23,6 +23,7 @@
         // GLOBAL VARIABLES - preserved exactly as in original template
         // Note: vars is already defined in base.html, we're just adding properties
         Object.assign(vars, {
+            'debug_mode': {{debug_mode|tojson}},
             'next_action': null,
             'user': null,
             'mask': null,

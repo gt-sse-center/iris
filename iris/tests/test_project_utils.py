@@ -1,5 +1,4 @@
 import os
-import sys
 
 import numpy as np
 import pytest
@@ -45,7 +44,7 @@ def test_make_absolute_varieties(tmp_path, monkeypatch):
     # Use an absolute path that's valid on the current platform
     #   in particular, Win w/py313+ needs "//already/abs" while others "/already/abs"
     already_abs = os.path.abspath(os.path.join(os.sep, "already", "abs"))
-    
+
     assert project.make_absolute([rel, already_abs]) == [abs_expected, already_abs]
 
 

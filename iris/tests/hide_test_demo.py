@@ -1,12 +1,13 @@
-from flask import url_for
 import pytest
 import requests
+from flask import url_for
+
 
 @pytest.mark.usefixtures('live_server')
 class TestCore:
     def url(self, url=''):
         return url_for('main.index', _external=True) + url
-    
+
     def test_public_pages(self):
         response = requests.get(self.url())
         assert response.status_code == 200

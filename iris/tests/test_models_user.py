@@ -1,6 +1,6 @@
 import types
 
-from iris.models import User, Action
+from iris.models import Action, User
 
 
 def test_user_password_roundtrip():
