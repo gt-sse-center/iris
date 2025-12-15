@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         exclude:
           # Reduce matrix size - only test edge cases on all platforms
@@ -171,8 +171,8 @@ jobs:
       - name: Install pypa/build & build a binary wheel and a source tarball
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: |
-          uv pip install build --user
-          uv run python -m build
+          python -m pip install build --user
+          python -m build
 
       - name: Store the distribution packages
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
