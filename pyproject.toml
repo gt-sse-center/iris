@@ -192,6 +192,8 @@ dev = [
 ]
 
 [tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
 
 [tool.versioningit.vcs]
 default-tag = "0.0.99" # useful for CI/shallow clones
