@@ -12,7 +12,13 @@ import flask
 import numpy as np
 import yaml
 
-__version__ = "1.0.0"
+try:
+    import importlib.metadata as importlib_metadata
+except ModuleNotFoundError:
+    import importlib_metadata
+
+__version__ = importlib_metadata.version(__name__)
+
 
 from iris.extensions import compress, db
 from iris.project import project

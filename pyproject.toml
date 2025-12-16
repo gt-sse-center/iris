@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -57,8 +57,6 @@ iris = "iris:run_app"
 [tool.setuptools]
 include-package-data = true
 
-[tool.setuptools.dynamic]
-version = {attr = "iris.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -193,3 +191,8 @@ tests = [
 dev = [
     "ruff>=0.14.3",
 ]
+
+[tool.setuptools_scm]
+
+[tool.versioningit.vcs]
+default-tag = "0.0.99" # useful for CI/shallow clones
