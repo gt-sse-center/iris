@@ -4,7 +4,6 @@ import shutil
 import sys
 import webbrowser
 from getpass import getpass
-from importlib.metadata import version
 from os.path import basename, dirname, exists, isabs, join
 from pathlib import Path
 from typing import Union
@@ -13,7 +12,16 @@ import flask
 import numpy as np
 import yaml
 
-__version__ = version("esa-iris")
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    from importlib_metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("esa-iris")
+except PackageNotFoundError:
+    # Package is not installed, e.g., in a development environment without an sdist install
+    __version__ = "unknown"
 del version
 
 from iris.extensions import compress, db
