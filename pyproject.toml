@@ -57,7 +57,6 @@ iris = "iris:run_app"
 [tool.setuptools]
 include-package-data = true
 
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["iris", "iris.*", "iris.demo"]

@@ -4,6 +4,7 @@ import shutil
 import sys
 import webbrowser
 from getpass import getpass
+from importlib.metadata import version
 from os.path import basename, dirname, exists, isabs, join
 from pathlib import Path
 from typing import Union
@@ -12,13 +13,8 @@ import flask
 import numpy as np
 import yaml
 
-try:
-    import importlib.metadata as importlib_metadata
-except ModuleNotFoundError:
-    import importlib_metadata
-
-__version__ = importlib_metadata.version(__name__)
-
+__version__ = version("esa-iris")
+del version
 
 from iris.extensions import compress, db
 from iris.project import project
