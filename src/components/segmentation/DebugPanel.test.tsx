@@ -7,10 +7,38 @@ const mockStore = {
   currentGroup: 0,
   views: [],
   getCurrentViews: () => [],
+  getDebugInfo: () => ({
+    hasViews: false,
+    viewsCount: 0,
+    currentGroup: 'default',
+    imageId: null,
+    imageLocation: [0, 0],
+    filters: { contrast: false, invert: false, brightness: 100, saturation: 100 },
+    isInitialized: false,
+    initializationError: null,
+  }),
+  retryInitialization: () => {},
+};
+
+const mockSegmentationStore = {
+  getDebugInfo: () => ({
+    showMask: true,
+    currentImageId: null,
+    imagesCount: 0,
+    filtersActive: false,
+    brightness: 100,
+    saturation: 100,
+    contrast: false,
+    invert: false,
+  }),
 };
 
 vi.mock('../../stores/viewManagerStore', () => ({
   useViewManagerStore: () => mockStore,
+}));
+
+vi.mock('../../stores/segmentationStore', () => ({
+  useSegmentationStore: () => mockSegmentationStore,
 }));
 
 describe('DebugPanel', () => {

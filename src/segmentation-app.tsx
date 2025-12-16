@@ -6,6 +6,7 @@ import SegmentationModals from './components/segmentation/SegmentationModals';
 import ViewerComparison from './components/segmentation/ViewerComparison';
 import { useSegmentationSetup } from './components/segmentation/hooks/useSegmentationSetup';
 import { useSegmentationStore } from './stores/segmentationStore';
+import { useViewManagerStore } from './stores/viewManagerStore';
 import './utils/legacyBridge'; // Initialize legacy bridge functions
 
 // Declare global functions that exist in the legacy JavaScript
@@ -90,6 +91,41 @@ const SegmentationApp: React.FC = () => {
   // Mark auth as checked immediately - legacy JS handles authentication
   useEffect(() => {
     setAuthChecked(true);
+  }, []);
+
+  // Initialize ViewManager store from legacy vars
+  useEffect(() => {
+    const initializeViewManager = () => {
+      const w = window as any;
+      if (w.vars && w.vars.config) {
+        console.log('🔧 Initializing ViewManager from legacy vars...');
+        useViewManagerStore.getState().initializeFromLegacy()
+          .then(() => {
+            console.log('✅ ViewManager initialized successfully');
+          })
+          .catch((error) => {
+            console.error('❌ Failed to initialize ViewManager:', error);
+          });
+      }
+    };
+
+    // Try to initialize immediately if vars are already available
+    if (window.vars) {
+      initializeViewManager();
+    }
+
+    // Also listen for when legacy vars are loaded
+    const checkForVars = setInterval(() => {
+      if (window.vars && window.vars.config && window.vars.config.views) {
+        clearInterval(checkForVars);
+        initializeViewManager();
+      }
+    }, 100);
+
+    // Clean up after 10 seconds
+    setTimeout(() => clearInterval(checkForVars), 10000);
+
+    return () => clearInterval(checkForVars);
   }, []);
 
   // Initialize navigation store with image list

@@ -32,6 +32,7 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
     getCurrentViews,
     updateViewDimensions,
     setImageLocation,
+    getDebugInfo,
   } = useViewManagerStore();
   
   const currentViews = getCurrentViews();
@@ -63,6 +64,7 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
   }, []);
   
   // Expose render function to legacy code during migration
+  // This is moved to store initialization, not component level
   useEffect(() => {
     const w = window as any;
     if (!w.reactViewManager) {
@@ -72,16 +74,15 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
   }, [renderAllViewPorts]);
   
   if (!imageId || currentViews.length === 0) {
-    const w = window as any;
+    // Get debug info from store instead of window.vars
     const debugInfo = {
       imageId,
       currentViewsLength: currentViews.length,
-      hasVars: !!w.vars,
-      hasConfig: !!w.vars?.config,
-      hasViews: !!w.vars?.config?.views,
-      viewsType: typeof w.vars?.config?.views,
-      viewsKeys: w.vars?.config?.views ? Object.keys(w.vars.config.views) : [],
+      storeDebugInfo: getDebugInfo(),
     };
+    
+    // Log the issue for debugging
+    console.warn('⚠️ ReactViewManager: No views or image available', debugInfo);
     
     return (
       <div 
@@ -101,6 +102,9 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
       >
         <div style={{ marginBottom: '10px', fontSize: '14px' }}>
           No views configured or image not loaded
+        </div>
+        <div style={{ marginBottom: '10px', fontSize: '12px', color: '#999' }}>
+          Draw at least 10 pixels from two classes!
         </div>
         <details style={{ fontSize: '10px', color: '#999' }}>
           <summary>Debug Info</summary>

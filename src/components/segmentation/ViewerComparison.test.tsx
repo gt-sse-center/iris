@@ -2,7 +2,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ViewerComparison from './ViewerComparison';
 
-// Mock the store
+// Mock the stores
 vi.mock('../../stores/viewManagerStore', () => ({
   initializeViewManagerFromLegacy: vi.fn(),
   useViewManagerStore: () => ({
@@ -16,6 +16,35 @@ vi.mock('../../stores/viewManagerStore', () => ({
     showControls: true,
     imageId: 'test-image',
     imageLocation: [0, 0] as [number, number],
+    debugMode: true,
+    isInitialized: false,
+    initializeFromLegacy: vi.fn().mockResolvedValue(undefined),
+    getDebugInfo: () => ({
+      hasViews: false,
+      viewsCount: 0,
+      currentGroup: 'default',
+      imageId: 'test-image',
+      imageLocation: [0, 0],
+      filters: { contrast: false, invert: false, brightness: 100, saturation: 100 },
+      isInitialized: false,
+      initializationError: null,
+    }),
+    retryInitialization: vi.fn(),
+  }),
+}));
+
+vi.mock('../../stores/segmentationStore', () => ({
+  useSegmentationStore: () => ({
+    getDebugInfo: () => ({
+      showMask: true,
+      currentImageId: 'test-image',
+      imagesCount: 0,
+      filtersActive: false,
+      brightness: 100,
+      saturation: 100,
+      contrast: false,
+      invert: false,
+    }),
   }),
 }));
 
