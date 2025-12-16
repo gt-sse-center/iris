@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "esa-iris"
-description = "Tool for manual image annotation"
+description = "Intelligently Reinforced Image Segmentation (IRIS), a tool for manual (supported by ML) multispectral general image segmentation, especially for satellite imagery"
 license = "GPL-3.0-or-later"
 authors = [
     {name = "John Mrziglod", email = "mrzo@gmx.de"},
@@ -69,7 +69,7 @@ include = ["iris", "iris.*", "iris.demo"]
 "iris.demo" = "demo"
 
 [tool.setuptools.package-data]
-iris = ["*.json", "*/templates/*", "*/static/*/*"]
+iris = ["*.json", "templates/*", "static/**/*"]
 "iris.demo" = ["**/*"]
 
 [tool.black]

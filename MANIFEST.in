@@ -1,0 +1,4 @@
+# Ensure demo data and built frontend assets are included in sdist/wheel
+recursive-include demo *
+recursive-include iris/static/dist *
+recursive-include demo/images *
