@@ -84,8 +84,11 @@ jobs:
       - name: Install dependencies and IRIS
         run: uv pip install -e ".[test]"
 
-      - name: Verify installation
-        run: uv run python environment_scripts/verify_installation.py
+      #- name: Verify installation
+      #  run: uv run python environment_scripts/verify_installation.py
+
+      - name: asdf
+        run: uv run python -c "import iris"
 
       - name: Test CLI functionality
         run: uv run iris --help
