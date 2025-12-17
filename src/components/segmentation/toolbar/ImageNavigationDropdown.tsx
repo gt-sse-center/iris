@@ -2,7 +2,7 @@
  * Image Navigation Dropdown Component
  * 
  * Displays current image name and allows navigation to any image in the project.
- * Shows annotation status for each image.
+ * Shows annotation status and thumbnail preview for each image.
  * 
  * Uses Zustand store as single source of truth for image list.
  */
@@ -62,11 +62,16 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
     return 'image-status-none';
   };
 
+  const getThumbnailUrl = (imageId: string) => {
+    // Use the same thumbnail endpoint as ImageInfoModal
+    return `/thumbnail/${imageId}?size=32x32`;
+  };
+
   return (
     <li
       className="toolbutton icon_button image-navigation-dropdown"
       ref={dropdownRef}
-      style={{ width: '200px', position: 'relative' }}
+      style={{ width: '220px', position: 'relative' }}
     >
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -108,6 +113,15 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
                       } ${getStatusClass(image)}`}
                       onClick={() => handleImageSelect(image.image_id)}
                     >
+                      <img 
+                        className="image-thumbnail"
+                        src={getThumbnailUrl(image.image_id)}
+                        alt=""
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                       <span className="image-name" style={{ color: '#000', fontSize: '14px', fontWeight: 'normal' }}>
                         {image.image_id}
                       </span>
