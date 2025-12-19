@@ -25,6 +25,17 @@ interface ImageInfo {
   annotation_count: number;
 }
 
+interface SegmentationDebugInfo {
+  showMask: boolean;
+  currentImageId: string | null;
+  imagesCount: number;
+  filtersActive: boolean;
+  brightness: number;
+  saturation: number;
+  contrast: boolean;
+  invert: boolean;
+}
+
 interface SegmentationState {
   // Mask Visibility
   showMask: boolean;
@@ -34,6 +45,9 @@ interface SegmentationState {
   // Navigation Confirmation Dialog
   showDialogueBeforeNextImage: boolean;
   setShowDialogueBeforeNextImage: (show: boolean) => void;
+  
+  // Debug state
+  debugMode: boolean;
 
   // Image Navigation
   images: ImageInfo[];
@@ -70,6 +84,10 @@ interface SegmentationState {
   changeBrightness: (up: boolean) => void;
   changeSaturation: (up: boolean) => void;
   setExpandedFilterSlider: (sliderId: string | null) => void;
+  
+  // Debug actions
+  setDebugMode: (enabled: boolean) => void;
+  getDebugInfo: () => SegmentationDebugInfo;
 }
 
 // Helper function to trigger legacy rendering
@@ -107,6 +125,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   
   // Filter UI State
   expandedFilterSlider: null,
+  
+  // Debug state
+  debugMode: false,
 
   setBrightness: (value: number) => {
     const clampedValue = Math.max(0, Math.min(800, value));
@@ -256,6 +277,23 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const { images, currentImageIndex } = get();
     return images[currentImageIndex] || null;
   },
+  
+  // Debug actions
+  setDebugMode: (debugMode) => set({ debugMode }),
+  
+  getDebugInfo: () => {
+    const state = get();
+    return {
+      showMask: state.showMask,
+      currentImageId: state.currentImageId,
+      imagesCount: state.images.length,
+      filtersActive: state.brightness !== 100 || state.saturation !== 100 || state.contrast || state.invert,
+      brightness: state.brightness,
+      saturation: state.saturation,
+      contrast: state.contrast,
+      invert: state.invert,
+    };
+  },
 }));
 
 // Initialize store from legacy vars if available
@@ -277,4 +315,10 @@ if (typeof window !== 'undefined') {
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
+  
+  // Initialize debug mode from legacy vars
+  const w = window as any;
+  if (w.vars?.debug_mode) {
+    useSegmentationStore.getState().setDebugMode(true);
+  }
 }

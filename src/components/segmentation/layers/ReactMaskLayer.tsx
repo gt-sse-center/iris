@@ -74,6 +74,9 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
+      // CRITICAL: Set canvas internal dimensions to match legacy system exactly
+      // Legacy uses: [canvas.width, canvas.height] = vm.calculateViewWidthHeight();
+      // This means canvas internal dimensions = viewport dimensions (not image dimensions)
       canvas.width = width;
       canvas.height = height;
       
@@ -90,13 +93,14 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
         // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
         addTrackTransforms(ctx);
         
-        // Add coordinate transformation functions for React canvas
+        // CRITICAL: Set the initial transformation matrix to match legacy system exactly
+        // image_shape[0] = height, image_shape[1] = width
+        // We need to scale canvas dimensions to image dimensions
         const w = window as any;
         if (w.vars?.image_shape) {
-          // CRITICAL: Set the initial transformation matrix to match legacy system
-          // Legacy uses image_shape[0] (height) for both X and Y scaling to maintain aspect ratio
-          const scale = canvas.width / w.vars.image_shape[0];
-          ctx.setTransform(scale, 0, 0, scale, 0, 0);
+          const scaleX = canvas.width / w.vars.image_shape[1];  // canvas width / image width
+          const scaleY = canvas.height / w.vars.image_shape[0]; // canvas height / image height
+          ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
         }
       }
       
@@ -166,10 +170,22 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
   }, [renderMask]);
   
   const canvasStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: 0,
+    top: 0,
     width: '100%',
     height: '100%',
     display: showMask ? 'block' : 'none',
-    objectFit: 'fill',
+    // Add distinctive styling to identify React canvas
+    border: '2px solid lime', // Bright green border to identify React canvas
+    backgroundColor: 'transparent',
+    cursor: 'crosshair',
+    WebkitTouchCallout: 'none',
+    WebkitUserSelect: 'none',
+    KhtmlUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none',
+    userSelect: 'none',
     ...style,
   };
   

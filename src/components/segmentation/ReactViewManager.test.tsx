@@ -13,6 +13,16 @@ const mockStore = {
   getCurrentViews: () => [],
   updateViewDimensions: () => {},
   setImageLocation: () => {},
+  getDebugInfo: () => ({
+    hasViews: false,
+    viewsCount: 0,
+    currentGroup: 'default',
+    imageId: 'test-image',
+    imageLocation: [0, 0],
+    filters: { contrast: false, invert: false, brightness: 100, saturation: 100 },
+    isInitialized: false,
+    initializationError: null,
+  }),
 };
 
 vi.mock('../../stores/viewManagerStore', () => ({

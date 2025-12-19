@@ -134,36 +134,32 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      // Set canvas dimensions to match image dimensions (like legacy)
-      const w = window as any;
-      if (w.vars?.image_shape) {
-        const imageWidth = w.vars.image_shape[1];  // width is image_shape[1]
-        const imageHeight = w.vars.image_shape[0]; // height is image_shape[0]
+      // Set canvas internal dimensions to match viewport dimensions (like legacy)
+      // Legacy uses: [canvas.width, canvas.height] = vm.calculateViewWidthHeight();
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Disable image smoothing for pixel-perfect rendering
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = '';
         
-        // Set canvas internal dimensions to match image dimensions
-        canvas.width = imageWidth;
-        canvas.height = imageHeight;
+        // Add full canvas transformation tracking (enables zoom/pan)
+        // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
+        addTrackTransforms(ctx);
         
-        // Disable image smoothing for pixel-perfect rendering
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.imageSmoothingEnabled = false;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          ctx.shadowBlur = 0;
-          ctx.shadowColor = '';
-          
-          // Add full canvas transformation tracking (enables zoom/pan)
-          // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
-          addTrackTransforms(ctx);
-          
-          // CRITICAL: Set the initial transformation matrix to match legacy system
-          // Legacy uses image_shape[0] (height) for both X and Y scaling to maintain aspect ratio
-          const w = window as any;
-          if (w.vars?.image_shape) {
-            const scale = canvas.width / w.vars.image_shape[0];
-            ctx.setTransform(scale, 0, 0, scale, 0, 0);
-          }
+        // CRITICAL: Set the initial transformation matrix to match legacy system exactly
+        // image_shape[0] = height, image_shape[1] = width
+        // We need to scale canvas dimensions to image dimensions
+        const w = window as any;
+        if (w.vars?.image_shape) {
+          const scaleX = canvas.width / w.vars.image_shape[1];  // canvas width / image width
+          const scaleY = canvas.height / w.vars.image_shape[0]; // canvas height / image height
+          ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
         }
       }
       
@@ -196,10 +192,22 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
   }, [renderImage, view]);
   
   const canvasStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: 0,
+    top: 0,
     width: '100%',
     height: '100%',
     display: 'block',
-    objectFit: 'fill', // Ensure image fills the container
+    // Add distinctive styling to identify React canvas
+    border: '2px solid blue', // Bright blue border to identify React RGB canvas
+    backgroundColor: 'transparent',
+    cursor: 'crosshair',
+    WebkitTouchCallout: 'none',
+    WebkitUserSelect: 'none',
+    KhtmlUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none',
+    userSelect: 'none',
     ...style,
   };
   

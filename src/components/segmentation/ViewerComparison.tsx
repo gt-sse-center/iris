@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import ReactViewManager from './ReactViewManager';
 import DebugPanel from './DebugPanel';
 import ErrorBoundary from './ErrorBoundary';
-import { initializeViewManagerFromLegacy } from '../../stores/viewManagerStore';
+import { useViewManagerStore } from '../../stores/viewManagerStore';
 
 interface ViewerComparisonProps {
   showComparison?: boolean;
@@ -18,11 +18,11 @@ interface ViewerComparisonProps {
 const ViewerComparison: React.FC<ViewerComparisonProps> = ({ 
   showComparison = true 
 }) => {
-  const [isInitialized, setIsInitialized] = useState(false);
+  // Use store hooks instead of direct window access
+  const { debugMode, isInitialized, initializeFromLegacy } = useViewManagerStore();
   
-  // Check if debug mode is enabled
-  const w = window as any;
-  const isDebugMode = w.vars?.debug_mode || false;
+  // Check if debug mode is enabled from store
+  const isDebugMode = debugMode;
   
   const [showReactViewer, setShowReactViewer] = useState(isDebugMode);
   const [showLegacyViewer, setShowLegacyViewer] = useState(true);
@@ -39,7 +39,7 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = ({
             // Re-initialize the legacy ViewManager
             w.init_views();
             setLegacyViewerNeedsInit(false);
-            if (w.vars?.debug_mode) {
+            if (debugMode) {
               console.log('🔧 Legacy ViewManager re-initialized');
             }
           } catch (error) {
@@ -50,7 +50,7 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [showLegacyViewer, legacyViewerNeedsInit]);
+  }, [showLegacyViewer, legacyViewerNeedsInit, debugMode]);
   
   // Track when legacy viewer is hidden to know when to re-init
   useEffect(() => {
@@ -59,50 +59,35 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = ({
     }
   }, [showLegacyViewer]);
 
-  // Initialize React ViewManager from legacy vars
+  // Initialize React ViewManager from legacy vars using store action
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 50; // 5 seconds max
-    
-    const initializeFromLegacy = () => {
-      const w = window as any;
+    if (!isInitialized) {
+      const handleRetryInit = () => {
+        console.log('🔧 ViewerComparison: Attempting to initialize ViewManager...');
+        initializeFromLegacy().then(() => {
+          console.log('✅ ViewerComparison: ViewManager initialized successfully');
+        }).catch((error) => {
+          console.error('❌ ViewerComparison: Failed to initialize React ViewManager:', error);
+        });
+      };
       
-      // Check if we have the necessary data
-      if (w.vars?.config?.views && (
-        Array.isArray(w.vars.config.views) || 
-        typeof w.vars.config.views === 'object'
-      )) {
-        const w = window as any;
-        if (w.vars?.debug_mode) {
-          console.log('🚀 Initializing React ViewManager from legacy vars');
+      // Try initialization immediately
+      handleRetryInit();
+      
+      // Also retry periodically if not initialized
+      const retryInterval = setInterval(() => {
+        if (!useViewManagerStore.getState().isInitialized && window.vars?.config?.views) {
+          console.log('🔄 ViewerComparison: Retrying initialization...');
+          handleRetryInit();
         }
-        try {
-          initializeViewManagerFromLegacy();
-          setIsInitialized(true);
-          if (w.vars?.debug_mode) {
-            console.log('✅ React ViewManager initialized successfully');
-          }
-        } catch (error) {
-          console.error('❌ Failed to initialize React ViewManager:', error);
-          setIsInitialized(false);
-        }
-      } else {
-        retryCount++;
-        if (retryCount < maxRetries) {
-          // Retry after a short delay
-          setTimeout(initializeFromLegacy, 100);
-        } else {
-          console.warn('⚠️ Failed to initialize React ViewManager after max retries');
-          if (w.vars?.debug_mode) {
-            console.log('Available vars:', w.vars);
-          }
-          setIsInitialized(false);
-        }
-      }
-    };
-    
-    initializeFromLegacy();
-  }, []);
+      }, 1000);
+      
+      // Clean up after 10 seconds
+      setTimeout(() => clearInterval(retryInterval), 10000);
+      
+      return () => clearInterval(retryInterval);
+    }
+  }, [isInitialized, initializeFromLegacy]);
   
   // If not in debug mode, only show legacy viewer
   if (!isDebugMode || !showComparison) {

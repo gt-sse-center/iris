@@ -7,14 +7,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { useViewManagerStore } from '../../stores/viewManagerStore';
+import { useSegmentationStore } from '../../stores/segmentationStore';
 
 const DebugPanel: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [legacyVars, setLegacyVars] = useState<any>(null);
   
+  // Use store hooks instead of direct window access
   const viewManagerState = useViewManagerStore();
+  const segmentationState = useSegmentationStore();
   
-  // Update legacy vars periodically
+  const { getDebugInfo, retryInitialization } = viewManagerState;
+  const debugInfo = getDebugInfo();
+  const segmentationDebugInfo = segmentationState.getDebugInfo();
+  
+  // Update legacy vars periodically (only for comparison)
   useEffect(() => {
     const updateLegacyVars = () => {
       const w = window as any;
@@ -139,12 +146,8 @@ const DebugPanel: React.FC = () => {
           maxHeight: '150px',
         }}>
           {JSON.stringify({
-            views: Object.keys(viewManagerState.views),
-            viewGroups: viewManagerState.viewGroups,
-            currentGroup: viewManagerState.currentGroup,
-            imageId: viewManagerState.imageId,
-            imageLocation: viewManagerState.imageLocation,
-            filters: viewManagerState.filters,
+            viewManager: debugInfo,
+            segmentation: segmentationDebugInfo,
           }, null, 2)}
         </pre>
       </div>
@@ -171,12 +174,7 @@ const DebugPanel: React.FC = () => {
         </button>
         
         <button
-          onClick={() => {
-            const w = window as any;
-            if (w.initializeViewManagerFromLegacy) {
-              w.initializeViewManagerFromLegacy();
-            }
-          }}
+          onClick={retryInitialization}
           style={{
             padding: '4px 8px',
             backgroundColor: '#4caf50',
