@@ -129,7 +129,7 @@ function save_config(config){
         body: JSON.stringify(config)
     })
 }
-function init_views(){
+async function init_views(){
     show_loader("Loading views...");
     vars.vm = new ViewManager(
         get_object('views-container'),
@@ -161,8 +161,8 @@ function init_views(){
     hidden_ctx.shadowColor = null;
     hidden_ctx.imageSmoothingEnabled = false;
 
-    // Load mask:
-    load_mask();
+    // Load mask (now properly awaited):
+    await load_mask();
 
     vars.vm.setImage(vars.image_id, vars.image_location);
     vars.vm.showGroup();
@@ -177,6 +177,7 @@ function init_views(){
 
     get_object("toolbar").style.visibility = "visible";
     get_object("statusbar").style.visibility = "visible";
+    hide_loader(); // Ensure loader is hidden after initialization
     newuser_help_popup();
 }
 
@@ -300,6 +301,13 @@ function change_brightness(up){
     
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy brightness fallback, store not available');
+    
+    // Safety check: only proceed if ViewManager is initialized
+    if (!vars.vm || !vars.vm.filters) {
+        console.log('[IRIS] ViewManager not initialized, skipping brightness change');
+        return;
+    }
+    
     if (up){
         vars.vm.filters.brightness += 10;
         vars.vm.filters.brightness = Math.min(800, vars.vm.filters.brightness);
@@ -318,6 +326,13 @@ function change_saturation(up){
     
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy saturation fallback, store not available');
+    
+    // Safety check: only proceed if ViewManager is initialized
+    if (!vars.vm || !vars.vm.filters) {
+        console.log('[IRIS] ViewManager not initialized, skipping saturation change');
+        return;
+    }
+    
     if (up){
         vars.vm.filters.saturation += 20;
         vars.vm.filters.saturation = Math.min(800, vars.vm.filters.saturation);
@@ -329,6 +344,14 @@ function change_saturation(up){
 }
 
 function set_current_class(class_id){
+    // PHASE 1: Check React store first (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setCurrentClass(class_id);
+        return; // Store handles everything including DOM updates
+    }
+    
+    // FALLBACK: Legacy behavior (should rarely be used)
+    console.log('[IRIS] Using legacy set_current_class fallback, store not available');
     vars.current_class = class_id;
     var colour = vars.classes[class_id].colour;
     var css_colour = rgba2css(colour);
@@ -348,6 +371,13 @@ function set_contrast(visible){
     
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy contrast fallback, store not available');
+    
+    // Safety check: only proceed if ViewManager is initialized
+    if (!vars.vm || !vars.vm.filters) {
+        console.log('[IRIS] ViewManager not initialized, skipping contrast change');
+        return;
+    }
+    
     vars.vm.filters.contrast = visible;
 
     if (vars.vm.filters.contrast){
@@ -368,6 +398,13 @@ function set_invert(visible){
     
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy invert fallback, store not available');
+    
+    // Safety check: only proceed if ViewManager is initialized
+    if (!vars.vm || !vars.vm.filters) {
+        console.log('[IRIS] ViewManager not initialized, skipping invert change');
+        return;
+    }
+    
     vars.vm.filters.invert = visible;
 
     if (vars.vm.filters.invert){
@@ -380,6 +417,14 @@ function set_invert(visible){
 }
 
 function set_tool(tool){
+    // PHASE 1: Check React store first (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setCurrentTool(tool);
+        return; // Store handles everything including DOM updates
+    }
+    
+    // FALLBACK: Legacy behavior (should rarely be used)
+    console.log('[IRIS] Using legacy set_tool fallback, store not available');
     get_object("tb_tool_"+vars.tool.type).classList.remove("checked");
     get_object("tb_tool_"+tool).classList.add("checked");
 
@@ -538,11 +583,26 @@ function update_views(){
     /*Update all views in all canvases. Always required after a zooming or
     translation action.*/
 
+    // Safety check: only proceed if ViewManager is initialized
+    if (!vars.vm || !vars.vm.render) {
+        console.log('[IRIS] update_views called but ViewManager not initialized yet');
+        return;
+    }
+
     // The coordinate system has changed:
     let one_canvas = document.getElementsByClassName("view-canvas")[0];
-    let image_coords = one_canvas.getContext("2d").getWorldCoords(
-        ...vars.cursor_canvas
-    );
+    if (!one_canvas) {
+        console.log('[IRIS] No view canvas found, skipping update_views');
+        return;
+    }
+    
+    let ctx = one_canvas.getContext("2d");
+    if (!ctx || !ctx.getWorldCoords) {
+        console.log('[IRIS] Canvas context not ready, skipping update_views');
+        return;
+    }
+    
+    let image_coords = ctx.getWorldCoords(...vars.cursor_canvas);
     vars.cursor_image = [image_coords.x, image_coords.y];
 
     // Redraw everything:
@@ -592,6 +652,13 @@ function update_drawn_pixels(){
             vars.n_user_pixels.total += 1;
         }
     }
+    
+    // Sync pixel counts to React store
+    if (window.segmentationStore) {
+        const store = window.segmentationStore.getState();
+        store.updateUserPixelCounts(vars.n_user_pixels);
+    }
+    
     get_object("drawn-pixels").innerHTML = nice_number(vars.n_user_pixels.total);
 
     var different_classes = 0;
@@ -775,7 +842,30 @@ function user_draws_on_mask(){
 
 function reload_hidden_mask(){
     /*Update hidden mask on a offscreen canvas*/
+    
+    // Safety check: only proceed if hidden mask canvas is initialized
+    if (!vars.hidden_mask) {
+        console.log('[IRIS] reload_hidden_mask called but hidden_mask not initialized yet');
+        return;
+    }
+    
+    // Safety check: ensure mask data is available
+    if (!vars.mask_shape || !vars.mask) {
+        console.log('[IRIS] reload_hidden_mask called but mask data not available yet');
+        return;
+    }
+    
+    // Safety check: ensure canvas is properly initialized
+    if (!vars.hidden_mask.getContext) {
+        console.log('[IRIS] reload_hidden_mask called but hidden_mask is not a valid canvas element');
+        return;
+    }
+    
     let ctx = vars.hidden_mask.getContext('2d');
+    if (!ctx) {
+        console.log('[IRIS] reload_hidden_mask called but canvas context not available');
+        return;
+    }
 
     // Prepare the actual mask which will be drawn:
     let [mask, colours] = get_current_mask_and_colours();
@@ -799,6 +889,14 @@ function reload_hidden_mask(){
 }
 
 function set_mask_type(type){
+    // PHASE 1: Check React store first (new source of truth)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setMaskType(type);
+        return; // Store handles everything including DOM updates
+    }
+    
+    // FALLBACK: Legacy behavior (should rarely be used)
+    console.log('[IRIS] Using legacy set_mask_type fallback, store not available');
     get_object("tb_mask_"+vars.mask_type).classList.remove("checked");
     get_object("tb_mask_"+type).classList.add("checked");
 
@@ -870,6 +968,12 @@ function render_mask(bbox=null){
         area again.
     */
 
+    // Safety check: only render if ViewManager is initialized
+    if (!vars.vm || !vars.vm.getLayers) {
+        console.log('[IRIS] render_mask called but ViewManager not initialized yet');
+        return;
+    }
+
     // Render the new mask sprite to all canvases:
     for (let layer of vars.vm.getLayers("mask")) {
         layer.render(bbox);
@@ -877,6 +981,12 @@ function render_mask(bbox=null){
 }
 
 function render_preview(){
+    // Safety check: only render if ViewManager is initialized
+    if (!vars.vm || !vars.vm.getLayers) {
+        console.log('[IRIS] render_preview called but ViewManager not initialized yet');
+        return;
+    }
+    
     for (let layer of vars.vm.getLayers("preview")) {
         layer.render();
     }
@@ -910,6 +1020,13 @@ function reset_filters(){
     
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy reset filters fallback, store not available');
+    
+    // Safety check: only proceed if ViewManager is initialized
+    if (!vars.vm || !vars.vm.filters) {
+        console.log('[IRIS] ViewManager not initialized, skipping filter reset');
+        return;
+    }
+    
     vars.vm.filters.brightness = 100;
     vars.vm.filters.saturation = 100;
     set_contrast(false);
@@ -1025,6 +1142,21 @@ async function fetch_server_update(update_config=true){
         vars.image_shape = vars.config.images.shape;
         vars.classes = vars.config.classes;
 
+        // Sync classes to React store after loading from config
+        if (window.segmentationStore && vars.classes) {
+            const store = window.segmentationStore.getState();
+            store.setClasses(vars.classes);
+            
+            // Also set the current class if it's valid
+            if (typeof vars.current_class === 'number' && vars.current_class < vars.classes.length) {
+                store.setCurrentClass(vars.current_class);
+            } else if (vars.classes.length > 0) {
+                // Default to first class if current class is invalid
+                vars.current_class = 0;
+                store.setCurrentClass(0);
+            }
+        }
+
         // The size (shape) of the mask area:
         vars.mask_shape = [
             vars.mask_area[2] - vars.mask_area[0], vars.mask_area[3] - vars.mask_area[1]
@@ -1038,7 +1170,7 @@ async function fetch_server_update(update_config=true){
     }
 
     if (vars.next_action !== null){
-        vars.next_action();
+        await vars.next_action();
         vars.next_action = null;
     }
 
@@ -1047,6 +1179,24 @@ async function fetch_server_update(update_config=true){
 }
 
 async function load_mask(){
+    // PHASE 2: Check React store first (new source of truth)
+    if (window.segmentationStore) {
+        const store = window.segmentationStore.getState();
+        try {
+            await store.loadMaskForImage(vars.image_id);
+            return; // Store handles everything
+        } catch (error) {
+            console.error('[IRIS] Store load_mask failed:', error);
+            // Fall back to legacy behavior on error
+        }
+    }
+    
+    // FALLBACK: Legacy behavior (should rarely be used)
+    console.log('[IRIS] Using legacy load_mask fallback, store not available');
+    await legacyLoadMask();
+}
+
+async function legacyLoadMask(){
     show_loader("Loading masks...");
 
     var results = await download(
@@ -1223,6 +1373,27 @@ function dialogue_before_next_image_save_and_continue(action_id){
 }
 
 function save_mask(call_afterwards=null){
+    // PHASE 2: Check React store first (new source of truth)
+    if (window.segmentationStore) {
+        const store = window.segmentationStore.getState();
+        store.saveCurrentMask().then(() => {
+            if (call_afterwards !== null) {
+                call_afterwards();
+            }
+        }).catch((error) => {
+            console.error('[IRIS] Store save_mask failed:', error);
+            // Fall back to legacy behavior on error
+            legacySaveMask(call_afterwards);
+        });
+        return;
+    }
+    
+    // FALLBACK: Legacy behavior (should rarely be used)
+    console.log('[IRIS] Using legacy save_mask fallback, store not available');
+    legacySaveMask(call_afterwards);
+}
+
+function legacySaveMask(call_afterwards=null){
     show_message('Saving mask...');
     // Do not save any masks if they have not been loaded yet
     let abort_save = false;
@@ -1273,6 +1444,24 @@ async function save_mask_finished(response, call_afterwards){
 }
 
 async function predict_mask(){
+    // PHASE 2: Check React store first (new source of truth)
+    if (window.segmentationStore) {
+        const store = window.segmentationStore.getState();
+        try {
+            await store.predictMask();
+            return; // Store handles everything
+        } catch (error) {
+            console.error('[IRIS] Store predict_mask failed:', error);
+            // Fall back to legacy behavior on error
+        }
+    }
+    
+    // FALLBACK: Legacy behavior (should rarely be used)
+    console.log('[IRIS] Using legacy predict_mask fallback, store not available');
+    await legacyPredictMask();
+}
+
+async function legacyPredictMask(){
     var user_classes = [];
     for (var i=0; i < vars.classes.length; i++){
         if (vars.n_user_pixels[i] > 10){
@@ -1280,10 +1469,8 @@ async function predict_mask(){
         }
     }
     if (user_classes.length < 2){
-        // This means there is only one class with enough training pixels:
-        show_dialogue(
-            "warning", "You need to draw at least 10 pixels for more than one class to use the AI."
-        );
+        // This validation is now handled by React store, just return
+        // The React store will show the modern error modal
         return;
     }
 

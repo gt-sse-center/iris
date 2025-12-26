@@ -7,6 +7,9 @@ import ConfirmDialog from '../ConfirmDialog';
 import ClassSelectionModal from '../ClassSelectionModal';
 import ImageInfoModal from '../ImageInfoModal';
 import ConfusionMatrixModal from '../ConfusionMatrixModal';
+import ErrorModal from '../ErrorModal';
+import { useSegmentationStore } from '../../stores/segmentationStore';
+import '../ErrorModal.css';
 
 interface SegmentationModalsProps {
   isPreferencesOpen: boolean;
@@ -49,6 +52,8 @@ const SegmentationModals: React.FC<SegmentationModalsProps> = ({
   isConfusionMatrixOpen,
   onCloseConfusionMatrix
 }) => {
+  const { errorModal, hideErrorModal } = useSegmentationStore();
+
   return (
     <>
       <PreferencesModal isOpen={isPreferencesOpen} onClose={onClosePreferences} />
@@ -83,6 +88,13 @@ const SegmentationModals: React.FC<SegmentationModalsProps> = ({
       <ConfusionMatrixModal
         isOpen={isConfusionMatrixOpen}
         onClose={onCloseConfusionMatrix}
+      />
+
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        title={errorModal.title}
+        message={errorModal.message}
+        onClose={hideErrorModal}
       />
     </>
   );
