@@ -1,7 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useSegmentationStore } from './segmentationStore';
 
-// Mock window object
+// Mock window object with proper typing
+interface MockVars {
+  vm?: {
+    filters: {
+      brightness: number;
+      saturation: number;
+      contrast: boolean;
+      invert: boolean;
+    };
+    render: ReturnType<typeof vi.fn>;
+    getLayers?: ReturnType<typeof vi.fn>;
+  };
+  tool: {
+    size: number;
+    type: string;
+  };
+}
+
 const mockWindow = {
   vars: {
     vm: {
@@ -17,7 +34,7 @@ const mockWindow = {
       size: 5,
       type: 'draw',
     },
-  },
+  } as MockVars,
   render_preview: vi.fn(),
 };
 
@@ -39,6 +56,13 @@ Object.defineProperty(window, 'dispatchEvent', {
   writable: true,
 });
 
+// Add getToolSizeFromStore to window for testing
+declare global {
+  interface Window {
+    getToolSizeFromStore?: () => number;
+  }
+}
+
 describe('segmentationStore - Filter Functions', () => {
   beforeEach(() => {
     const store = useSegmentationStore.getState();
@@ -52,7 +76,7 @@ describe('segmentationStore - Filter Functions', () => {
     // Test brightness with clamping
     store.setBrightness(150);
     expect(useSegmentationStore.getState().brightness).toBe(150);
-    expect(mockWindow.vars.vm.filters.brightness).toBe(150);
+    expect(mockWindow.vars.vm?.filters.brightness).toBe(150);
     
     store.setBrightness(1000); // Should clamp to 800
     expect(useSegmentationStore.getState().brightness).toBe(800);
@@ -62,7 +86,7 @@ describe('segmentationStore - Filter Functions', () => {
     expect(useSegmentationStore.getState().brightness).toBe(790);
     
     // Test legacy render is called
-    expect(mockWindow.vars.vm.render).toHaveBeenCalled();
+    expect(mockWindow.vars.vm?.render).toHaveBeenCalled();
   });
 
   it('handles exclusive slider expansion', () => {
@@ -91,7 +115,7 @@ describe('segmentationStore - Filter Functions', () => {
     const newState = useSegmentationStore.getState();
     expect(newState.brightness).toBe(100);
     expect(newState.contrast).toBe(false);
-    expect(mockWindow.vars.vm.filters.brightness).toBe(100);
+    expect(mockWindow.vars.vm?.filters.brightness).toBe(100);
   });
 });
 
@@ -131,7 +155,9 @@ describe('segmentationStore - Tool Size Migration', () => {
     const store = useSegmentationStore.getState();
     
     // Mock ViewManager initialization
-    mockWindow.vars.vm = { getLayers: vi.fn() };
+    if (mockWindow.vars.vm) {
+      mockWindow.vars.vm.getLayers = vi.fn();
+    }
     
     store.setToolSize(15);
     
@@ -150,7 +176,7 @@ describe('segmentationStore - Tool Size Migration', () => {
     const store = useSegmentationStore.getState();
     
     // Remove ViewManager to simulate initialization state
-    delete mockWindow.vars.vm;
+    mockWindow.vars.vm = undefined;
     
     // Should not throw error
     expect(() => store.setToolSize(20)).not.toThrow();
@@ -163,6 +189,6 @@ describe('segmentationStore - Tool Size Migration', () => {
     
     // Test global helper function
     expect(window.getToolSizeFromStore).toBeDefined();
-    expect(window.getToolSizeFromStore()).toBe(25);
+    expect(window.getToolSizeFromStore?.()).toBe(25);
   });
 });
