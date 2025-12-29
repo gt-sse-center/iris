@@ -249,6 +249,16 @@ const setCursorImageInStore = (x: number, y: number) => {
   useSegmentationStore.getState().setCursorImage([x, y]);
 };
 
+// Helper function to get current tool from React store (for legacy compatibility)
+const getCurrentToolFromStore = () => {
+  return useSegmentationStore.getState().currentTool;
+};
+
+// Helper function to set current tool in React store (for legacy compatibility)
+const setCurrentToolInStore = (tool: 'move' | 'draw' | 'eraser') => {
+  useSegmentationStore.getState().setCurrentTool(tool);
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -437,6 +447,13 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   // PHASE 1: Core Drawing Actions with Legacy Sync
   setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => {
+    // Validate tool type
+    const validTools = ['move', 'draw', 'eraser'] as const;
+    if (!validTools.includes(tool)) {
+      console.warn('[IRIS] setCurrentTool: Invalid tool type provided', tool);
+      return;
+    }
+    
     set({ currentTool: tool });
     
     // Sync with legacy vars during migration
@@ -1007,6 +1024,8 @@ if (typeof window !== 'undefined') {
   (window as any).getToolResizingModeFromStore = getToolResizingModeFromStore;
   (window as any).getCursorImageFromStore = getCursorImageFromStore;
   (window as any).setCursorImageInStore = setCursorImageInStore;
+  (window as any).getCurrentToolFromStore = getCurrentToolFromStore;
+  (window as any).setCurrentToolInStore = setCurrentToolInStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
@@ -1017,6 +1036,7 @@ if (typeof window !== 'undefined') {
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;

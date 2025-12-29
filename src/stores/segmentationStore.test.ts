@@ -67,6 +67,8 @@ declare global {
     getToolResizingModeFromStore?: () => boolean;
     getCursorImageFromStore?: () => [number, number];
     setCursorImageInStore?: (x: number, y: number) => void;
+    getCurrentToolFromStore?: () => 'move' | 'draw' | 'eraser';
+    setCurrentToolInStore?: (tool: 'move' | 'draw' | 'eraser') => void;
   }
 }
 
@@ -335,5 +337,121 @@ describe('segmentationStore - Cursor Image Migration', () => {
     store.setCursorImage([123.456, 789.012]);
     expect(useSegmentationStore.getState().cursorImage).toEqual([123.456, 789.012]);
     expect(mockWindow.vars.cursor_image).toEqual([123.456, 789.012]);
+  });
+});
+describe('segmentationStore - Tool Type Migration', () => {
+  beforeEach(() => {
+    const store = useSegmentationStore.getState();
+    // Reset to default tool
+    store.setCurrentTool('draw');
+    vi.clearAllMocks();
+  });
+
+  it('manages tool type with legacy sync', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test setting tool type
+    store.setCurrentTool('move');
+    expect(useSegmentationStore.getState().currentTool).toBe('move');
+    expect(mockWindow.vars.tool.type).toBe('move');
+    
+    // Test updating tool type
+    store.setCurrentTool('eraser');
+    expect(useSegmentationStore.getState().currentTool).toBe('eraser');
+    expect(mockWindow.vars.tool.type).toBe('eraser');
+  });
+
+  it('validates tool type input', () => {
+    const store = useSegmentationStore.getState();
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    
+    // Test invalid inputs
+    store.setCurrentTool('invalid' as any);
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setCurrentTool: Invalid tool type provided', 'invalid');
+    
+    // Should not change current tool
+    expect(useSegmentationStore.getState().currentTool).toBe('draw'); // Should remain default
+    
+    consoleSpy.mockRestore();
+  });
+
+  it('provides helper functions for legacy JavaScript access', () => {
+    const store = useSegmentationStore.getState();
+    store.setCurrentTool('move');
+    
+    // Test global helper functions
+    expect(window.getCurrentToolFromStore).toBeDefined();
+    expect(window.setCurrentToolInStore).toBeDefined();
+    expect(window.getCurrentToolFromStore?.()).toBe('move');
+    
+    // Test setting through helper
+    window.setCurrentToolInStore?.('eraser');
+    expect(useSegmentationStore.getState().currentTool).toBe('eraser');
+  });
+
+  it('handles all valid tool types', () => {
+    const store = useSegmentationStore.getState();
+    const validTools = ['move', 'draw', 'eraser'] as const;
+    
+    validTools.forEach(tool => {
+      store.setCurrentTool(tool);
+      expect(useSegmentationStore.getState().currentTool).toBe(tool);
+      expect(mockWindow.vars.tool.type).toBe(tool);
+    });
+  });
+
+  it('defaults to draw tool', () => {
+    // Fresh store should have default tool
+    const store = useSegmentationStore.getState();
+    expect(store.currentTool).toBe('draw');
+  });
+
+  it('updates DOM elements when tool changes', () => {
+    const store = useSegmentationStore.getState();
+    const mockGetObject = vi.fn();
+    const mockButton = { classList: { remove: vi.fn(), add: vi.fn() } };
+    
+    (window as any).get_object = mockGetObject;
+    mockGetObject.mockReturnValue(mockButton);
+    
+    store.setCurrentTool('move');
+    
+    // Should remove checked class from all tools
+    expect(mockGetObject).toHaveBeenCalledWith('tb_tool_move');
+    expect(mockGetObject).toHaveBeenCalledWith('tb_tool_draw');
+    expect(mockGetObject).toHaveBeenCalledWith('tb_tool_eraser');
+    
+    // Should add checked class to current tool
+    expect(mockButton.classList.add).toHaveBeenCalledWith('checked');
+  });
+
+  it('triggers preview render when tool changes', () => {
+    const store = useSegmentationStore.getState();
+    const mockRenderPreview = vi.fn();
+    
+    // Mock the render_preview function and ViewManager
+    (window as any).render_preview = mockRenderPreview;
+    (window as any).vars = {
+      ...mockWindow.vars,
+      vm: { getLayers: vi.fn() }
+    };
+    
+    store.setCurrentTool('move');
+    
+    expect(mockRenderPreview).toHaveBeenCalled();
+  });
+
+  it('handles initialization gracefully when ViewManager not ready', () => {
+    const store = useSegmentationStore.getState();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    
+    // Remove ViewManager to simulate initialization state
+    delete (window as any).vars.vm;
+    
+    expect(() => store.setCurrentTool('move')).not.toThrow();
+    expect(useSegmentationStore.getState().currentTool).toBe('move');
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setCurrentTool: Skipping render_preview, ViewManager not initialized yet');
+    
+    consoleSpy.mockRestore();
   });
 });

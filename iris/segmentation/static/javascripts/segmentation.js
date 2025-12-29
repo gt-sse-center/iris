@@ -431,14 +431,14 @@ function set_invert(visible){
 }
 
 function set_tool(tool){
-    // PHASE 1: Check React store first (new source of truth)
-    if (window.segmentationStore) {
-        window.segmentationStore.getState().setCurrentTool(tool);
+    // Update through React store (primary source)
+    if (window.setCurrentToolInStore) {
+        window.setCurrentToolInStore(tool);
         return; // Store handles everything including DOM updates
     }
     
     // FALLBACK: Legacy behavior (should rarely be used)
-    console.log('[IRIS] Using legacy set_tool fallback, store not available');
+    console.warn('[IRIS Migration] set_tool: Using legacy vars.tool.type update fallback - React store not available yet');
     get_object("tb_tool_"+vars.tool.type).classList.remove("checked");
     get_object("tb_tool_"+tool).classList.add("checked");
 
@@ -514,10 +514,20 @@ function mouse_wheel(event){
 
 function mouse_move(event){
     update_cursor_coords(this, event);
+    
+    // Get current tool from React store (primary source) with fallback to legacy vars
+    let currentTool;
+    if (window.getCurrentToolFromStore) {
+        currentTool = window.getCurrentToolFromStore();
+    } else {
+        console.warn('[IRIS Migration] mouse_move: Using legacy vars.tool.type fallback - React store not available yet');
+        currentTool = vars.tool.type; // Fallback during initialization
+    }
+    
     if (
         (event.buttons == 2
         || event.buttons == 4
-        || (event.buttons == 1 && vars.tool.type == 'move'))
+        || (event.buttons == 1 && currentTool == 'move'))
         && vars.drag_start !== null
     ){
         // Get cursor image from React store (primary source) with fallback to legacy vars
@@ -536,7 +546,7 @@ function mouse_move(event){
     }
 
     // mouse left button must be pressed to draw
-    if (event.buttons == 1 && vars.tool.type != 'move'){
+    if (event.buttons == 1 && currentTool != 'move'){
         user_draws_on_mask();
     }
 
@@ -547,13 +557,22 @@ function mouse_move(event){
 function mouse_down(event){
     update_cursor_coords(this, event);
 
-    if (event.buttons == 1 && vars.tool.type != 'move'){
+    // Get current tool from React store (primary source) with fallback to legacy vars
+    let currentTool;
+    if (window.getCurrentToolFromStore) {
+        currentTool = window.getCurrentToolFromStore();
+    } else {
+        console.warn('[IRIS Migration] mouse_down: Using legacy vars.tool.type fallback - React store not available yet');
+        currentTool = vars.tool.type; // Fallback during initialization
+    }
+
+    if (event.buttons == 1 && currentTool != 'move'){
         user_draws_on_mask();
         vars.drag_start = null;
     } else if (
         event.buttons == 2
         || event.buttons == 4
-        || (event.buttons == 1 && vars.tool.type == 'move')
+        || (event.buttons == 1 && currentTool == 'move')
     ){
         // Get cursor image from React store (primary source) with fallback to legacy vars
         let cursorImage;
@@ -574,10 +593,20 @@ function mouse_up(event){
 
 function mouse_enter(event){
     update_cursor_coords(this, event);
+    
+    // Get current tool from React store (primary source) with fallback to legacy vars
+    let currentTool;
+    if (window.getCurrentToolFromStore) {
+        currentTool = window.getCurrentToolFromStore();
+    } else {
+        console.warn('[IRIS Migration] mouse_enter: Using legacy vars.tool.type fallback - React store not available yet');
+        currentTool = vars.tool.type; // Fallback during initialization
+    }
+    
     if (
         event.buttons == 2
         || event.buttons == 4
-        || (event.buttons == 1 && vars.tool.type == 'move')
+        || (event.buttons == 1 && currentTool == 'move')
     ){
         // Get cursor image from React store (primary source) with fallback to legacy vars
         let cursorImage;
@@ -962,9 +991,18 @@ function user_draws_on_mask(){
     y_start = Math.max(0, y_start);
     y_end = Math.min(vars.mask_shape[1]-1, y_end);
 
+    // Get current tool from React store (primary source) with fallback to legacy vars
+    let currentTool;
+    if (window.getCurrentToolFromStore) {
+        currentTool = window.getCurrentToolFromStore();
+    } else {
+        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.tool.type fallback - React store not available yet');
+        currentTool = vars.tool.type; // Fallback during initialization
+    }
+
     for (let x = x_start; x < x_end; x++) {
         for (let y = y_start; y < y_end; y++) {
-            if (vars.tool.type == "eraser"){
+            if (currentTool == "eraser"){
                 vars.user_mask[y*vars.mask_shape[0]+x] = 0;
             } else {
                 vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
@@ -979,7 +1017,7 @@ function user_draws_on_mask(){
         var hidden_ctx = vars.hidden_mask.getContext('2d');
         hidden_ctx.clearRect(...drawing_area);
 
-        if (vars.tool.type != "eraser"){
+        if (currentTool != "eraser"){
             hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
             hidden_ctx.fillRect(...drawing_area);
         }
