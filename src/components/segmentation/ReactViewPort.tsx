@@ -22,6 +22,11 @@ interface ReactViewPortProps {
   imageId: string;
   imageLocation: [number, number];
   onImageLocationChange: (location: [number, number]) => void;
+  // PHASE 3A: New zoom/pan/interaction props
+  zoomLevel?: number;
+  panOffset?: { x: number; y: number };
+  isActive?: boolean;
+  onViewActivate?: () => void;
 }
 
 const ReactViewPort: React.FC<ReactViewPortProps> = ({
@@ -33,6 +38,11 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
   imageId,
   imageLocation,
   onImageLocationChange,
+  // PHASE 3A: New props with defaults
+  zoomLevel = 1.0,
+  panOffset = { x: 0, y: 0 },
+  isActive = false,
+  onViewActivate,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedViewName, setSelectedViewName] = useState(view.name);
@@ -70,7 +80,9 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
     position: 'relative',
     width: `${width}px`,
     height: `${height}px`,
-    border: '1px solid #ccc',
+    border: isActive ? '2px solid #007acc' : '1px solid #ccc',
+    backgroundColor: isActive ? 'rgba(0, 122, 204, 0.05)' : 'transparent',
+    cursor: 'pointer',
   };
   
   const layersContainerStyle: React.CSSProperties = {
@@ -96,7 +108,11 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
   };
   
   return (
-    <div ref={containerRef} style={containerStyle}>
+    <div 
+      ref={containerRef} 
+      style={containerStyle}
+      onClick={() => onViewActivate && onViewActivate()}
+    >
       {/* Layers Container */}
       <div style={layersContainerStyle}>
         {/* RGB/Image Layer */}
@@ -107,6 +123,8 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
             height={height}
             imageId={imageId}
             zIndex={1}
+            zoomLevel={zoomLevel}
+            panOffset={panOffset}
           />
         )}
         
@@ -119,6 +137,8 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
             imageLocation={imageLocation}
             onLocationChange={onImageLocationChange}
             zIndex={1}
+            zoomLevel={zoomLevel}
+            panOffset={panOffset}
           />
         )}
         
@@ -129,6 +149,8 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
             width={width}
             height={height}
             zIndex={2}
+            zoomLevel={zoomLevel}
+            panOffset={panOffset}
           />
         )}
         
@@ -139,6 +161,8 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
             width={width}
             height={height}
             zIndex={3}
+            zoomLevel={zoomLevel}
+            panOffset={panOffset}
           />
         )}
       </div>

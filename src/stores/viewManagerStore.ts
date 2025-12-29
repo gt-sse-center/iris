@@ -34,6 +34,14 @@ export interface DebugInfo {
   filters: ViewFilters;
   isInitialized: boolean;
   initializationError: string | null;
+  // PHASE 3A: Additional debug info
+  currentView: string | null;
+  zoomLevel: number;
+  panOffset: { x: number; y: number };
+  canvasDimensions: { width: number; height: number };
+  mousePosition: { x: number; y: number };
+  isMouseDown: boolean;
+  isDragging: boolean;
 }
 
 export interface ViewManagerState {
@@ -46,10 +54,24 @@ export interface ViewManagerState {
   imageAspectRatio: number;
   showControls: boolean;
   
+  // PHASE 3A: View Management State
+  currentView: string | null;
+  
+  // PHASE 3A: Zoom & Pan State
+  zoomLevel: number;
+  panOffset: { x: number; y: number };
+  zoomFactor: number;
+  
+  // PHASE 3A: Canvas State
+  canvasDimensions: { width: number; height: number };
+  mousePosition: { x: number; y: number };
+  isMouseDown: boolean;
+  isDragging: boolean;
+  
   // Filters (synced with segmentationStore)
   filters: ViewFilters;
   
-  // Canvas dimensions
+  // Canvas dimensions (legacy compatibility)
   viewWidth: number;
   viewHeight: number;
   
@@ -67,6 +89,28 @@ export interface ViewManagerState {
   setImageAspectRatio: (ratio: number) => void;
   setShowControls: (show: boolean) => void;
   toggleControls: () => void;
+  
+  // PHASE 3A: View Management Actions
+  setCurrentView: (viewName: string | null) => void;
+  switchToView: (viewName: string) => void;
+  
+  // PHASE 3A: Zoom & Pan Actions
+  setZoomLevel: (level: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  setPanOffset: (offset: { x: number; y: number }) => void;
+  panTo: (x: number, y: number) => void;
+  resetView: () => void;
+  
+  // PHASE 3A: Canvas Actions
+  updateCanvasDimensions: (dimensions: { width: number; height: number }) => void;
+  updateMousePosition: (position: { x: number; y: number }) => void;
+  setMouseDown: (isDown: boolean) => void;
+  setDragging: (isDragging: boolean) => void;
+  
+  // PHASE 3A: Coordinate Transformation
+  screenToImageCoordinates: (screenX: number, screenY: number) => { x: number; y: number };
+  imageToScreenCoordinates: (imageX: number, imageY: number) => { x: number; y: number };
   
   // View management
   addView: (name: string, position?: number) => void;
@@ -99,6 +143,20 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   imageLocation: [0, 0],
   imageAspectRatio: 1,
   showControls: false,
+  
+  // PHASE 3A: View Management State
+  currentView: null,
+  
+  // PHASE 3A: Zoom & Pan State
+  zoomLevel: 1.0,
+  panOffset: { x: 0, y: 0 },
+  zoomFactor: 1.0,
+  
+  // PHASE 3A: Canvas State
+  canvasDimensions: { width: 400, height: 400 },
+  mousePosition: { x: 0, y: 0 },
+  isMouseDown: false,
+  isDragging: false,
   
   filters: {
     contrast: false,
@@ -141,6 +199,170 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   toggleControls: () => {
     const { showControls } = get();
     set({ showControls: !showControls });
+  },
+  
+  // PHASE 3A: View Management Actions
+  setCurrentView: (currentView) => {
+    set({ currentView });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.vm) {
+      w.vars.vm.current_view = currentView;
+    }
+  },
+  
+  switchToView: (viewName) => {
+    const { views } = get();
+    if (views[viewName]) {
+      get().setCurrentView(viewName);
+      
+      // Trigger legacy view update if available
+      const w = window as any;
+      if (w.set_view) {
+        w.set_view(viewName);
+      }
+    } else {
+      console.warn(`[ViewManager] View '${viewName}' not found`);
+    }
+  },
+  
+  // PHASE 3A: Zoom & Pan Actions
+  setZoomLevel: (zoomLevel) => {
+    const clampedZoom = Math.max(0.1, Math.min(10.0, zoomLevel));
+    set({ zoomLevel: clampedZoom, zoomFactor: clampedZoom });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.vm) {
+      w.vars.vm.zoom_level = clampedZoom;
+      w.vars.vm.zoom_factor = clampedZoom;
+    }
+    
+    // Trigger legacy zoom update if available
+    if (w.update_zoom) {
+      w.update_zoom(clampedZoom);
+    }
+  },
+  
+  zoomIn: () => {
+    const { zoomLevel } = get();
+    const newZoom = Math.min(10.0, zoomLevel * 1.2);
+    get().setZoomLevel(newZoom);
+  },
+  
+  zoomOut: () => {
+    const { zoomLevel } = get();
+    const newZoom = Math.max(0.1, zoomLevel / 1.2);
+    get().setZoomLevel(newZoom);
+  },
+  
+  setPanOffset: (panOffset) => {
+    set({ panOffset });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.vm) {
+      w.vars.vm.pan_offset = panOffset;
+    }
+    
+    // Trigger legacy pan update if available
+    if (w.update_pan) {
+      w.update_pan(panOffset.x, panOffset.y);
+    }
+  },
+  
+  panTo: (x, y) => {
+    get().setPanOffset({ x, y });
+  },
+  
+  resetView: () => {
+    set({ 
+      zoomLevel: 1.0, 
+      zoomFactor: 1.0, 
+      panOffset: { x: 0, y: 0 } 
+    });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.vm) {
+      w.vars.vm.zoom_level = 1.0;
+      w.vars.vm.zoom_factor = 1.0;
+      w.vars.vm.pan_offset = { x: 0, y: 0 };
+    }
+    
+    // Trigger legacy reset if available
+    if (w.reset_view) {
+      w.reset_view();
+    }
+  },
+  
+  // PHASE 3A: Canvas Actions
+  updateCanvasDimensions: (canvasDimensions) => {
+    set({ 
+      canvasDimensions,
+      viewWidth: canvasDimensions.width,
+      viewHeight: canvasDimensions.height
+    });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.canvas_width = canvasDimensions.width;
+      w.vars.canvas_height = canvasDimensions.height;
+    }
+  },
+  
+  updateMousePosition: (mousePosition) => {
+    set({ mousePosition });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mouse_x = mousePosition.x;
+      w.vars.mouse_y = mousePosition.y;
+    }
+  },
+  
+  setMouseDown: (isMouseDown) => {
+    set({ isMouseDown });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mouse_down = isMouseDown;
+    }
+  },
+  
+  setDragging: (isDragging) => {
+    set({ isDragging });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.dragging = isDragging;
+    }
+  },
+  
+  // PHASE 3A: Coordinate Transformation
+  screenToImageCoordinates: (screenX, screenY) => {
+    const { zoomLevel, panOffset, canvasDimensions } = get();
+    
+    // Transform screen coordinates to image coordinates
+    const imageX = (screenX - canvasDimensions.width / 2 - panOffset.x) / zoomLevel;
+    const imageY = (screenY - canvasDimensions.height / 2 - panOffset.y) / zoomLevel;
+    
+    return { x: imageX, y: imageY };
+  },
+  
+  imageToScreenCoordinates: (imageX, imageY) => {
+    const { zoomLevel, panOffset, canvasDimensions } = get();
+    
+    // Transform image coordinates to screen coordinates
+    const screenX = imageX * zoomLevel + canvasDimensions.width / 2 + panOffset.x;
+    const screenY = imageY * zoomLevel + canvasDimensions.height / 2 + panOffset.y;
+    
+    return { x: screenX, y: screenY };
   },
   
   // View management
@@ -268,6 +490,14 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       filters: state.filters,
       isInitialized: state.isInitialized,
       initializationError: state.initializationError,
+      // PHASE 3A: Additional debug info
+      currentView: state.currentView,
+      zoomLevel: state.zoomLevel,
+      panOffset: state.panOffset,
+      canvasDimensions: state.canvasDimensions,
+      mousePosition: state.mousePosition,
+      isMouseDown: state.isMouseDown,
+      isDragging: state.isDragging,
     };
   },
   
@@ -357,6 +587,41 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
         store.setFilters(w.vars.vm.filters);
       }
       
+      // PHASE 3A: Initialize zoom/pan/canvas state from legacy vars
+      if (w.vars.vm) {
+        if (typeof w.vars.vm.zoom_level === 'number') {
+          console.log('🔧 ViewManager: Setting zoom level:', w.vars.vm.zoom_level);
+          store.setZoomLevel(w.vars.vm.zoom_level);
+        }
+        
+        if (w.vars.vm.pan_offset) {
+          console.log('🔧 ViewManager: Setting pan offset:', w.vars.vm.pan_offset);
+          store.setPanOffset(w.vars.vm.pan_offset);
+        }
+        
+        if (w.vars.vm.current_view) {
+          console.log('🔧 ViewManager: Setting current view:', w.vars.vm.current_view);
+          store.setCurrentView(w.vars.vm.current_view);
+        }
+      }
+      
+      // Initialize canvas dimensions from legacy vars
+      if (w.vars.canvas_width && w.vars.canvas_height) {
+        console.log('🔧 ViewManager: Setting canvas dimensions:', w.vars.canvas_width, 'x', w.vars.canvas_height);
+        store.updateCanvasDimensions({
+          width: w.vars.canvas_width,
+          height: w.vars.canvas_height
+        });
+      }
+      
+      // Initialize mouse position from legacy vars
+      if (typeof w.vars.mouse_x === 'number' && typeof w.vars.mouse_y === 'number') {
+        store.updateMousePosition({
+          x: w.vars.mouse_x,
+          y: w.vars.mouse_y
+        });
+      }
+      
       set({ isInitialized: true });
       console.log('✅ ViewManager: Initialization complete');
     } catch (error) {
@@ -387,15 +652,46 @@ if (typeof window !== 'undefined') {
   (window as any).viewManagerStore = useViewManagerStore;
   (window as any).initializeViewManagerFromLegacy = initializeViewManagerFromLegacy;
   
+  // PHASE 3A: Legacy bridge functions for zoom/pan/view operations
+  (window as any).reactViewManager = {
+    // View management
+    setView: (viewName: string) => useViewManagerStore.getState().switchToView(viewName),
+    getCurrentView: () => useViewManagerStore.getState().currentView,
+    
+    // Zoom operations
+    zoomIn: () => useViewManagerStore.getState().zoomIn(),
+    zoomOut: () => useViewManagerStore.getState().zoomOut(),
+    setZoom: (level: number) => useViewManagerStore.getState().setZoomLevel(level),
+    getZoom: () => useViewManagerStore.getState().zoomLevel,
+    
+    // Pan operations
+    panTo: (x: number, y: number) => useViewManagerStore.getState().panTo(x, y),
+    getPanOffset: () => useViewManagerStore.getState().panOffset,
+    
+    // Canvas operations
+    updateCanvasSize: (width: number, height: number) => 
+      useViewManagerStore.getState().updateCanvasDimensions({ width, height }),
+    getCanvasSize: () => useViewManagerStore.getState().canvasDimensions,
+    
+    // Mouse operations
+    updateMouse: (x: number, y: number) => 
+      useViewManagerStore.getState().updateMousePosition({ x, y }),
+    setMouseDown: (isDown: boolean) => useViewManagerStore.getState().setMouseDown(isDown),
+    
+    // Coordinate transformation
+    screenToImage: (x: number, y: number) => 
+      useViewManagerStore.getState().screenToImageCoordinates(x, y),
+    imageToScreen: (x: number, y: number) => 
+      useViewManagerStore.getState().imageToScreenCoordinates(x, y),
+    
+    // Reset operations
+    resetView: () => useViewManagerStore.getState().resetView(),
+  };
+  
   // Initialize debug mode from legacy vars
   const w = window as any;
   if (w.vars?.debug_mode) {
     useViewManagerStore.getState().setDebugMode(true);
-  }
-  
-  // Expose render function to legacy code during migration
-  if (!w.reactViewManager) {
-    w.reactViewManager = {};
   }
   
   // Auto-initialize when legacy vars become available

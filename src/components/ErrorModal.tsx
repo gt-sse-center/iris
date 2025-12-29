@@ -13,8 +13,6 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   message, 
   onClose 
 }) => {
-  console.log('[IRIS] ErrorModal render:', { isOpen, title, message });
-  
   if (!isOpen) return null;
 
   return (

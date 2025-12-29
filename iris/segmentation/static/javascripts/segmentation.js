@@ -515,6 +515,10 @@ function mouse_enter(event){
 }
 
 function zoom(delta){
+    // PHASE 3A: For now, use legacy zoom until React components fully handle canvas transformations
+    // TODO: Enable React zoom when canvas transformation is implemented in React components
+    console.log('[IRIS] Using legacy zoom (React canvas transformations not yet implemented)');
+    
     let factor = Math.pow(1.1, delta);
 
     for (let canvas of document.getElementsByClassName('view-canvas')){
@@ -525,6 +529,14 @@ function zoom(delta){
         ctx.translate(-vars.cursor_image[0], -vars.cursor_image[1]);
 
         constrain_view(ctx, factor, 0, 0);
+    }
+    update_views();
+    
+    // Also update React store for consistency
+    if (window.reactViewManager && window.reactViewManager.setZoom) {
+        const currentZoom = window.reactViewManager.getZoom();
+        const newZoom = currentZoom * factor;
+        window.reactViewManager.setZoom(newZoom);
     }
     update_views();
 }
@@ -583,6 +595,9 @@ function update_views(){
     /*Update all views in all canvases. Always required after a zooming or
     translation action.*/
 
+    // PHASE 3A: For now, use legacy update until React components fully handle canvas transformations
+    console.log('[IRIS] Using legacy update_views (React canvas transformations not yet implemented)');
+
     // Safety check: only proceed if ViewManager is initialized
     if (!vars.vm || !vars.vm.render) {
         console.log('[IRIS] update_views called but ViewManager not initialized yet');
@@ -610,6 +625,9 @@ function update_views(){
 }
 
 function reset_views(){
+    // PHASE 3A: For now, use legacy reset until React components fully handle canvas transformations
+    console.log('[IRIS] Using legacy reset_views (React canvas transformations not yet implemented)');
+    
     for (let canvas of document.getElementsByClassName('view-canvas')){
         let ctx = canvas.getContext('2d');
         ctx.setTransform(
@@ -618,6 +636,11 @@ function reset_views(){
         );
     }
     update_views();
+    
+    // Also update React store for consistency
+    if (window.reactViewManager && window.reactViewManager.resetView) {
+        window.reactViewManager.resetView();
+    }
 }
 
 function update_cursor_coords(obj, event){
@@ -718,6 +741,15 @@ function undo(){
     update_drawn_pixels();
     reload_hidden_mask();
     render_mask();
+
+    // Notify React store that mask has changed
+    if (window.segmentationStore) {
+        const store = window.segmentationStore.getState();
+        store.setMaskChanged(true);
+        store.setShowDialogueBeforeNextImage(true);
+    } else {
+        vars.show_dialogue_before_next_image = true;
+    }
 }
 
 function redo(){
@@ -737,6 +769,15 @@ function redo(){
     update_drawn_pixels();
     reload_hidden_mask();
     render_mask();
+
+    // Notify React store that mask has changed
+    if (window.segmentationStore) {
+        const store = window.segmentationStore.getState();
+        store.setMaskChanged(true);
+        store.setShowDialogueBeforeNextImage(true);
+    } else {
+        vars.show_dialogue_before_next_image = true;
+    }
 }
 
 function user_draws_on_mask(){
@@ -834,7 +875,10 @@ function user_draws_on_mask(){
 
     // Set flag to show confirmation dialog before navigating away
     if (window.segmentationStore) {
-        window.segmentationStore.getState().setShowDialogueBeforeNextImage(true);
+        const store = window.segmentationStore.getState();
+        store.setShowDialogueBeforeNextImage(true);
+        // IMPORTANT: Mark mask as changed so it gets saved properly
+        store.setMaskChanged(true);
     } else {
         vars.show_dialogue_before_next_image = true;
     }
@@ -1005,7 +1049,10 @@ function reset_mask(){
 
     // Set flag to show confirmation dialog before navigating away
     if (window.segmentationStore) {
-        window.segmentationStore.getState().setShowDialogueBeforeNextImage(true);
+        const store = window.segmentationStore.getState();
+        store.setShowDialogueBeforeNextImage(true);
+        // IMPORTANT: Mark mask as changed so it gets saved properly
+        store.setMaskChanged(true);
     } else {
         vars.show_dialogue_before_next_image = true;
     }
@@ -1397,15 +1444,15 @@ function legacySaveMask(call_afterwards=null){
     show_message('Saving mask...');
     // Do not save any masks if they have not been loaded yet
     let abort_save = false;
-    if (vars.mask === null
-        || vars.user_mask === null
-        || vars.n_user_pixels.total == 0
-    ){
+    if (vars.mask === null || vars.user_mask === null){
         if(call_afterwards !== null){
           call_afterwards();
         }
         return;
     }
+
+    // Allow saving even when n_user_pixels.total == 0 (empty masks should be saved)
+    // This ensures that cleared/reset masks are properly saved to the server
 
     // Combine both masks together to one byte array only with padding magic
     // numbers 254 to make sure the transaction was done successfully
