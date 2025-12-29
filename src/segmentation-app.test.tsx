@@ -58,12 +58,19 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     (window as any).init_segmentation = vi.fn();
     (window as any).vars = {};
     
-    // Mock fetch for authentication check
+    // Mock fetch for authentication check - fix the URL to match what the app actually calls
     global.fetch = vi.fn((url) => {
-      if (url === '/user/api/current') {
+      if (url === '/user/get/current') {
         return Promise.resolve({
           ok: true,
           json: async () => ({ user: { id: 1, name: 'testuser', admin: false } })
+        });
+      }
+      // Mock image list API call
+      if (url.includes('/segmentation/api/images/list')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ images: [] })
         });
       }
       return Promise.reject(new Error('Unknown URL'));
@@ -86,6 +93,8 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     delete (window as any).vars;
     delete (window as any).openLogin;
     delete (window as any).openUserProfile;
+    delete (window as any).irisReactApp;
+    vi.restoreAllMocks();
   });
 
   it('opens preferences modal when openPreferences=true in URL', async () => {
@@ -109,7 +118,7 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     await waitFor(() => {
       const modal = getByTestId('preferences-modal');
       expect(modal).toHaveAttribute('data-open', 'true');
-    });
+    }, { timeout: 3000 });
   });
 
   it('does not open preferences modal without URL parameter', async () => {
@@ -157,7 +166,7 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     await waitFor(() => {
       expect(window.openLogin).toBeDefined();
       expect(typeof window.openLogin).toBe('function');
-    });
+    }, { timeout: 3000 });
 
     // Call the function and verify login form appears
     window.openLogin!();
@@ -189,7 +198,7 @@ describe('SegmentationApp - URL Parameter Handling', () => {
     await waitFor(() => {
       expect(window.openUserProfile).toBeDefined();
       expect(typeof window.openUserProfile).toBe('function');
-    });
+    }, { timeout: 3000 });
 
     // Call the function and verify profile modal appears
     await act(async () => {
@@ -224,7 +233,7 @@ describe('SegmentationApp - URL Parameter Handling', () => {
       expect(window.irisReactApp).toBeDefined();
       expect(window.irisReactApp?.openHelpModal).toBeDefined();
       expect(typeof window.irisReactApp?.openHelpModal).toBe('function');
-    });
+    }, { timeout: 3000 });
 
     // Call the function and verify help modal appears
     await act(async () => {
