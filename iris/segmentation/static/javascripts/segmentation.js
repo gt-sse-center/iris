@@ -435,26 +435,53 @@ function set_tool(tool){
 
 function get_tool_offset(){
     /*Since we have draw with a tool, this returns the offset of the tool sprite*/
-    if (vars.tool.size == 1){
+    // Get tool size from React store (primary source) with fallback to legacy vars
+    let toolSize;
+    if (window.getToolSizeFromStore) {
+        toolSize = window.getToolSizeFromStore();
+    } else {
+        console.warn('[IRIS Migration] get_tool_offset: Using legacy vars.tool.size fallback - React store not available yet');
+        toolSize = vars.tool.size; // Fallback during initialization
+    }
+    
+    if (toolSize == 1){
         return {'x': 0, 'y': 0}
     }
 
     return {
-        'x': round_number(-vars.tool.size/2),
-        'y': round_number(-vars.tool.size/2),
+        'x': round_number(-toolSize/2),
+        'y': round_number(-toolSize/2),
     };
 }
 
 function mouse_wheel(event){
     var delta = Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
     if (vars.tool.resizing_mode){
-        // Change size of tool:
-        vars.tool.size += delta * 0.5 * vars.tool.size;
-        vars.tool.size = round_number(Math.max(
+        // Change size of tool using React store (primary source)
+        let currentSize;
+        if (window.getToolSizeFromStore) {
+            currentSize = window.getToolSizeFromStore();
+        } else {
+            console.warn('[IRIS Migration] mouse_wheel: Using legacy vars.tool.size fallback - React store not available yet');
+            currentSize = vars.tool.size; // Fallback during initialization
+        }
+        
+        let newSize = currentSize + delta * 0.5 * currentSize;
+        newSize = round_number(Math.max(
             1, Math.min(
-                vars.tool.size, Math.max(...vars.mask_shape)
+                newSize, Math.max(...vars.mask_shape)
             )
         ));
+        
+        // Update through React store (primary source)
+        if (window.segmentationStore) {
+            window.segmentationStore.getState().setToolSize(newSize);
+        } else {
+            // Fallback to legacy vars during initialization
+            console.warn('[IRIS Migration] mouse_wheel: Using legacy vars.tool.size update fallback - React store not available yet');
+            vars.tool.size = newSize;
+        }
+        
         render_preview();
     } else {
         zoom(delta);
@@ -811,10 +838,19 @@ function user_draws_on_mask(){
     // canvas coordinates.
 
     // Get the bounding box mask coordinates:
+    // Get tool size from React store (primary source) with fallback to legacy vars
+    let toolSize;
+    if (window.getToolSizeFromStore) {
+        toolSize = window.getToolSizeFromStore();
+    } else {
+        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.tool.size fallback - React store not available yet');
+        toolSize = vars.tool.size; // Fallback during initialization
+    }
+    
     let x_start = vars.cursor_image[0] + offset.x,// - vars.mask_area[0],
-        x_end = x_start + vars.tool.size;
+        x_end = x_start + toolSize;
     let y_start = vars.cursor_image[1] + offset.y,// - vars.mask_area[1],
-        y_end = y_start + vars.tool.size;
+        y_end = y_start + toolSize;
 
     // Make sure we do not draw outside of the canvas. Hence, here we have the
     // canvas boundaries in image coordinates:

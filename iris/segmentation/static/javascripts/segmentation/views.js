@@ -79,10 +79,20 @@ class PreviewLayer extends CanvasLayer{
         let ctx = this.container.getContext("2d");
         ctx.clearRect(0, 0, ...vars.image_shape);
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
+        
+        // Get tool size from React store (primary source) with fallback to legacy vars
+        let toolSize;
+        if (window.getToolSizeFromStore) {
+            toolSize = window.getToolSizeFromStore();
+        } else {
+            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.size fallback - React store not available yet');
+            toolSize = vars.tool.size; // Fallback during initialization
+        }
+        
         ctx.fillRect(
             vars.cursor_image[0]+offset.x,
             vars.cursor_image[1]+offset.y,
-            vars.tool.size, vars.tool.size
+            toolSize, toolSize
         );
 
         // Draw the boundaries of the masking area

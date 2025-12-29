@@ -222,6 +222,11 @@ interface SegmentationState {
   getDebugInfo: () => SegmentationDebugInfo;
 }
 
+// Helper function to get tool size from React store (for legacy compatibility)
+const getToolSizeFromStore = () => {
+  return useSegmentationStore.getState().toolSize;
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -419,10 +424,10 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setToolSize: (size: number) => {
-    const clampedSize = Math.max(1, Math.min(size, 100)); // Reasonable bounds
+    const clampedSize = Math.max(1, Math.min(size, 100)); // Reasonable bounds: 1-100 pixels
     set({ toolSize: clampedSize });
     
-    // Sync with legacy vars during migration
+    // Sync with legacy vars during migration for backward compatibility
     const w = window as any;
     if (w.vars?.tool) {
       w.vars.tool.size = clampedSize;
@@ -434,6 +439,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     } else {
       console.log('[IRIS] setToolSize: Skipping render_preview, ViewManager not initialized yet');
     }
+    
+    // Trigger React preview layer re-render
+    window.dispatchEvent(new CustomEvent('react-preview-render'));
   },
 
   setCurrentClass: (classId: number) => {
@@ -937,11 +945,15 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  (window as any).getToolSizeFromStore = getToolSizeFromStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
   (window as any).initializeCoreDrawingStateFromLegacy = initializeCoreDrawingStateFromLegacy;
   (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
+  
+  // Migration tracking - only log when store is available (no need to spam console)
+  console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;

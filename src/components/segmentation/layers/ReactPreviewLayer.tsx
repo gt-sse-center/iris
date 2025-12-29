@@ -8,6 +8,7 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import ReactBaseLayer, { ReactBaseLayerProps } from './ReactBaseLayer';
 import { createCoordinateTransform, updateCursorCoords, addTrackTransforms, CoordinateTransform } from '../../../utils/coordinateTransform';
+import { useSegmentationStore } from '../../../stores/segmentationStore';
 
 interface ReactPreviewLayerProps extends Omit<ReactBaseLayerProps, 'children'> {
   // Additional props specific to preview layer
@@ -28,6 +29,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [transform, setTransform] = useState<CoordinateTransform | null>(null);
   
+  // Get tool size from React store (primary source)
+  const toolSize = useSegmentationStore((state) => state.toolSize);
+  
   // Render preview function
   const renderPreview = useCallback(() => {
     const canvas = canvasRef.current;
@@ -38,7 +42,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     
     // Get legacy vars for cursor and tool data
     const w = window as any;
-    if (!w.vars?.cursor_image || !w.vars?.tool || !w.vars?.image_shape) {
+    if (!w.vars?.cursor_image || !w.vars?.image_shape) {
       return;
     }
     
@@ -61,9 +65,15 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     const cursorX = win.vars.cursor_image[0] + offset.x;
     const cursorY = win.vars.cursor_image[1] + offset.y;
     
-    // Tool size should also be in image coordinates - the canvas transform will scale it
-    const toolWidth = win.vars.tool.size;
-    const toolHeight = win.vars.tool.size;
+    // CRITICAL FIX: The tool size needs to be in image coordinates, not screen coordinates
+    // Since we apply a canvas transformation, we need to account for the scaling
+    // Legacy uses: canvas.width / vars.image_shape[0] for both X and Y scaling
+    const scale = canvas.width / win.vars.image_shape[0];
+    
+    // The tool size should be consistent in screen pixels, so we need to inverse-scale it
+    // to account for the canvas transformation
+    const toolWidth = toolSize / scale;
+    const toolHeight = toolSize / scale;
     
     // Draw tool cursor preview
     ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
@@ -92,7 +102,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.rect(maskX, maskY, maskWidth, maskHeight);
       ctx.stroke();
     }
-  }, []);
+  }, [toolSize]); // Re-render when toolSize changes
   
   // Handle canvas size changes and coordinate transformation
   useEffect(() => {
@@ -128,11 +138,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
           addTrackTransforms(ctx);
           
           // CRITICAL: Set the initial transformation matrix to match legacy system exactly
-          // image_shape[0] = height, image_shape[1] = width
-          // We need to scale canvas dimensions to image dimensions
-          const scaleX = canvas.width / w.vars.image_shape[1];  // canvas width / image width
-          const scaleY = canvas.height / w.vars.image_shape[0]; // canvas height / image height
-          ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          // Legacy uses: ctx.canvas.width / vars.image_shape[0] for BOTH X and Y scaling
+          // This maintains square pixels and matches the legacy coordinate system
+          const scale = canvas.width / w.vars.image_shape[0]; // Use image height for both dimensions
+          ctx.setTransform(scale, 0, 0, scale, 0, 0);
         }
       }
       
