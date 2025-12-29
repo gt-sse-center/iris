@@ -18,6 +18,7 @@ interface MockVars {
     type: string;
     resizing_mode: boolean;
   };
+  cursor_image: [number, number];
 }
 
 const mockWindow = {
@@ -36,6 +37,7 @@ const mockWindow = {
       type: 'draw',
       resizing_mode: false,
     },
+    cursor_image: [0, 0],
   } as MockVars,
   render_preview: vi.fn(),
 };
@@ -63,6 +65,8 @@ declare global {
   interface Window {
     getToolSizeFromStore?: () => number;
     getToolResizingModeFromStore?: () => boolean;
+    getCursorImageFromStore?: () => [number, number];
+    setCursorImageInStore?: (x: number, y: number) => void;
   }
 }
 
@@ -243,5 +247,93 @@ describe('segmentationStore - Tool Resizing Mode Migration', () => {
     
     // Should default to false (zoom mode, not resize mode)
     expect(store.toolResizingMode).toBe(false);
+  });
+});
+
+describe('segmentationStore - Cursor Image Migration', () => {
+  beforeEach(() => {
+    const store = useSegmentationStore.getState();
+    // Reset to default cursor position
+    store.setCursorImage([0, 0]);
+    vi.clearAllMocks();
+  });
+
+  it('manages cursor image coordinates with legacy sync', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test setting cursor coordinates
+    store.setCursorImage([100, 200]);
+    expect(useSegmentationStore.getState().cursorImage).toEqual([100, 200]);
+    expect(mockWindow.vars.cursor_image).toEqual([100, 200]);
+    
+    // Test updating coordinates
+    store.setCursorImage([50, 75]);
+    expect(useSegmentationStore.getState().cursorImage).toEqual([50, 75]);
+    expect(mockWindow.vars.cursor_image).toEqual([50, 75]);
+  });
+
+  it('validates coordinate input', () => {
+    const store = useSegmentationStore.getState();
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    
+    // Test invalid inputs
+    store.setCursorImage([100] as any); // Wrong length
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setCursorImage: Invalid coordinates provided', [100]);
+    
+    store.setCursorImage(['100', '200'] as any); // Wrong type
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setCursorImage: Invalid coordinates provided', ['100', '200']);
+    
+    store.setCursorImage(null as any); // Null input
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setCursorImage: Invalid coordinates provided', null);
+    
+    consoleSpy.mockRestore();
+  });
+
+  it('provides helper functions for legacy JavaScript access', () => {
+    const store = useSegmentationStore.getState();
+    store.setCursorImage([150, 250]);
+    
+    // Test global helper functions
+    expect(window.getCursorImageFromStore).toBeDefined();
+    expect(window.setCursorImageInStore).toBeDefined();
+    expect(window.getCursorImageFromStore?.()).toEqual([150, 250]);
+    
+    // Test setting through helper
+    window.setCursorImageInStore?.(300, 400);
+    expect(useSegmentationStore.getState().cursorImage).toEqual([300, 400]);
+  });
+
+  it('handles coordinate array immutability', () => {
+    const store = useSegmentationStore.getState();
+    const coords = [100, 200] as [number, number];
+    store.setCursorImage(coords);
+    
+    // Modifying original array shouldn't affect store
+    coords[0] = 999;
+    expect(useSegmentationStore.getState().cursorImage).toEqual([100, 200]);
+  });
+
+  it('defaults to [0, 0] coordinates', () => {
+    // Fresh store should have default cursor position
+    const store = useSegmentationStore.getState();
+    expect(store.cursorImage).toEqual([0, 0]);
+  });
+
+  it('handles negative coordinates correctly', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test negative coordinates (valid for image coordinates)
+    store.setCursorImage([-50, -100]);
+    expect(useSegmentationStore.getState().cursorImage).toEqual([-50, -100]);
+    expect(mockWindow.vars.cursor_image).toEqual([-50, -100]);
+  });
+
+  it('handles decimal coordinates correctly', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test decimal coordinates (valid for image coordinates)
+    store.setCursorImage([123.456, 789.012]);
+    expect(useSegmentationStore.getState().cursorImage).toEqual([123.456, 789.012]);
+    expect(mockWindow.vars.cursor_image).toEqual([123.456, 789.012]);
   });
 });

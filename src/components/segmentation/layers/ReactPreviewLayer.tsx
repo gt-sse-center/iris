@@ -32,6 +32,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
   // Get tool size from React store (primary source)
   const toolSize = useSegmentationStore((state) => state.toolSize);
   
+  // Get cursor image from React store (primary source)
+  const cursorImage = useSegmentationStore((state) => state.cursorImage);
+  
   // Render preview function
   const renderPreview = useCallback(() => {
     const canvas = canvasRef.current;
@@ -62,8 +65,8 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     
     // The cursor coordinates are already in image space, and the canvas transformation
     // will be applied automatically when we draw. We just need to draw at the image coordinates.
-    const cursorX = win.vars.cursor_image[0] + offset.x;
-    const cursorY = win.vars.cursor_image[1] + offset.y;
+    const cursorX = cursorImage[0] + offset.x;
+    const cursorY = cursorImage[1] + offset.y;
     
     // CRITICAL FIX: The tool size needs to be in image coordinates, not screen coordinates
     // Since we apply a canvas transformation, we need to account for the scaling
@@ -102,7 +105,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.rect(maskX, maskY, maskWidth, maskHeight);
       ctx.stroke();
     }
-  }, [toolSize]); // Re-render when toolSize changes
+  }, [toolSize, cursorImage]); // Re-render when toolSize or cursorImage changes
   
   // Handle canvas size changes and coordinate transformation
   useEffect(() => {

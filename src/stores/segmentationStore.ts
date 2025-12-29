@@ -148,6 +148,10 @@ interface SegmentationState {
   // Debug state
   debugMode: boolean;
 
+  // Cursor Image (replaces vars.cursor_image)
+  cursorImage: [number, number];
+  setCursorImage: (coords: [number, number]) => void;
+
   // Image Navigation
   images: ImageInfo[];
   currentImageId: string | null;
@@ -235,6 +239,16 @@ const getToolResizingModeFromStore = () => {
   return useSegmentationStore.getState().toolResizingMode;
 };
 
+// Helper function to get cursor image from React store (for legacy compatibility)
+const getCursorImageFromStore = () => {
+  return useSegmentationStore.getState().cursorImage;
+};
+
+// Helper function to set cursor image in React store (for legacy compatibility)
+const setCursorImageInStore = (x: number, y: number) => {
+  useSegmentationStore.getState().setCursorImage([x, y]);
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -301,6 +315,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   
   // Debug state
   debugMode: false,
+
+  // Cursor Image State (replaces vars.cursor_image)
+  cursorImage: [0, 0], // Default cursor position
 
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
@@ -398,6 +415,24 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setExpandedFilterSlider: (sliderId: string | null) => {
     set({ expandedFilterSlider: sliderId });
+  },
+
+  setCursorImage: (coords: [number, number]) => {
+    // Validate coordinates are numbers
+    if (!Array.isArray(coords) || coords.length !== 2 || typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
+      console.warn('[IRIS] setCursorImage: Invalid coordinates provided', coords);
+      return;
+    }
+    
+    // Create a copy to ensure immutability
+    const coordsCopy: [number, number] = [coords[0], coords[1]];
+    set({ cursorImage: coordsCopy });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars) {
+      w.vars.cursor_image = coordsCopy;
+    }
   },
 
   // PHASE 1: Core Drawing Actions with Legacy Sync
@@ -970,6 +1005,8 @@ if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
   (window as any).getToolSizeFromStore = getToolSizeFromStore;
   (window as any).getToolResizingModeFromStore = getToolResizingModeFromStore;
+  (window as any).getCursorImageFromStore = getCursorImageFromStore;
+  (window as any).setCursorImageInStore = setCursorImageInStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
@@ -979,6 +1016,7 @@ if (typeof window !== 'undefined') {
   // Migration tracking - only log when store is available (no need to spam console)
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;
