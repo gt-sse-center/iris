@@ -19,6 +19,7 @@ interface MockVars {
     resizing_mode: boolean;
   };
   cursor_image: [number, number];
+  drag_start: [number, number] | null;
 }
 
 const mockWindow = {
@@ -38,6 +39,7 @@ const mockWindow = {
       resizing_mode: false,
     },
     cursor_image: [0, 0],
+    drag_start: null,
   } as MockVars,
   render_preview: vi.fn(),
 };
@@ -69,6 +71,8 @@ declare global {
     setCursorImageInStore?: (x: number, y: number) => void;
     getCurrentToolFromStore?: () => 'move' | 'draw' | 'eraser';
     setCurrentToolInStore?: (tool: 'move' | 'draw' | 'eraser') => void;
+    getDragStartFromStore?: () => [number, number] | null;
+    setDragStartInStore?: (coords: [number, number] | null) => void;
   }
 }
 
@@ -453,5 +457,127 @@ describe('segmentationStore - Tool Type Migration', () => {
     expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setCurrentTool: Skipping render_preview, ViewManager not initialized yet');
     
     consoleSpy.mockRestore();
+  });
+});
+describe('segmentationStore - Drag Start Migration', () => {
+  beforeEach(() => {
+    const store = useSegmentationStore.getState();
+    // Reset to default drag state
+    store.setDragStart(null);
+    
+    // Reset mock window vars
+    mockWindow.vars.drag_start = null;
+    
+    vi.clearAllMocks();
+  });
+
+  it('manages drag start coordinates with legacy sync', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test setting drag start coordinates
+    store.setDragStart([100, 200]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([100, 200]);
+    expect((window as any).vars.drag_start).toEqual([100, 200]);
+    
+    // Test updating coordinates
+    store.setDragStart([50, 75]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([50, 75]);
+    expect((window as any).vars.drag_start).toEqual([50, 75]);
+    
+    // Test clearing drag start
+    store.setDragStart(null);
+    expect(useSegmentationStore.getState().dragStart).toBe(null);
+    expect((window as any).vars.drag_start).toBe(null);
+  });
+
+  it('validates coordinate input', () => {
+    const store = useSegmentationStore.getState();
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    
+    // Test invalid inputs
+    store.setDragStart([100] as any); // Wrong length
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setDragStart: Invalid coordinates provided', [100]);
+    
+    store.setDragStart(['100', '200'] as any); // Wrong type
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setDragStart: Invalid coordinates provided', ['100', '200']);
+    
+    store.setDragStart(undefined as any); // Undefined input
+    expect(consoleSpy).toHaveBeenCalledWith('[IRIS] setDragStart: Invalid coordinates provided', undefined);
+    
+    // Should not change drag start on invalid input
+    expect(useSegmentationStore.getState().dragStart).toBe(null);
+    
+    consoleSpy.mockRestore();
+  });
+
+  it('provides helper functions for legacy JavaScript access', () => {
+    const store = useSegmentationStore.getState();
+    store.setDragStart([150, 250]);
+    
+    // Test global helper functions
+    expect(window.getDragStartFromStore).toBeDefined();
+    expect(window.setDragStartInStore).toBeDefined();
+    expect(window.getDragStartFromStore?.()).toEqual([150, 250]);
+    
+    // Test setting through helper
+    window.setDragStartInStore?.([300, 400]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([300, 400]);
+    
+    // Test clearing through helper
+    window.setDragStartInStore?.(null);
+    expect(useSegmentationStore.getState().dragStart).toBe(null);
+  });
+
+  it('handles coordinate array immutability', () => {
+    const store = useSegmentationStore.getState();
+    const coords = [100, 200] as [number, number];
+    store.setDragStart(coords);
+    
+    // Modifying original array shouldn't affect store
+    coords[0] = 999;
+    expect(useSegmentationStore.getState().dragStart).toEqual([100, 200]);
+  });
+
+  it('defaults to null (no active drag)', () => {
+    // Fresh store should have no active drag
+    const store = useSegmentationStore.getState();
+    expect(store.dragStart).toBe(null);
+  });
+
+  it('handles negative coordinates correctly', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test negative coordinates (valid for drag operations)
+    store.setDragStart([-50, -100]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([-50, -100]);
+    expect((window as any).vars.drag_start).toEqual([-50, -100]);
+  });
+
+  it('handles decimal coordinates correctly', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test decimal coordinates (valid for drag operations)
+    store.setDragStart([123.456, 789.012]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([123.456, 789.012]);
+    expect((window as any).vars.drag_start).toEqual([123.456, 789.012]);
+  });
+
+  it('handles drag state transitions correctly', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Start with no drag
+    expect(store.dragStart).toBe(null);
+    
+    // Start drag operation
+    store.setDragStart([10, 20]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([10, 20]);
+    
+    // Update drag position
+    store.setDragStart([30, 40]);
+    expect(useSegmentationStore.getState().dragStart).toEqual([30, 40]);
+    
+    // End drag operation
+    store.setDragStart(null);
+    expect(useSegmentationStore.getState().dragStart).toBe(null);
   });
 });

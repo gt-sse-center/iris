@@ -528,21 +528,31 @@ function mouse_move(event){
         (event.buttons == 2
         || event.buttons == 4
         || (event.buttons == 1 && currentTool == 'move'))
-        && vars.drag_start !== null
     ){
-        // Get cursor image from React store (primary source) with fallback to legacy vars
-        let cursorImage;
-        if (window.getCursorImageFromStore) {
-            cursorImage = window.getCursorImageFromStore();
+        // Get drag start from React store (primary source) with fallback to legacy vars
+        let dragStart;
+        if (window.getDragStartFromStore) {
+            dragStart = window.getDragStartFromStore();
         } else {
-            console.warn('[IRIS Migration] mouse_move: Using legacy vars.cursor_image fallback - React store not available yet');
-            cursorImage = vars.cursor_image; // Fallback during initialization
+            console.warn('[IRIS Migration] mouse_move: Using legacy vars.drag_start fallback - React store not available yet');
+            dragStart = vars.drag_start;
         }
         
-        move(
-            cursorImage[0]-vars.drag_start[0],
-            cursorImage[1]-vars.drag_start[1]
-        );
+        if (dragStart !== null) {
+            // Get cursor image from React store (primary source) with fallback to legacy vars
+            let cursorImage;
+            if (window.getCursorImageFromStore) {
+                cursorImage = window.getCursorImageFromStore();
+            } else {
+                console.warn('[IRIS Migration] mouse_move: Using legacy vars.cursor_image fallback - React store not available yet');
+                cursorImage = vars.cursor_image; // Fallback during initialization
+            }
+            
+            move(
+                cursorImage[0]-dragStart[0],
+                cursorImage[1]-dragStart[1]
+            );
+        }
     }
 
     // mouse left button must be pressed to draw
@@ -568,7 +578,14 @@ function mouse_down(event){
 
     if (event.buttons == 1 && currentTool != 'move'){
         user_draws_on_mask();
-        vars.drag_start = null;
+        
+        // Clear drag start using React store (primary) with fallback to legacy vars
+        if (window.setDragStartInStore) {
+            window.setDragStartInStore(null);
+        } else {
+            console.warn('[IRIS Migration] mouse_down: Using legacy vars.drag_start fallback - React store not available yet');
+            vars.drag_start = null;
+        }
     } else if (
         event.buttons == 2
         || event.buttons == 4
@@ -583,12 +600,24 @@ function mouse_down(event){
             cursorImage = vars.cursor_image; // Fallback during initialization
         }
         
-        vars.drag_start = [...cursorImage];
+        // Set drag start using React store (primary) with fallback to legacy vars
+        if (window.setDragStartInStore) {
+            window.setDragStartInStore([...cursorImage]);
+        } else {
+            console.warn('[IRIS Migration] mouse_down: Using legacy vars.drag_start fallback - React store not available yet');
+            vars.drag_start = [...cursorImage];
+        }
     }
 }
 
 function mouse_up(event){
-    vars.drag_start = null;
+    // Clear drag start using React store (primary) with fallback to legacy vars
+    if (window.setDragStartInStore) {
+        window.setDragStartInStore(null);
+    } else {
+        console.warn('[IRIS Migration] mouse_up: Using legacy vars.drag_start fallback - React store not available yet');
+        vars.drag_start = null;
+    }
 }
 
 function mouse_enter(event){
@@ -617,7 +646,13 @@ function mouse_enter(event){
             cursorImage = vars.cursor_image; // Fallback during initialization
         }
         
-        vars.drag_start = [...cursorImage];
+        // Set drag start using React store (primary) with fallback to legacy vars
+        if (window.setDragStartInStore) {
+            window.setDragStartInStore([...cursorImage]);
+        } else {
+            console.warn('[IRIS Migration] mouse_enter: Using legacy vars.drag_start fallback - React store not available yet');
+            vars.drag_start = [...cursorImage];
+        }
     }
 }
 

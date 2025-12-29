@@ -117,6 +117,10 @@ interface SegmentationDebugInfo {
   maskType: string;
   classesCount: number;
   totalUserPixels: number;
+  // Mouse & Canvas State debug info
+  cursorImage: [number, number];
+  dragStart: [number, number] | null;
+  isDragging: boolean;
   // PHASE 2: Navigation & Actions debug info
   hasConfig: boolean;
   hasUser: boolean;
@@ -151,6 +155,10 @@ interface SegmentationState {
   // Cursor Image (replaces vars.cursor_image)
   cursorImage: [number, number];
   setCursorImage: (coords: [number, number]) => void;
+
+  // Drag State (replaces vars.drag_start)
+  dragStart: [number, number] | null;
+  setDragStart: (coords: [number, number] | null) => void;
 
   // Image Navigation
   images: ImageInfo[];
@@ -259,6 +267,16 @@ const setCurrentToolInStore = (tool: 'move' | 'draw' | 'eraser') => {
   useSegmentationStore.getState().setCurrentTool(tool);
 };
 
+// Helper function to get drag start from React store (for legacy compatibility)
+const getDragStartFromStore = () => {
+  return useSegmentationStore.getState().dragStart;
+};
+
+// Helper function to set drag start in React store (for legacy compatibility)
+const setDragStartInStore = (coords: [number, number] | null) => {
+  useSegmentationStore.getState().setDragStart(coords);
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -328,6 +346,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   // Cursor Image State (replaces vars.cursor_image)
   cursorImage: [0, 0], // Default cursor position
+
+  // Drag State (replaces vars.drag_start)
+  dragStart: null, // Default to no active drag
 
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
@@ -442,6 +463,28 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const w = window as any;
     if (w.vars) {
       w.vars.cursor_image = coordsCopy;
+    }
+  },
+
+  setDragStart: (coords: [number, number] | null) => {
+    // Validate coordinates if not null
+    if (coords !== null) {
+      if (!Array.isArray(coords) || coords.length !== 2 || 
+          typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
+        console.warn('[IRIS] setDragStart: Invalid coordinates provided', coords);
+        return;
+      }
+      // Create a copy to ensure immutability
+      const coordsCopy: [number, number] = [coords[0], coords[1]];
+      set({ dragStart: coordsCopy });
+    } else {
+      set({ dragStart: null });
+    }
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars) {
+      w.vars.drag_start = coords;
     }
   },
 
@@ -924,6 +967,10 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskType: state.maskType,
       classesCount: state.classes.length,
       totalUserPixels: state.userPixelCounts.total,
+      // Mouse & Canvas State debug info
+      cursorImage: state.cursorImage,
+      dragStart: state.dragStart,
+      isDragging: state.dragStart !== null,
       // PHASE 2: Navigation & Actions debug info
       hasConfig: state.config !== null,
       hasUser: state.user !== null,
@@ -1026,6 +1073,8 @@ if (typeof window !== 'undefined') {
   (window as any).setCursorImageInStore = setCursorImageInStore;
   (window as any).getCurrentToolFromStore = getCurrentToolFromStore;
   (window as any).setCurrentToolInStore = setCurrentToolInStore;
+  (window as any).getDragStartFromStore = getDragStartFromStore;
+  (window as any).setDragStartInStore = setDragStartInStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
@@ -1037,6 +1086,7 @@ if (typeof window !== 'undefined') {
   console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Drag Start Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;
