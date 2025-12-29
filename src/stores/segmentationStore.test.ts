@@ -16,6 +16,7 @@ interface MockVars {
   tool: {
     size: number;
     type: string;
+    resizing_mode: boolean;
   };
 }
 
@@ -33,6 +34,7 @@ const mockWindow = {
     tool: {
       size: 5,
       type: 'draw',
+      resizing_mode: false,
     },
   } as MockVars,
   render_preview: vi.fn(),
@@ -60,6 +62,7 @@ Object.defineProperty(window, 'dispatchEvent', {
 declare global {
   interface Window {
     getToolSizeFromStore?: () => number;
+    getToolResizingModeFromStore?: () => boolean;
   }
 }
 
@@ -190,5 +193,55 @@ describe('segmentationStore - Tool Size Migration', () => {
     // Test global helper function
     expect(window.getToolSizeFromStore).toBeDefined();
     expect(window.getToolSizeFromStore?.()).toBe(25);
+  });
+});
+
+describe('segmentationStore - Tool Resizing Mode Migration', () => {
+  beforeEach(() => {
+    const store = useSegmentationStore.getState();
+    // Reset to default resizing mode
+    store.setToolResizingMode(false);
+    vi.clearAllMocks();
+  });
+
+  it('manages tool resizing mode with legacy sync', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test setting resizing mode
+    store.setToolResizingMode(true);
+    expect(useSegmentationStore.getState().toolResizingMode).toBe(true);
+    expect(mockWindow.vars.tool.resizing_mode).toBe(true);
+    
+    // Test disabling resizing mode
+    store.setToolResizingMode(false);
+    expect(useSegmentationStore.getState().toolResizingMode).toBe(false);
+    expect(mockWindow.vars.tool.resizing_mode).toBe(false);
+  });
+
+  it('provides helper function for legacy JavaScript access', () => {
+    const store = useSegmentationStore.getState();
+    store.setToolResizingMode(true);
+    
+    // Test global helper function
+    expect(window.getToolResizingModeFromStore).toBeDefined();
+    expect(window.getToolResizingModeFromStore?.()).toBe(true);
+  });
+
+  it('handles boolean validation correctly', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Test with boolean values
+    store.setToolResizingMode(true);
+    expect(useSegmentationStore.getState().toolResizingMode).toBe(true);
+    
+    store.setToolResizingMode(false);
+    expect(useSegmentationStore.getState().toolResizingMode).toBe(false);
+  });
+
+  it('defaults to false (zoom mode)', () => {
+    const store = useSegmentationStore.getState();
+    
+    // Should default to false (zoom mode, not resize mode)
+    expect(store.toolResizingMode).toBe(false);
   });
 });

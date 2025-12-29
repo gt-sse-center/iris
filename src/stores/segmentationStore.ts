@@ -112,6 +112,7 @@ interface SegmentationDebugInfo {
   // Core drawing state debug info
   currentTool: string;
   toolSize: number;
+  toolResizingMode: boolean;
   currentClass: number;
   maskType: string;
   classesCount: number;
@@ -186,6 +187,7 @@ interface SegmentationState {
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'move' | 'draw' | 'eraser';
   toolSize: number;
+  toolResizingMode: boolean;
   currentClass: number;
   maskType: 'final' | 'user' | 'errors';
   classes: ClassConfig[];
@@ -194,6 +196,7 @@ interface SegmentationState {
   // PHASE 1: Core Drawing Actions
   setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => void;
   setToolSize: (size: number) => void;
+  setToolResizingMode: (resizing: boolean) => void;
   setCurrentClass: (classId: number) => void;
   setMaskType: (type: 'final' | 'user' | 'errors') => void;
   setClasses: (classes: ClassConfig[]) => void;
@@ -225,6 +228,11 @@ interface SegmentationState {
 // Helper function to get tool size from React store (for legacy compatibility)
 const getToolSizeFromStore = () => {
   return useSegmentationStore.getState().toolSize;
+};
+
+// Helper function to get tool resizing mode from React store (for legacy compatibility)
+const getToolResizingModeFromStore = () => {
+  return useSegmentationStore.getState().toolResizingMode;
 };
 
 // Helper function to trigger legacy rendering
@@ -297,6 +305,7 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
   toolSize: 5, // Default tool size
+  toolResizingMode: false, // Default to zoom mode (not resize mode)
   currentClass: 0, // Default to first class
   maskType: 'final', // Default mask type
   classes: [], // Will be initialized from legacy vars
@@ -442,6 +451,16 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     
     // Trigger React preview layer re-render
     window.dispatchEvent(new CustomEvent('react-preview-render'));
+  },
+
+  setToolResizingMode: (resizing: boolean) => {
+    set({ toolResizingMode: resizing });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars?.tool) {
+      w.vars.tool.resizing_mode = resizing;
+    }
   },
 
   setCurrentClass: (classId: number) => {
@@ -848,6 +867,7 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       // PHASE 1: Core drawing state debug info
       currentTool: state.currentTool,
       toolSize: state.toolSize,
+      toolResizingMode: state.toolResizingMode,
       currentClass: state.currentClass,
       maskType: state.maskType,
       classesCount: state.classes.length,
@@ -888,6 +908,9 @@ const initializeCoreDrawingStateFromLegacy = () => {
       }
       if (w.vars.tool.size) {
         store.setToolSize(w.vars.tool.size);
+      }
+      if (typeof w.vars.tool.resizing_mode === 'boolean') {
+        store.setToolResizingMode(w.vars.tool.resizing_mode);
       }
     }
     
@@ -946,6 +969,7 @@ const initializeNavigationActionsStateFromLegacy = () => {
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
   (window as any).getToolSizeFromStore = getToolSizeFromStore;
+  (window as any).getToolResizingModeFromStore = getToolResizingModeFromStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
@@ -954,6 +978,7 @@ if (typeof window !== 'undefined') {
   
   // Migration tracking - only log when store is available (no need to spam console)
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;

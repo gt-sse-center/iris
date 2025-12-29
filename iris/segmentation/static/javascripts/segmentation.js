@@ -284,12 +284,26 @@ function key_down(event){
     } else if (key == "KeyB"){
         vars.vm.showNextGroup();
     } else if (event.shiftKey){
-        vars.tool.resizing_mode = true;
+        // Update tool resizing mode through React store (primary source)
+        if (window.segmentationStore) {
+            window.segmentationStore.getState().setToolResizingMode(true);
+        } else {
+            // Fallback to legacy vars during initialization
+            console.warn('[IRIS Migration] key_down: Using legacy vars.tool.resizing_mode fallback - React store not available yet');
+            vars.tool.resizing_mode = true;
+        }
     }
 }
 
 function key_up(event){
-    vars.tool.resizing_mode = event.shiftKey;
+    // Update tool resizing mode through React store (primary source)
+    if (window.segmentationStore) {
+        window.segmentationStore.getState().setToolResizingMode(event.shiftKey);
+    } else {
+        // Fallback to legacy vars during initialization
+        console.warn('[IRIS Migration] key_up: Using legacy vars.tool.resizing_mode fallback - React store not available yet');
+        vars.tool.resizing_mode = event.shiftKey;
+    }
 }
 
 function change_brightness(up){
@@ -456,7 +470,17 @@ function get_tool_offset(){
 
 function mouse_wheel(event){
     var delta = Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
-    if (vars.tool.resizing_mode){
+    
+    // Get resizing mode from React store (primary source) with fallback to legacy vars
+    let resizingMode;
+    if (window.getToolResizingModeFromStore) {
+        resizingMode = window.getToolResizingModeFromStore();
+    } else {
+        console.warn('[IRIS Migration] mouse_wheel: Using legacy vars.tool.resizing_mode fallback - React store not available yet');
+        resizingMode = vars.tool.resizing_mode; // Fallback during initialization
+    }
+    
+    if (resizingMode){
         // Change size of tool using React store (primary source)
         let currentSize;
         if (window.getToolSizeFromStore) {
