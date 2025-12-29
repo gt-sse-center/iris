@@ -1353,6 +1353,7 @@ async function dialogue_before_next_image(){
     let response = await fetch(`${vars.url.main}get_action_info/${vars.image_id}/segmentation`);
     if (response.status >= 400){
         // Continue without any dialogue
+        hide_loader(); // Fix: Hide the loader before continuing
         if (window.segmentationStore) {
             window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
         } else {
