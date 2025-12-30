@@ -168,6 +168,12 @@ interface SegmentationState {
   dragStart: [number, number] | null;
   setDragStart: (coords: [number, number] | null) => void;
 
+  // Hidden Mask Canvas (replaces vars.hidden_mask)
+  hiddenMaskCanvas: HTMLCanvasElement | null;
+  setHiddenMaskCanvas: (canvas: HTMLCanvasElement | null) => void;
+  createHiddenMaskCanvas: (width: number, height: number) => HTMLCanvasElement;
+  getHiddenMaskContext: () => CanvasRenderingContext2D | null;
+
   // Image Navigation
   images: ImageInfo[];
   currentImageId: string | null;
@@ -321,6 +327,21 @@ const setToolShapeInStore = (shape: 'square' | 'round') => {
   useSegmentationStore.getState().setToolShape(shape);
 };
 
+// Helper function to get hidden mask canvas from React store (for legacy compatibility)
+const getHiddenMaskCanvasFromStore = () => {
+  return useSegmentationStore.getState().hiddenMaskCanvas;
+};
+
+// Helper function to get hidden mask context from React store (for legacy compatibility)
+const getHiddenMaskContextFromStore = () => {
+  return useSegmentationStore.getState().getHiddenMaskContext();
+};
+
+// Helper function to create hidden mask canvas from React store (for legacy compatibility)
+const createHiddenMaskCanvasFromStore = (width: number, height: number) => {
+  return useSegmentationStore.getState().createHiddenMaskCanvas(width, height);
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -419,6 +440,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   // Drag State (replaces vars.drag_start)
   dragStart: null, // Default to no active drag
+
+  // Hidden Mask Canvas State (replaces vars.hidden_mask)
+  hiddenMaskCanvas: null, // Default to no canvas
 
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
@@ -559,6 +583,68 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars) {
       w.vars.drag_start = coords;
     }
+  },
+
+  // Hidden Mask Canvas Actions (replaces vars.hidden_mask)
+  setHiddenMaskCanvas: (canvas: HTMLCanvasElement | null) => {
+    set({ hiddenMaskCanvas: canvas });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.hidden_mask = canvas;
+    }
+  },
+
+  createHiddenMaskCanvas: (width: number, height: number) => {
+    // Validate dimensions
+    if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
+      console.error('[IRIS] createHiddenMaskCanvas: Invalid dimensions provided', { width, height });
+      throw new Error(`Invalid canvas dimensions: ${width}x${height}`);
+    }
+    
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Configure canvas for optimal mask rendering (same as legacy)
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+        ctx.imageSmoothingEnabled = false;
+      } else {
+        console.error('[IRIS] createHiddenMaskCanvas: Failed to get 2D context');
+        throw new Error('Failed to get 2D context for hidden mask canvas');
+      }
+      
+      // Set the canvas in the store
+      get().setHiddenMaskCanvas(canvas);
+      
+      console.log(`[IRIS] Created hidden mask canvas: ${width}x${height}`);
+      return canvas;
+    } catch (error) {
+      console.error('[IRIS] createHiddenMaskCanvas failed:', error);
+      throw error;
+    }
+  },
+
+  getHiddenMaskContext: () => {
+    const canvas = get().hiddenMaskCanvas;
+    if (!canvas) {
+      console.warn('[IRIS] getHiddenMaskContext: No hidden mask canvas available');
+      return null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('[IRIS] getHiddenMaskContext: Failed to get 2D context');
+    }
+    
+    return ctx;
   },
 
   // PHASE 1: Core Drawing Actions with Legacy Sync
@@ -1192,6 +1278,9 @@ if (typeof window !== 'undefined') {
   (window as any).setDragStartInStore = setDragStartInStore;
   (window as any).getToolShapeFromStore = getToolShapeFromStore;
   (window as any).setToolShapeInStore = setToolShapeInStore;
+  (window as any).getHiddenMaskCanvasFromStore = getHiddenMaskCanvasFromStore;
+  (window as any).getHiddenMaskContextFromStore = getHiddenMaskContextFromStore;
+  (window as any).createHiddenMaskCanvasFromStore = createHiddenMaskCanvasFromStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
@@ -1206,6 +1295,7 @@ if (typeof window !== 'undefined') {
   console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Drag Start Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Hidden Mask Canvas Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;

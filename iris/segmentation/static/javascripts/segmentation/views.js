@@ -5,31 +5,37 @@ class MaskLayer extends CanvasLayer{
         super(port, vm, view, "mask");
     }
     render(bbox=null){
-        console.log('[IRIS] Legacy MaskLayer.render called with bbox:', bbox);
         let ctx = this.container.getContext("2d");
+        
+        // Get hidden canvas from React store or fallback to legacy
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
+            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        
+        if (!hiddenCanvas) {
+            console.error('[IRIS] Hidden mask canvas not available for MaskLayer render');
+            return;
+        }
+        
         if (bbox === null){
-            console.log('[IRIS] Legacy MaskLayer: doing full redraw');
             // No specific coordinates are given, i.e. we redraw the whole mask:
             ctx.clearRect(0, 0, ...vars.image_shape);
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
             );
         } else {
-            console.log('[IRIS] Legacy MaskLayer: doing partial redraw with bbox:', bbox);
             ctx.clearRect(
                 bbox[0]+vars.mask_area[0],
                 bbox[1]+vars.mask_area[1],
                 bbox[2], bbox[3]
             );
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 ...bbox,
                 bbox[0]+vars.mask_area[0], bbox[1]+vars.mask_area[1],
                 bbox[2], bbox[3]
             );
         }
-        console.log('[IRIS] Legacy MaskLayer: render complete');
     }
 }
 
@@ -43,11 +49,21 @@ class SuperpixelsLayer extends CanvasLayer{
     }
     render(bbox=null){
         let ctx = this.container.getContext("2d");
+        
+        // Get hidden canvas from React store or fallback to legacy
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
+            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        
+        if (!hiddenCanvas) {
+            console.error('[IRIS] Hidden mask canvas not available for SuperpixelsLayer render');
+            return;
+        }
+        
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
             ctx.clearRect(0, 0, ...vars.image_shape);
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
             );
         } else {
@@ -57,7 +73,7 @@ class SuperpixelsLayer extends CanvasLayer{
                 bbox[2], bbox[3]
             );
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 ...bbox,
                 bbox[0]+vars.mask_area[0], bbox[1]+vars.mask_area[1],
                 bbox[2], bbox[3]

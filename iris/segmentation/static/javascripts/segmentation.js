@@ -176,15 +176,37 @@ async function init_views(){
     // It much faster to change some pixel values on a sprite and draw it then
     // to the canvas once than redrawing each pixel to the canvas directly.
     // Hence, we use a hidden canvas for the mask:
-    vars.hidden_mask = document.createElement('canvas');
-    vars.hidden_mask.width = vars.mask_shape[0];
-    vars.hidden_mask.height = vars.mask_shape[1];
-    let hidden_ctx = vars.hidden_mask.getContext('2d');
-    hidden_ctx.shadowOffsetX = 0;
-    hidden_ctx.shadowOffsetY = 0;
-    hidden_ctx.shadowBlur = 0;
-    hidden_ctx.shadowColor = null;
-    hidden_ctx.imageSmoothingEnabled = false;
+    if (window.createHiddenMaskCanvasFromStore) {
+        // Use React store for hidden mask canvas creation
+        try {
+            window.createHiddenMaskCanvasFromStore(vars.mask_shape[0], vars.mask_shape[1]);
+            console.log('[IRIS Migration] Using React store for hidden mask canvas creation');
+        } catch (error) {
+            console.error('[IRIS Migration] Failed to create hidden mask canvas from store:', error);
+            // Fallback to legacy approach
+            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback');
+            vars.hidden_mask = document.createElement('canvas');
+            vars.hidden_mask.width = vars.mask_shape[0];
+            vars.hidden_mask.height = vars.mask_shape[1];
+            let hidden_ctx = vars.hidden_mask.getContext('2d');
+            hidden_ctx.shadowOffsetX = 0;
+            hidden_ctx.shadowOffsetY = 0;
+            hidden_ctx.shadowBlur = 0;
+            hidden_ctx.shadowColor = null;
+            hidden_ctx.imageSmoothingEnabled = false;
+        }
+    } else {
+        console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - React store not available');
+        vars.hidden_mask = document.createElement('canvas');
+        vars.hidden_mask.width = vars.mask_shape[0];
+        vars.hidden_mask.height = vars.mask_shape[1];
+        let hidden_ctx = vars.hidden_mask.getContext('2d');
+        hidden_ctx.shadowOffsetX = 0;
+        hidden_ctx.shadowOffsetY = 0;
+        hidden_ctx.shadowBlur = 0;
+        hidden_ctx.shadowColor = null;
+        hidden_ctx.imageSmoothingEnabled = false;
+    }
 
     // Load mask (now properly awaited):
     await load_mask();
@@ -1206,7 +1228,22 @@ function user_draws_on_mask(){
 
     // Now we draw on the hidden mask and render it
     if (vars.mask_type == 'final' || vars.mask_type == 'user'){
-        var hidden_ctx = vars.hidden_mask.getContext('2d');
+        var hidden_ctx;
+        if (window.getHiddenMaskContextFromStore) {
+            hidden_ctx = window.getHiddenMaskContextFromStore();
+            if (!hidden_ctx) {
+                console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - context not available from store');
+                hidden_ctx = vars.hidden_mask?.getContext('2d');
+            }
+        } else {
+            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - store not available');
+            hidden_ctx = vars.hidden_mask?.getContext('2d');
+        }
+        
+        if (!hidden_ctx) {
+            console.error('[IRIS] Hidden mask context not available');
+            return;
+        }
         
         if (toolShape === 'round') {
             // Special case: 1-pixel brush - square and round are identical
@@ -1406,23 +1443,37 @@ function user_draws_on_mask(){
 function reload_hidden_mask(){
     /*Update hidden mask on a offscreen canvas*/
     
-    // Safety check: only proceed if hidden mask canvas is initialized
-    if (!vars.hidden_mask) {
+    // Get hidden mask context from React store or fallback to legacy
+    let ctx;
+    if (window.getHiddenMaskContextFromStore) {
+        ctx = window.getHiddenMaskContextFromStore();
+        if (!ctx) {
+            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - context not available from store');
+            // Safety check: only proceed if hidden mask canvas is initialized
+            if (!vars.hidden_mask) {
+                console.error('[IRIS] Hidden mask canvas not available');
+                return;
+            }
+            ctx = vars.hidden_mask.getContext('2d');
+        }
+    } else {
+        console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - store not available');
+        // Safety check: only proceed if hidden mask canvas is initialized
+        if (!vars.hidden_mask) {
+            console.error('[IRIS] Hidden mask canvas not available');
+            return;
+        }
+        ctx = vars.hidden_mask.getContext('2d');
+    }
+    
+    if (!ctx) {
+        console.error('[IRIS] Hidden mask context not available');
         return;
     }
     
     // Safety check: ensure mask data is available
     if (!vars.mask_shape || !vars.mask) {
-        return;
-    }
-    
-    // Safety check: ensure canvas is properly initialized
-    if (!vars.hidden_mask.getContext) {
-        return;
-    }
-    
-    let ctx = vars.hidden_mask.getContext('2d');
-    if (!ctx) {
+        console.error('[IRIS] Mask data not available for reload_hidden_mask');
         return;
     }
 
