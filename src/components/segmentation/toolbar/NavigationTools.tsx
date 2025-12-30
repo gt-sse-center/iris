@@ -24,13 +24,19 @@ const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) =>
   const handleNavigateToImage = (imageId: string) => {
     const w = window as any;
     
-    // Check if user has unsaved changes
-    const shouldShowDialogue = w.segmentationStore 
-      ? w.segmentationStore.getState().showDialogueBeforeNextImage
-      : false;
+    // Check if user has unsaved changes - this is the correct condition
+    const store = useSegmentationStore.getState();
+    const hasUnsavedChanges = store.maskChanged;
     
-    if (shouldShowDialogue) {
+    console.log('[IRIS Navigation] handleNavigateToImage called:', {
+      imageId,
+      hasUnsavedChanges,
+      currentImageId: store.currentImageId
+    });
+    
+    if (hasUnsavedChanges) {
       // User has unsaved changes - show confirmation dialog
+      console.log('[IRIS Navigation] Showing dialogue for unsaved changes');
       if (w.dialogue_before_next_image) {
         // Store the target image ID for after the dialog
         w.pendingNavigationImageId = imageId;
@@ -40,6 +46,7 @@ const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) =>
       }
     } else {
       // No unsaved changes - navigate directly
+      console.log('[IRIS Navigation] Navigating directly to:', imageId);
       const url = `/segmentation/?image_id=${encodeURIComponent(imageId)}`;
       if (w.goto_url) {
         w.goto_url(url);
