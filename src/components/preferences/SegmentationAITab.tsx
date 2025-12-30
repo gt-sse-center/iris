@@ -292,14 +292,14 @@ const SegmentationAITab: React.FC<SegmentationAITabProps> = ({
               <td>Suppression filter threshold:</td>
               <td>
                 <div className="slider">
-                  <input type="number" className="slider-value" data-testid="input-suppression-threshold" min="0" max="100" value={config.segmentation.ai_model.suppression_threshold} onChange={(e) => updateAIModelConfig('suppression_threshold', parseInt(e.target.value) || 0)} style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }} /><span style={{ marginLeft: '5px' }}>%</span>
+                  <input type="number" className="slider-value" data-testid="input-suppression-threshold" min="0" max="100" value={Math.round((config.segmentation.ai_model.suppression_threshold || 0) * 100)} onChange={(e) => updateAIModelConfig('suppression_threshold', (parseInt(e.target.value) || 0) / 100)} style={{ width: '60px', textAlign: 'center', border: '1px solid #ccc', padding: '2px' }} /><span style={{ marginLeft: '5px' }}>%</span>
                   <input
                     className="slider-widget"
                     type="range"
                     min="0"
                     max="100"
-                    value={config.segmentation.ai_model.suppression_threshold}
-                    onChange={(e) => updateAIModelConfig('suppression_threshold', parseInt(e.target.value))}
+                    value={Math.round((config.segmentation.ai_model.suppression_threshold || 0) * 100)}
+                    onChange={(e) => updateAIModelConfig('suppression_threshold', parseInt(e.target.value) / 100)}
                   />
                 </div>
               </td>

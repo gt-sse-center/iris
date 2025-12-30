@@ -147,6 +147,42 @@ interface SegmentationState {
   // New User Experience (replaces vars.just_logged_in)
   justLoggedIn: boolean;
   setJustLoggedIn: (loggedIn: boolean) => void;
+
+  // CRITICAL: Core Mask Data (replaces vars.mask, vars.user_mask, vars.errors_mask)
+  maskData: Uint8Array | null;
+  userMaskData: Uint8Array | null;
+  errorsMaskData: Uint8Array | null;
+  maskDimensions: { width: number; height: number } | null;
+  
+  // Mask Data Actions
+  setMaskData: (data: Uint8Array, width: number, height: number) => void;
+  setUserMaskData: (data: Uint8Array) => void;
+  setErrorsMaskData: (data: Uint8Array) => void;
+  getMaskPixel: (x: number, y: number) => number;
+  setMaskPixel: (x: number, y: number, classId: number) => void;
+  getUserMaskPixel: (x: number, y: number) => number;
+  setUserMaskPixel: (x: number, y: number, value: number) => void;
+  clearMask: () => void;
+  copyMask: () => Uint8Array | null;
+  copyUserMask: () => Uint8Array | null;
+  
+  // Bulk operations for performance
+  updateMaskRegion: (pixels: Array<{x: number, y: number, classId: number}>) => void;
+  fillMaskRegion: (startX: number, startY: number, endX: number, endY: number, classId: number) => void;
+  
+  // History System (replaces vars.history)
+  maskHistory: Uint8Array[];
+  userMaskHistory: Uint8Array[];
+  historyCurrentEpoch: number;
+  historyMaxEpochs: number;
+  
+  // History Actions
+  updateHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+  discardFuture: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
   
   // Error Modal
   errorModal: {
@@ -233,6 +269,7 @@ interface SegmentationState {
   setMaskType: (type: 'final' | 'user' | 'errors') => void;
   setClasses: (classes: ClassConfig[]) => void;
   updateUserPixelCounts: (counts: { [classId: number]: number; total: number }) => void;
+  calculatePixelCounts: () => { [classId: number]: number; total: number };
   
   // PHASE 2: Navigation & Actions State (replaces vars.config, vars.user, vars.confusion_matrix)
   config: ProjectConfig | null;
@@ -342,6 +379,80 @@ const createHiddenMaskCanvasFromStore = (width: number, height: number) => {
   return useSegmentationStore.getState().createHiddenMaskCanvas(width, height);
 };
 
+// CRITICAL: Helper functions for mask data legacy access during migration
+const getMaskDataFromStore = () => {
+  return useSegmentationStore.getState().maskData;
+};
+
+const setMaskDataInStore = (data: Uint8Array, width: number, height: number) => {
+  useSegmentationStore.getState().setMaskData(data, width, height);
+};
+
+const getUserMaskDataFromStore = () => {
+  return useSegmentationStore.getState().userMaskData;
+};
+
+const setUserMaskDataInStore = (data: Uint8Array) => {
+  useSegmentationStore.getState().setUserMaskData(data);
+};
+
+const getErrorsMaskDataFromStore = () => {
+  return useSegmentationStore.getState().errorsMaskData;
+};
+
+const setErrorsMaskDataInStore = (data: Uint8Array) => {
+  useSegmentationStore.getState().setErrorsMaskData(data);
+};
+
+const getMaskPixelFromStore = (x: number, y: number) => {
+  return useSegmentationStore.getState().getMaskPixel(x, y);
+};
+
+const setMaskPixelInStore = (x: number, y: number, classId: number) => {
+  useSegmentationStore.getState().setMaskPixel(x, y, classId);
+};
+
+const getUserMaskPixelFromStore = (x: number, y: number) => {
+  return useSegmentationStore.getState().getUserMaskPixel(x, y);
+};
+
+const setUserMaskPixelInStore = (x: number, y: number, value: number) => {
+  useSegmentationStore.getState().setUserMaskPixel(x, y, value);
+};
+
+const copyMaskFromStore = () => {
+  return useSegmentationStore.getState().copyMask();
+};
+
+const copyUserMaskFromStore = () => {
+  return useSegmentationStore.getState().copyUserMask();
+};
+
+// History system helper functions
+const updateHistoryInStore = () => {
+  useSegmentationStore.getState().updateHistory();
+};
+
+const undoInStore = () => {
+  useSegmentationStore.getState().undo();
+};
+
+const redoInStore = () => {
+  useSegmentationStore.getState().redo();
+};
+
+const discardFutureInStore = () => {
+  useSegmentationStore.getState().discardFuture();
+};
+
+const canUndoFromStore = () => {
+  return useSegmentationStore.getState().canUndo();
+};
+
+const canRedoFromStore = () => {
+  return useSegmentationStore.getState().canRedo();
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -393,6 +504,375 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars) {
       w.vars.just_logged_in = loggedIn;
     }
+  },
+
+  // CRITICAL: Core Mask Data State (replaces vars.mask, vars.user_mask, vars.errors_mask)
+  maskData: null,
+  userMaskData: null,
+  errorsMaskData: null,
+  maskDimensions: null,
+
+  // History System State (replaces vars.history)
+  maskHistory: [],
+  userMaskHistory: [],
+  historyCurrentEpoch: 0,
+  historyMaxEpochs: 30,
+
+  // CRITICAL: Core Mask Data Actions (replaces vars.mask, vars.user_mask, vars.errors_mask)
+  setMaskData: (data: Uint8Array, width: number, height: number) => {
+    // Validate input
+    if (!(data instanceof Uint8Array)) {
+      console.error('[IRIS] setMaskData: Invalid data type, expected Uint8Array');
+      return;
+    }
+    if (width <= 0 || height <= 0) {
+      console.error('[IRIS] setMaskData: Invalid dimensions', { width, height });
+      return;
+    }
+    if (data.length !== width * height) {
+      console.error('[IRIS] setMaskData: Data length mismatch', {
+        dataLength: data.length,
+        expectedLength: width * height
+      });
+      return;
+    }
+
+    // Create a copy to ensure immutability
+    const dataCopy = new Uint8Array(data);
+    set({ 
+      maskData: dataCopy,
+      maskDimensions: { width, height }
+    });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mask = dataCopy;
+      w.vars.mask_shape = [width, height];
+    }
+
+    // Trigger mask-related updates (only if classes are set)
+    const { classes } = get();
+    if (classes && classes.length > 0) {
+      get().updateUserPixelCounts(get().calculatePixelCounts());
+    }
+  },
+
+  setUserMaskData: (data: Uint8Array) => {
+    const { maskDimensions } = get();
+    if (!maskDimensions) {
+      console.error('[IRIS] setUserMaskData: No mask dimensions set');
+      return;
+    }
+    
+    if (!(data instanceof Uint8Array)) {
+      console.error('[IRIS] setUserMaskData: Invalid data type, expected Uint8Array');
+      return;
+    }
+    if (data.length !== maskDimensions.width * maskDimensions.height) {
+      console.error('[IRIS] setUserMaskData: Data length mismatch');
+      return;
+    }
+
+    const dataCopy = new Uint8Array(data);
+    set({ userMaskData: dataCopy });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.user_mask = dataCopy;
+    }
+
+    // Update pixel counts when user mask changes (only if classes are set)
+    const { classes } = get();
+    if (classes && classes.length > 0) {
+      get().updateUserPixelCounts(get().calculatePixelCounts());
+    }
+  },
+
+  setErrorsMaskData: (data: Uint8Array) => {
+    const { maskDimensions } = get();
+    if (!maskDimensions) {
+      console.error('[IRIS] setErrorsMaskData: No mask dimensions set');
+      return;
+    }
+    
+    if (!(data instanceof Uint8Array)) {
+      console.error('[IRIS] setErrorsMaskData: Invalid data type, expected Uint8Array');
+      return;
+    }
+    if (data.length !== maskDimensions.width * maskDimensions.height) {
+      console.error('[IRIS] setErrorsMaskData: Data length mismatch');
+      return;
+    }
+
+    const dataCopy = new Uint8Array(data);
+    set({ errorsMaskData: dataCopy });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.errors_mask = dataCopy;
+    }
+  },
+
+  getMaskPixel: (x: number, y: number) => {
+    const { maskData, maskDimensions } = get();
+    if (!maskData || !maskDimensions) return 0;
+    if (x < 0 || x >= maskDimensions.width || y < 0 || y >= maskDimensions.height) {
+      return 0; // Out of bounds
+    }
+    const index = y * maskDimensions.width + x;
+    return maskData[index];
+  },
+
+  setMaskPixel: (x: number, y: number, classId: number) => {
+    const { maskData, maskDimensions } = get();
+    if (!maskData || !maskDimensions) return;
+    if (x < 0 || x >= maskDimensions.width || y < 0 || y >= maskDimensions.height) {
+      return; // Out of bounds
+    }
+    const index = y * maskDimensions.width + x;
+    
+    // Create new array to maintain immutability
+    const newMaskData = new Uint8Array(maskData);
+    newMaskData[index] = classId;
+    get().setMaskData(newMaskData, maskDimensions.width, maskDimensions.height);
+  },
+
+  getUserMaskPixel: (x: number, y: number) => {
+    const { userMaskData, maskDimensions } = get();
+    if (!userMaskData || !maskDimensions) return 0;
+    if (x < 0 || x >= maskDimensions.width || y < 0 || y >= maskDimensions.height) {
+      return 0; // Out of bounds
+    }
+    const index = y * maskDimensions.width + x;
+    return userMaskData[index];
+  },
+
+  setUserMaskPixel: (x: number, y: number, value: number) => {
+    const { userMaskData, maskDimensions } = get();
+    if (!userMaskData || !maskDimensions) return;
+    if (x < 0 || x >= maskDimensions.width || y < 0 || y >= maskDimensions.height) {
+      return; // Out of bounds
+    }
+    const index = y * maskDimensions.width + x;
+    
+    // Create new array to maintain immutability
+    const newUserMaskData = new Uint8Array(userMaskData);
+    newUserMaskData[index] = value;
+    get().setUserMaskData(newUserMaskData);
+  },
+
+  clearMask: () => {
+    set({ 
+      maskData: null,
+      userMaskData: null,
+      errorsMaskData: null,
+      maskDimensions: null,
+      maskHistory: [],
+      userMaskHistory: [],
+      historyCurrentEpoch: 0
+    });
+
+    // Sync with legacy vars
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mask = null;
+      w.vars.user_mask = null;
+      w.vars.errors_mask = null;
+      w.vars.mask_shape = null;
+      w.vars.history = {
+        mask: [],
+        user_mask: [],
+        current_epoch: 0,
+        max_epochs: 30
+      };
+    }
+  },
+
+  copyMask: () => {
+    const { maskData } = get();
+    return maskData ? new Uint8Array(maskData) : null;
+  },
+
+  copyUserMask: () => {
+    const { userMaskData } = get();
+    return userMaskData ? new Uint8Array(userMaskData) : null;
+  },
+
+  // Batch Updates for Performance
+  updateMaskRegion: (pixels: Array<{x: number, y: number, classId: number}>) => {
+    const { maskData, maskDimensions } = get();
+    if (!maskData || !maskDimensions) return;
+
+    const newMaskData = new Uint8Array(maskData);
+    pixels.forEach(({x, y, classId}) => {
+      if (x >= 0 && x < maskDimensions.width && y >= 0 && y < maskDimensions.height) {
+        const index = y * maskDimensions.width + x;
+        newMaskData[index] = classId;
+      }
+    });
+    get().setMaskData(newMaskData, maskDimensions.width, maskDimensions.height);
+  },
+
+  fillMaskRegion: (startX: number, startY: number, endX: number, endY: number, classId: number) => {
+    const { maskData, maskDimensions } = get();
+    if (!maskData || !maskDimensions) return;
+
+    const newMaskData = new Uint8Array(maskData);
+    for (let y = startY; y <= endY; y++) {
+      for (let x = startX; x <= endX; x++) {
+        if (x >= 0 && x < maskDimensions.width && y >= 0 && y < maskDimensions.height) {
+          const index = y * maskDimensions.width + x;
+          newMaskData[index] = classId;
+        }
+      }
+    }
+    get().setMaskData(newMaskData, maskDimensions.width, maskDimensions.height);
+  },
+
+  // History System Actions (replaces vars.history)
+  updateHistory: () => {
+    const { 
+      maskData, 
+      userMaskData, 
+      maskHistory, 
+      userMaskHistory, 
+      historyCurrentEpoch, 
+      historyMaxEpochs 
+    } = get();
+    
+    if (!maskData || !userMaskData) return;
+
+    // Create copies for history
+    const maskCopy = new Uint8Array(maskData);
+    const userMaskCopy = new Uint8Array(userMaskData);
+
+    // Remove future history if we're not at the end
+    const newMaskHistory = maskHistory.slice(0, historyCurrentEpoch + 1);
+    const newUserMaskHistory = userMaskHistory.slice(0, historyCurrentEpoch + 1);
+
+    // Add current state to history
+    newMaskHistory.push(maskCopy);
+    newUserMaskHistory.push(userMaskCopy);
+
+    // Calculate new epoch (points to the newly added entry)
+    let newEpoch = newMaskHistory.length - 1;
+
+    // Limit history size
+    if (newMaskHistory.length > historyMaxEpochs) {
+      newMaskHistory.shift();
+      newUserMaskHistory.shift();
+      newEpoch = newMaskHistory.length - 1; // Adjust epoch after removing first element
+    }
+
+    set({
+      maskHistory: newMaskHistory,
+      userMaskHistory: newUserMaskHistory,
+      historyCurrentEpoch: newEpoch
+    });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.history) {
+      w.vars.history.mask = newMaskHistory.map(arr => Array.from(arr));
+      w.vars.history.user_mask = newUserMaskHistory.map(arr => Array.from(arr));
+      w.vars.history.current_epoch = get().historyCurrentEpoch;
+    }
+  },
+
+  discardFuture: () => {
+    const { maskHistory, userMaskHistory, historyCurrentEpoch } = get();
+    
+    const newMaskHistory = maskHistory.slice(0, historyCurrentEpoch + 1);
+    const newUserMaskHistory = userMaskHistory.slice(0, historyCurrentEpoch + 1);
+
+    set({
+      maskHistory: newMaskHistory,
+      userMaskHistory: newUserMaskHistory
+    });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.history) {
+      w.vars.history.mask = newMaskHistory.map(arr => Array.from(arr));
+      w.vars.history.user_mask = newUserMaskHistory.map(arr => Array.from(arr));
+    }
+  },
+
+  undo: () => {
+    const { maskHistory, userMaskHistory, historyCurrentEpoch, maskDimensions } = get();
+    
+    if (historyCurrentEpoch <= 0 || !maskDimensions) return;
+
+    const newEpoch = historyCurrentEpoch - 1;
+    const historicalMask = maskHistory[newEpoch];
+    const historicalUserMask = userMaskHistory[newEpoch];
+
+    if (historicalMask && historicalUserMask) {
+      set({
+        maskData: new Uint8Array(historicalMask),
+        userMaskData: new Uint8Array(historicalUserMask),
+        historyCurrentEpoch: newEpoch
+      });
+
+      // Sync with legacy vars during migration
+      const w = window as any;
+      if (w.vars) {
+        w.vars.mask = new Uint8Array(historicalMask);
+        w.vars.user_mask = new Uint8Array(historicalUserMask);
+        w.vars.history.current_epoch = newEpoch;
+      }
+
+      // Update pixel counts and trigger re-render (only if classes are set)
+      const { classes } = get();
+      if (classes && classes.length > 0) {
+        get().updateUserPixelCounts(get().calculatePixelCounts());
+      }
+    }
+  },
+
+  redo: () => {
+    const { maskHistory, userMaskHistory, historyCurrentEpoch, maskDimensions } = get();
+    
+    if (historyCurrentEpoch >= maskHistory.length - 1 || !maskDimensions) return;
+
+    const newEpoch = historyCurrentEpoch + 1;
+    const historicalMask = maskHistory[newEpoch];
+    const historicalUserMask = userMaskHistory[newEpoch];
+
+    if (historicalMask && historicalUserMask) {
+      set({
+        maskData: new Uint8Array(historicalMask),
+        userMaskData: new Uint8Array(historicalUserMask),
+        historyCurrentEpoch: newEpoch
+      });
+
+      // Sync with legacy vars during migration
+      const w = window as any;
+      if (w.vars) {
+        w.vars.mask = new Uint8Array(historicalMask);
+        w.vars.user_mask = new Uint8Array(historicalUserMask);
+        w.vars.history.current_epoch = newEpoch;
+      }
+
+      // Update pixel counts and trigger re-render (only if classes are set)
+      const { classes } = get();
+      if (classes && classes.length > 0) {
+        get().updateUserPixelCounts(get().calculatePixelCounts());
+      }
+    }
+  },
+
+  canUndo: () => {
+    const { maskHistory, historyCurrentEpoch } = get();
+    return maskHistory.length > 1 && historyCurrentEpoch > 0;
+  },
+
+  canRedo: () => {
+    const { maskHistory, historyCurrentEpoch } = get();
+    return historyCurrentEpoch < maskHistory.length - 1;
   },
 
   // Error Modal State
@@ -886,6 +1366,32 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     get().setMaskChanged(true);
   },
 
+  // Helper function to calculate pixel counts from mask data
+  calculatePixelCounts: () => {
+    const { maskData, userMaskData, classes } = get();
+    if (!maskData || !userMaskData || !classes) return { total: 0 };
+
+    const counts: { [classId: number]: number; total: number } = { total: 0 };
+    
+    // Initialize counts for all classes
+    classes.forEach((_, index) => {
+      counts[index] = 0;
+    });
+
+    // Count pixels where user has drawn (user_mask[i] == 1)
+    for (let i = 0; i < userMaskData.length; i++) {
+      if (userMaskData[i]) {
+        const classId = maskData[i];
+        if (counts[classId] !== undefined) {
+          counts[classId]++;
+          counts.total++;
+        }
+      }
+    }
+
+    return counts;
+  },
+
   // PHASE 2: Navigation & Actions Actions
   saveCurrentMask: async () => {
     const { currentImageId, isLoading } = get();
@@ -1282,6 +1788,28 @@ if (typeof window !== 'undefined') {
   (window as any).getHiddenMaskContextFromStore = getHiddenMaskContextFromStore;
   (window as any).createHiddenMaskCanvasFromStore = createHiddenMaskCanvasFromStore;
   
+  // CRITICAL: Export mask data helper functions for legacy JavaScript
+  (window as any).getMaskDataFromStore = getMaskDataFromStore;
+  (window as any).setMaskDataInStore = setMaskDataInStore;
+  (window as any).getUserMaskDataFromStore = getUserMaskDataFromStore;
+  (window as any).setUserMaskDataInStore = setUserMaskDataInStore;
+  (window as any).getErrorsMaskDataFromStore = getErrorsMaskDataFromStore;
+  (window as any).setErrorsMaskDataInStore = setErrorsMaskDataInStore;
+  (window as any).getMaskPixelFromStore = getMaskPixelFromStore;
+  (window as any).setMaskPixelInStore = setMaskPixelInStore;
+  (window as any).getUserMaskPixelFromStore = getUserMaskPixelFromStore;
+  (window as any).setUserMaskPixelInStore = setUserMaskPixelInStore;
+  (window as any).copyMaskFromStore = copyMaskFromStore;
+  (window as any).copyUserMaskFromStore = copyUserMaskFromStore;
+  
+  // Export history system helper functions
+  (window as any).updateHistoryInStore = updateHistoryInStore;
+  (window as any).undoInStore = undoInStore;
+  (window as any).redoInStore = redoInStore;
+  (window as any).discardFutureInStore = discardFutureInStore;
+  (window as any).canUndoFromStore = canUndoFromStore;
+  (window as any).canRedoFromStore = canRedoFromStore;
+  
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
   (window as any).initializeCoreDrawingStateFromLegacy = initializeCoreDrawingStateFromLegacy;
@@ -1296,6 +1824,9 @@ if (typeof window !== 'undefined') {
   console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Drag Start Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Hidden Mask Canvas Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] 🚨 CRITICAL: Mask Data Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] 🚨 CRITICAL: User Mask Data Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] 🚨 CRITICAL: History System Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;
