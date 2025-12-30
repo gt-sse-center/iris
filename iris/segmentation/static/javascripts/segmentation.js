@@ -998,10 +998,14 @@ function user_draws_on_mask(){
         cursorImage = vars.cursor_image; // Fallback during initialization
     }
     
-    let x_start = cursorImage[0] + offset.x,// - vars.mask_area[0],
+    let x_start = cursorImage[0] + offset.x,
         x_end = x_start + toolSize;
-    let y_start = cursorImage[1] + offset.y,// - vars.mask_area[1],
+    let y_start = cursorImage[1] + offset.y,
         y_end = y_start + toolSize;
+
+    // For round brushes, we need to ensure the bounding box encompasses the full circle
+    // The current bounding box is based on the square tool size, which should work for circles too
+    // since the circle fits within the square, but let's make sure the center calculation is correct
 
     // Make sure we do not draw outside of the canvas. Hence, here we have the
     // canvas boundaries in image coordinates:
@@ -1035,13 +1039,141 @@ function user_draws_on_mask(){
         currentTool = vars.tool.type; // Fallback during initialization
     }
 
-    for (let x = x_start; x < x_end; x++) {
-        for (let y = y_start; y < y_end; y++) {
+    // Get tool shape from React store (primary source) with fallback to legacy vars
+    let toolShape;
+    if (window.getToolShapeFromStore) {
+        toolShape = window.getToolShapeFromStore();
+    } else {
+        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.tool.shape fallback - React store not available yet');
+        toolShape = vars.tool.shape || 'square'; // Fallback during initialization
+    }
+
+    // Draw pixels based on tool shape
+    if (toolShape === 'round') {
+        // Special case: 1-pixel brush - square and round are identical
+        if (toolSize === 1) {
+            // Use simple single-pixel logic for both square and round
+            const x = x_start;
+            const y = y_start;
             if (currentTool == "eraser"){
                 vars.user_mask[y*vars.mask_shape[0]+x] = 0;
             } else {
                 vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
                 vars.user_mask[y*vars.mask_shape[0]+x] = 1;
+            }
+        }
+        // Special case: 3-pixel brush - use cross pattern (center + 4 adjacent pixels)
+        else if (toolSize === 3) {
+            // Cross pattern: center pixel + 4 adjacent pixels (no corners)
+            const centerX = Math.floor((x_start + x_end) / 2);
+            const centerY = Math.floor((y_start + y_end) / 2);
+            
+            // Define cross pattern relative to center
+            const crossPattern = [
+                {dx: 0, dy: 0},   // center
+                {dx: -1, dy: 0},  // left
+                {dx: 1, dy: 0},   // right
+                {dx: 0, dy: -1},  // top
+                {dx: 0, dy: 1}    // bottom
+            ];
+            
+            for (const {dx, dy} of crossPattern) {
+                const x = centerX + dx;
+                const y = centerY + dy;
+                
+                // Check bounds
+                if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
+                    if (currentTool == "eraser"){
+                        vars.user_mask[y*vars.mask_shape[0]+x] = 0;
+                    } else {
+                        vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
+                        vars.user_mask[y*vars.mask_shape[0]+x] = 1;
+                    }
+                }
+            }
+        }
+        // Special case: 5-pixel brush - use diamond pattern (center + cross + diagonals at distance 1)
+        else if (toolSize === 5) {
+            // Diamond pattern: center + 4 adjacent + 4 diagonal neighbors
+            const centerX = Math.floor((x_start + x_end) / 2);
+            const centerY = Math.floor((y_start + y_end) / 2);
+            
+            // Define diamond pattern relative to center
+            const diamondPattern = [
+                {dx: 0, dy: 0},   // center
+                // Cross (distance 1)
+                {dx: -1, dy: 0},  // left
+                {dx: 1, dy: 0},   // right
+                {dx: 0, dy: -1},  // top
+                {dx: 0, dy: 1},   // bottom
+                // Diagonals (distance 1)
+                {dx: -1, dy: -1}, // top-left
+                {dx: 1, dy: -1},  // top-right
+                {dx: -1, dy: 1},  // bottom-left
+                {dx: 1, dy: 1},   // bottom-right
+                // Extended cross (distance 2)
+                {dx: -2, dy: 0},  // far left
+                {dx: 2, dy: 0},   // far right
+                {dx: 0, dy: -2},  // far top
+                {dx: 0, dy: 2}    // far bottom
+            ];
+            
+            for (const {dx, dy} of diamondPattern) {
+                const x = centerX + dx;
+                const y = centerY + dy;
+                
+                // Check bounds
+                if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
+                    if (currentTool == "eraser"){
+                        vars.user_mask[y*vars.mask_shape[0]+x] = 0;
+                    } else {
+                        vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
+                        vars.user_mask[y*vars.mask_shape[0]+x] = 1;
+                    }
+                }
+            }
+        }
+        // Regular round brush: use circular drawing logic for sizes > 5
+        else {
+            // Calculate the center of the brush in image coordinates (before mask transformation)
+            const brushCenterX = cursorImage[0] + offset.x + toolSize / 2;
+            const brushCenterY = cursorImage[1] + offset.y + toolSize / 2;
+            const radius = toolSize / 2;
+            
+            // Iterate through bounding box and check if each pixel is within the circle
+            for (let x = x_start; x < x_end; x++) {
+                for (let y = y_start; y < y_end; y++) {
+                    // Convert mask coordinates back to image coordinates for distance calculation
+                    const imageX = x + vars.mask_area[0];
+                    const imageY = y + vars.mask_area[1];
+                    
+                    // Calculate distance from brush center
+                    const dx = imageX - brushCenterX;
+                    const dy = imageY - brushCenterY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Only draw if pixel is within the circle
+                    if (distance <= radius) {
+                        if (currentTool == "eraser"){
+                            vars.user_mask[y*vars.mask_shape[0]+x] = 0;
+                        } else {
+                            vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
+                            vars.user_mask[y*vars.mask_shape[0]+x] = 1;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Square brush: use original rectangular drawing logic
+        for (let x = x_start; x < x_end; x++) {
+            for (let y = y_start; y < y_end; y++) {
+                if (currentTool == "eraser"){
+                    vars.user_mask[y*vars.mask_shape[0]+x] = 0;
+                } else {
+                    vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
+                    vars.user_mask[y*vars.mask_shape[0]+x] = 1;
+                }
             }
         }
     }
@@ -1050,15 +1182,181 @@ function user_draws_on_mask(){
     // Now we draw on the hidden mask and render it
     if (vars.mask_type == 'final' || vars.mask_type == 'user'){
         var hidden_ctx = vars.hidden_mask.getContext('2d');
-        hidden_ctx.clearRect(...drawing_area);
+        
+        if (toolShape === 'round') {
+            // Special case: 1-pixel brush - square and round are identical
+            if (toolSize === 1) {
+                const x = x_start;
+                const y = y_start;
+                
+                if (currentTool == "eraser" || vars.current_class == 0){
+                    hidden_ctx.clearRect(x, y, 1, 1);
+                } else {
+                    // First clear to prevent double-application, then fill
+                    hidden_ctx.clearRect(x, y, 1, 1);
+                    hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
+                    hidden_ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            // Special case: 3-pixel brush - use cross pattern
+            else if (toolSize === 3) {
+                const centerX = Math.floor((x_start + x_end) / 2);
+                const centerY = Math.floor((y_start + y_end) / 2);
+                
+                // Define cross pattern relative to center
+                const crossPattern = [
+                    {dx: 0, dy: 0},   // center
+                    {dx: -1, dy: 0},  // left
+                    {dx: 1, dy: 0},   // right
+                    {dx: 0, dy: -1},  // top
+                    {dx: 0, dy: 1}    // bottom
+                ];
+                
+                for (const {dx, dy} of crossPattern) {
+                    const x = centerX + dx;
+                    const y = centerY + dy;
+                    
+                    // Check bounds
+                    if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
+                        if (currentTool == "eraser" || vars.current_class == 0){
+                            hidden_ctx.clearRect(x, y, 1, 1);
+                        } else {
+                            // First clear to prevent double-application, then fill
+                            hidden_ctx.clearRect(x, y, 1, 1);
+                            hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
+                            hidden_ctx.fillRect(x, y, 1, 1);
+                        }
+                    }
+                }
+            }
+            // Special case: 5-pixel brush - use diamond pattern
+            else if (toolSize === 5) {
+                const centerX = Math.floor((x_start + x_end) / 2);
+                const centerY = Math.floor((y_start + y_end) / 2);
+                
+                // Define diamond pattern relative to center
+                const diamondPattern = [
+                    {dx: 0, dy: 0},   // center
+                    // Cross (distance 1)
+                    {dx: -1, dy: 0},  // left
+                    {dx: 1, dy: 0},   // right
+                    {dx: 0, dy: -1},  // top
+                    {dx: 0, dy: 1},   // bottom
+                    // Diagonals (distance 1)
+                    {dx: -1, dy: -1}, // top-left
+                    {dx: 1, dy: -1},  // top-right
+                    {dx: -1, dy: 1},  // bottom-left
+                    {dx: 1, dy: 1},   // bottom-right
+                    // Extended cross (distance 2)
+                    {dx: -2, dy: 0},  // far left
+                    {dx: 2, dy: 0},   // far right
+                    {dx: 0, dy: -2},  // far top
+                    {dx: 0, dy: 2}    // far bottom
+                ];
+                
+                for (const {dx, dy} of diamondPattern) {
+                    const x = centerX + dx;
+                    const y = centerY + dy;
+                    
+                    // Check bounds
+                    if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
+                        if (currentTool == "eraser" || vars.current_class == 0){
+                            hidden_ctx.clearRect(x, y, 1, 1);
+                        } else {
+                            // First clear to prevent double-application, then fill
+                            hidden_ctx.clearRect(x, y, 1, 1);
+                            hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
+                            hidden_ctx.fillRect(x, y, 1, 1);
+                        }
+                    }
+                }
+            }
+            // Regular round brush: use circular drawing logic for sizes > 5
+            else {
+                const brushCenterX = cursorImage[0] + offset.x + toolSize / 2;
+                const brushCenterY = cursorImage[1] + offset.y + toolSize / 2;
+                const radius = toolSize / 2;
+                
+                if (currentTool == "eraser"){
+                    // For eraser, we need to clear pixels within the circle
+                    for (let x = x_start; x < x_end; x++) {
+                        for (let y = y_start; y < y_end; y++) {
+                            // Convert mask coordinates back to image coordinates for distance calculation
+                            const imageX = x + vars.mask_area[0];
+                            const imageY = y + vars.mask_area[1];
+                            
+                            // Calculate distance from brush center
+                            const dx = imageX - brushCenterX;
+                            const dy = imageY - brushCenterY;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            // Only clear if pixel is within the circle
+                            if (distance <= radius) {
+                                hidden_ctx.clearRect(x, y, 1, 1);
+                            }
+                        }
+                    }
+                } else {
+                    // For drawing, check if we're drawing "clear" class (0) or a real class
+                    if (vars.current_class == 0) {
+                        // Clear class: clear pixels within the circle
+                        for (let x = x_start; x < x_end; x++) {
+                            for (let y = y_start; y < y_end; y++) {
+                                // Convert mask coordinates back to image coordinates for distance calculation
+                                const imageX = x + vars.mask_area[0];
+                                const imageY = y + vars.mask_area[1];
+                                
+                                // Calculate distance from brush center
+                                const dx = imageX - brushCenterX;
+                                const dy = imageY - brushCenterY;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                
+                                // Only clear if pixel is within the circle
+                                if (distance <= radius) {
+                                    hidden_ctx.clearRect(x, y, 1, 1);
+                                }
+                            }
+                        }
+                    } else {
+                        // Real class: first clear the circular area, then fill with class color
+                        // This prevents double-application and ensures consistent opacity
+                        for (let x = x_start; x < x_end; x++) {
+                            for (let y = y_start; y < y_end; y++) {
+                                // Convert mask coordinates back to image coordinates for distance calculation
+                                const imageX = x + vars.mask_area[0];
+                                const imageY = y + vars.mask_area[1];
+                                
+                                // Calculate distance from brush center
+                                const dx = imageX - brushCenterX;
+                                const dy = imageY - brushCenterY;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                
+                                // Only modify if pixel is within the circle
+                                if (distance <= radius) {
+                                    // First clear the pixel to prevent double-application
+                                    hidden_ctx.clearRect(x, y, 1, 1);
+                                    // Then fill with the class color
+                                    hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
+                                    hidden_ctx.fillRect(x, y, 1, 1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            render_mask(); // Full re-render for round brushes
+        } else {
+            // Square brush: use original rectangular drawing logic for partial updates
+            hidden_ctx.clearRect(...drawing_area);
 
-        if (currentTool != "eraser"){
-            hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
-            hidden_ctx.fillRect(...drawing_area);
+            if (currentTool != "eraser"){
+                hidden_ctx.fillStyle = rgba2css(get_current_class_colour());
+                hidden_ctx.fillRect(...drawing_area);
+            }
+            
+            render_mask(drawing_area); // Optimized partial re-render for square brushes
         }
-
-        // Render the current mask view:
-        render_mask(drawing_area);
     }
 
     update_drawn_pixels();
@@ -1085,25 +1383,21 @@ function reload_hidden_mask(){
     
     // Safety check: only proceed if hidden mask canvas is initialized
     if (!vars.hidden_mask) {
-        console.log('[IRIS] reload_hidden_mask called but hidden_mask not initialized yet');
         return;
     }
     
     // Safety check: ensure mask data is available
     if (!vars.mask_shape || !vars.mask) {
-        console.log('[IRIS] reload_hidden_mask called but mask data not available yet');
         return;
     }
     
     // Safety check: ensure canvas is properly initialized
     if (!vars.hidden_mask.getContext) {
-        console.log('[IRIS] reload_hidden_mask called but hidden_mask is not a valid canvas element');
         return;
     }
     
     let ctx = vars.hidden_mask.getContext('2d');
     if (!ctx) {
-        console.log('[IRIS] reload_hidden_mask called but canvas context not available');
         return;
     }
 

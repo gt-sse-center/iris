@@ -5,8 +5,10 @@ class MaskLayer extends CanvasLayer{
         super(port, vm, view, "mask");
     }
     render(bbox=null){
+        console.log('[IRIS] Legacy MaskLayer.render called with bbox:', bbox);
         let ctx = this.container.getContext("2d");
         if (bbox === null){
+            console.log('[IRIS] Legacy MaskLayer: doing full redraw');
             // No specific coordinates are given, i.e. we redraw the whole mask:
             ctx.clearRect(0, 0, ...vars.image_shape);
             ctx.drawImage(
@@ -14,6 +16,7 @@ class MaskLayer extends CanvasLayer{
                 vars.mask_area[0], vars.mask_area[1]
             );
         } else {
+            console.log('[IRIS] Legacy MaskLayer: doing partial redraw with bbox:', bbox);
             ctx.clearRect(
                 bbox[0]+vars.mask_area[0],
                 bbox[1]+vars.mask_area[1],
@@ -26,6 +29,7 @@ class MaskLayer extends CanvasLayer{
                 bbox[2], bbox[3]
             );
         }
+        console.log('[IRIS] Legacy MaskLayer: render complete');
     }
 }
 
@@ -98,11 +102,33 @@ class PreviewLayer extends CanvasLayer{
             cursorImage = vars.cursor_image; // Fallback during initialization
         }
         
-        ctx.fillRect(
-            cursorImage[0]+offset.x,
-            cursorImage[1]+offset.y,
-            toolSize, toolSize
-        );
+        // Get tool shape from React store (primary source) with fallback to legacy vars
+        let toolShape;
+        if (window.getToolShapeFromStore) {
+            toolShape = window.getToolShapeFromStore();
+        } else {
+            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.shape fallback - React store not available yet');
+            toolShape = vars.tool.shape || 'square'; // Fallback during initialization
+        }
+        
+        // Draw tool cursor preview based on shape
+        if (toolShape === 'round') {
+            // Draw circular cursor
+            const radius = toolSize / 2;
+            const centerX = cursorImage[0] + offset.x + radius;
+            const centerY = cursorImage[1] + offset.y + radius;
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        } else {
+            // Draw square cursor (default)
+            ctx.fillRect(
+                cursorImage[0]+offset.x,
+                cursorImage[1]+offset.y,
+                toolSize, toolSize
+            );
+        }
 
         // Draw the boundaries of the masking area
         ctx.beginPath();

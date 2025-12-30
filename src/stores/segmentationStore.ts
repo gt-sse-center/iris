@@ -199,7 +199,10 @@ interface SegmentationState {
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'move' | 'draw' | 'eraser';
   toolSize: number;
+  toolShape: 'square' | 'round';
   toolResizingMode: boolean;
+  showDrawToolDropdown: boolean;
+  showEraserToolDropdown: boolean;
   currentClass: number;
   maskType: 'final' | 'user' | 'errors';
   classes: ClassConfig[];
@@ -208,7 +211,10 @@ interface SegmentationState {
   // PHASE 1: Core Drawing Actions
   setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => void;
   setToolSize: (size: number) => void;
+  setToolShape: (shape: 'square' | 'round') => void;
   setToolResizingMode: (resizing: boolean) => void;
+  setShowDrawToolDropdown: (show: boolean) => void;
+  setShowEraserToolDropdown: (show: boolean) => void;
   setCurrentClass: (classId: number) => void;
   setMaskType: (type: 'final' | 'user' | 'errors') => void;
   setClasses: (classes: ClassConfig[]) => void;
@@ -275,6 +281,16 @@ const getDragStartFromStore = () => {
 // Helper function to set drag start in React store (for legacy compatibility)
 const setDragStartInStore = (coords: [number, number] | null) => {
   useSegmentationStore.getState().setDragStart(coords);
+};
+
+// Helper function to get tool shape from React store (for legacy compatibility)
+const getToolShapeFromStore = () => {
+  return useSegmentationStore.getState().toolShape;
+};
+
+// Helper function to set tool shape in React store (for legacy compatibility)
+const setToolShapeInStore = (shape: 'square' | 'round') => {
+  useSegmentationStore.getState().setToolShape(shape);
 };
 
 // Helper function to trigger legacy rendering
@@ -353,7 +369,10 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
   toolSize: 5, // Default tool size
+  toolShape: 'square', // Default tool shape
   toolResizingMode: false, // Default to zoom mode (not resize mode)
+  showDrawToolDropdown: false, // Default to dropdown closed
+  showEraserToolDropdown: false, // Default to dropdown closed
   currentClass: 0, // Default to first class
   maskType: 'final', // Default mask type
   classes: [], // Will be initialized from legacy vars
@@ -556,6 +575,41 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars?.tool) {
       w.vars.tool.resizing_mode = resizing;
     }
+  },
+
+  setToolShape: (shape: 'square' | 'round') => {
+    // Validate shape type
+    const validShapes = ['square', 'round'] as const;
+    if (!validShapes.includes(shape)) {
+      console.warn('[IRIS] setToolShape: Invalid shape type provided', shape);
+      return;
+    }
+    
+    set({ toolShape: shape });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars?.tool) {
+      w.vars.tool.shape = shape;
+    }
+    
+    // Trigger legacy preview render (with safety check for initialization)
+    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+      w.render_preview();
+    } else {
+      console.log('[IRIS] setToolShape: Skipping render_preview, ViewManager not initialized yet');
+    }
+    
+    // Trigger React preview layer re-render
+    window.dispatchEvent(new CustomEvent('react-preview-render'));
+  },
+
+  setShowDrawToolDropdown: (show: boolean) => {
+    set({ showDrawToolDropdown: show });
+  },
+
+  setShowEraserToolDropdown: (show: boolean) => {
+    set({ showEraserToolDropdown: show });
   },
 
   setCurrentClass: (classId: number) => {
@@ -1075,6 +1129,8 @@ if (typeof window !== 'undefined') {
   (window as any).setCurrentToolInStore = setCurrentToolInStore;
   (window as any).getDragStartFromStore = getDragStartFromStore;
   (window as any).setDragStartInStore = setDragStartInStore;
+  (window as any).getToolShapeFromStore = getToolShapeFromStore;
+  (window as any).setToolShapeInStore = setToolShapeInStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;

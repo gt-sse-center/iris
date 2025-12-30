@@ -32,6 +32,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
   // Get tool size from React store (primary source)
   const toolSize = useSegmentationStore((state) => state.toolSize);
   
+  // Get tool shape from React store (primary source)
+  const toolShape = useSegmentationStore((state) => state.toolShape);
+  
   // Get cursor image from React store (primary source)
   const cursorImage = useSegmentationStore((state) => state.cursorImage);
   
@@ -78,9 +81,22 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     const toolWidth = toolSize / scale;
     const toolHeight = toolSize / scale;
     
-    // Draw tool cursor preview
+    // Draw tool cursor preview based on shape
     ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
-    ctx.fillRect(cursorX, cursorY, toolWidth, toolHeight);
+    
+    if (toolShape === 'round') {
+      // Draw circular cursor
+      const radius = toolWidth / 2;
+      const centerX = cursorX + radius;
+      const centerY = cursorY + radius;
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.fill();
+    } else {
+      // Draw square cursor (default)
+      ctx.fillRect(cursorX, cursorY, toolWidth, toolHeight);
+    }
     
     // Draw mask area boundaries
     if (win.vars.mask_area && win.vars.mask_shape) {
@@ -105,7 +121,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.rect(maskX, maskY, maskWidth, maskHeight);
       ctx.stroke();
     }
-  }, [toolSize, cursorImage]); // Re-render when toolSize or cursorImage changes
+  }, [toolSize, toolShape, cursorImage]); // Re-render when toolSize, toolShape, or cursorImage changes
   
   // Handle canvas size changes and coordinate transformation
   useEffect(() => {
