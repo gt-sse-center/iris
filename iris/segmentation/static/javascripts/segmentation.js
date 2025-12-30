@@ -815,7 +815,16 @@ function update_views(){
         return;
     }
     
-    let image_coords = ctx.getWorldCoords(...vars.cursor_canvas);
+    // Get canvas coordinates from React store (primary source)
+    let canvasCoords;
+    if (window.getCanvasMousePositionFromStore) {
+        canvasCoords = window.getCanvasMousePositionFromStore();
+    } else {
+        console.warn('[IRIS Migration] update_views: Using legacy vars.cursor_canvas fallback - React store not available yet');
+        canvasCoords = vars.cursor_canvas || [0, 0];
+    }
+    
+    let image_coords = ctx.getWorldCoords(...canvasCoords);
     let newCursorImage = [image_coords.x, image_coords.y];
     
     // Update through React store (primary source)
@@ -860,7 +869,14 @@ function update_cursor_coords(obj, event){
         (event.clientY - rect.top) / (rect.bottom - rect.top) * obj.height
     );
 
-    vars.cursor_canvas = [x, y];
+    // Update canvas coordinates through React store (primary source)
+    if (window.setCanvasMousePositionInStore) {
+        window.setCanvasMousePositionInStore(x, y);
+    } else {
+        console.warn('[IRIS Migration] update_cursor_coords: Using legacy vars.cursor_canvas fallback - React store not available yet');
+        vars.cursor_canvas = [x, y];
+    }
+
     let canvas = document.getElementsByClassName('view-canvas')[0];
     let image_coords = canvas.getContext("2d").getWorldCoords(x, y);
     let newCursorImage = [
@@ -872,7 +888,7 @@ function update_cursor_coords(obj, event){
         window.setCursorImageInStore(newCursorImage[0], newCursorImage[1]);
     } else {
         // Fallback to legacy vars during initialization
-        console.warn('[IRIS Migration] set_cursor_coords: Using legacy vars.cursor_image update fallback - React store not available yet');
+        console.warn('[IRIS Migration] update_cursor_coords: Using legacy vars.cursor_image update fallback - React store not available yet');
         vars.cursor_image = newCursorImage;
     }
 }

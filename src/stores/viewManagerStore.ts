@@ -40,6 +40,7 @@ export interface DebugInfo {
   panOffset: { x: number; y: number };
   canvasDimensions: { width: number; height: number };
   mousePosition: { x: number; y: number };
+  canvasMousePosition: [number, number];
   isMouseDown: boolean;
   isDragging: boolean;
 }
@@ -65,6 +66,7 @@ export interface ViewManagerState {
   // PHASE 3A: Canvas State
   canvasDimensions: { width: number; height: number };
   mousePosition: { x: number; y: number };
+  canvasMousePosition: [number, number]; // Canvas coordinates [x, y] in pixels (replaces vars.cursor_canvas)
   isMouseDown: boolean;
   isDragging: boolean;
   
@@ -105,6 +107,7 @@ export interface ViewManagerState {
   // PHASE 3A: Canvas Actions
   updateCanvasDimensions: (dimensions: { width: number; height: number }) => void;
   updateMousePosition: (position: { x: number; y: number }) => void;
+  setCanvasMousePosition: (coords: [number, number]) => void;
   setMouseDown: (isDown: boolean) => void;
   setDragging: (isDragging: boolean) => void;
   
@@ -155,6 +158,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   // PHASE 3A: Canvas State
   canvasDimensions: { width: 400, height: 400 },
   mousePosition: { x: 0, y: 0 },
+  canvasMousePosition: [0, 0], // Canvas coordinates [x, y] in pixels (replaces vars.cursor_canvas)
   isMouseDown: false,
   isDragging: false,
   
@@ -321,6 +325,25 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     if (w.vars) {
       w.vars.mouse_x = mousePosition.x;
       w.vars.mouse_y = mousePosition.y;
+    }
+  },
+
+  setCanvasMousePosition: (coords) => {
+    // Validate coordinates
+    if (!Array.isArray(coords) || coords.length !== 2 || 
+        typeof coords[0] !== 'number' || typeof coords[1] !== 'number' ||
+        isNaN(coords[0]) || isNaN(coords[1])) {
+      console.warn('[IRIS] setCanvasMousePosition: Invalid coordinates', coords);
+      return;
+    }
+
+    const coordsCopy: [number, number] = [coords[0], coords[1]];
+    set({ canvasMousePosition: coordsCopy });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.cursor_canvas = coordsCopy;
     }
   },
   
@@ -496,6 +519,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       panOffset: state.panOffset,
       canvasDimensions: state.canvasDimensions,
       mousePosition: state.mousePosition,
+      canvasMousePosition: state.canvasMousePosition,
       isMouseDown: state.isMouseDown,
       isDragging: state.isDragging,
     };
@@ -621,6 +645,12 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
           y: w.vars.mouse_y
         });
       }
+
+      // Initialize canvas mouse position from legacy vars
+      if (w.vars.cursor_canvas && Array.isArray(w.vars.cursor_canvas) && w.vars.cursor_canvas.length === 2) {
+        console.log('🔧 ViewManager: Setting canvas mouse position:', w.vars.cursor_canvas);
+        store.setCanvasMousePosition(w.vars.cursor_canvas);
+      }
       
       set({ isInitialized: true });
       console.log('✅ ViewManager: Initialization complete');
@@ -676,6 +706,9 @@ if (typeof window !== 'undefined') {
     // Mouse operations
     updateMouse: (x: number, y: number) => 
       useViewManagerStore.getState().updateMousePosition({ x, y }),
+    setCanvasMousePosition: (x: number, y: number) =>
+      useViewManagerStore.getState().setCanvasMousePosition([x, y]),
+    getCanvasMousePosition: () => useViewManagerStore.getState().canvasMousePosition,
     setMouseDown: (isDown: boolean) => useViewManagerStore.getState().setMouseDown(isDown),
     
     // Coordinate transformation
@@ -686,6 +719,15 @@ if (typeof window !== 'undefined') {
     
     // Reset operations
     resetView: () => useViewManagerStore.getState().resetView(),
+  };
+  
+  // Helper functions for legacy JavaScript access during migration
+  (window as any).getCanvasMousePositionFromStore = () => {
+    return useViewManagerStore.getState().canvasMousePosition;
+  };
+  
+  (window as any).setCanvasMousePositionInStore = (x: number, y: number) => {
+    useViewManagerStore.getState().setCanvasMousePosition([x, y]);
   };
   
   // Initialize debug mode from legacy vars
