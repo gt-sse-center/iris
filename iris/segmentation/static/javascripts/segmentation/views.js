@@ -156,10 +156,15 @@ class PreviewLayer extends CanvasLayer{
 
         ctx.strokeStyle = "red";
         ctx.setLineDash([5, 15]);
-        ctx.rect(
-            vars.mask_area[0], vars.mask_area[1],
-            ...vars.mask_shape
-        );
-        ctx.stroke();
+        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : vars.mask_shape;
+        if (maskShape) {
+            ctx.rect(
+                vars.mask_area[0], vars.mask_area[1],
+                ...maskShape
+            );
+            ctx.stroke();
+        } else {
+            console.warn('[IRIS Migration] No mask shape available for ViewLayer rendering');
+        }
     }
 }

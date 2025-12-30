@@ -166,6 +166,10 @@ interface SegmentationState {
   copyMask: () => Uint8Array | null;
   copyUserMask: () => Uint8Array | null;
   
+  // Mask Shape Actions (replaces vars.mask_shape)
+  setMaskDimensions: (dimensions: { width: number; height: number }) => void;
+  getMaskShape: () => [number, number] | null;
+  
   // Bulk operations for performance
   updateMaskRegion: (pixels: Array<{x: number, y: number, classId: number}>) => void;
   fillMaskRegion: (startX: number, startY: number, endX: number, endY: number, classId: number) => void;
@@ -388,6 +392,44 @@ const setMaskDataInStore = (data: Uint8Array, width: number, height: number) => 
   useSegmentationStore.getState().setMaskData(data, width, height);
 };
 
+// CRITICAL: Helper functions for mask shape legacy access during migration (vars.mask_shape)
+const getMaskShapeFromStore = (): [number, number] | null => {
+  const dimensions = useSegmentationStore.getState().maskDimensions;
+  return dimensions ? [dimensions.width, dimensions.height] : null;
+};
+
+const setMaskShapeInStore = (width: number, height: number) => {
+  // Validate input
+  if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
+    console.error('[IRIS] setMaskShapeInStore: Invalid dimensions', { width, height });
+    return;
+  }
+
+  const store = useSegmentationStore.getState();
+  
+  // If we have existing mask data, validate dimensions match
+  const currentMask = store.maskData;
+  if (currentMask && currentMask.length !== width * height) {
+    console.warn('[IRIS] setMaskShapeInStore: Dimension mismatch with existing mask data', {
+      currentLength: currentMask.length,
+      expectedLength: width * height
+    });
+  }
+
+  // Update dimensions using store method (this will also sync with legacy vars.mask_shape)
+  store.setMaskDimensions({ width, height });
+};
+
+const getMaskWidthFromStore = (): number => {
+  const dimensions = useSegmentationStore.getState().maskDimensions;
+  return dimensions ? dimensions.width : 0;
+};
+
+const getMaskHeightFromStore = (): number => {
+  const dimensions = useSegmentationStore.getState().maskDimensions;
+  return dimensions ? dimensions.height : 0;
+};
+
 const getUserMaskDataFromStore = () => {
   return useSegmentationStore.getState().userMaskData;
 };
@@ -426,6 +468,14 @@ const copyMaskFromStore = () => {
 
 const copyUserMaskFromStore = () => {
   return useSegmentationStore.getState().copyUserMask();
+};
+
+const getMaskTypeFromStore = () => {
+  return useSegmentationStore.getState().maskType;
+};
+
+const getClassesFromStore = () => {
+  return useSegmentationStore.getState().classes;
 };
 
 // History system helper functions
@@ -699,6 +749,31 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   copyUserMask: () => {
     const { userMaskData } = get();
     return userMaskData ? new Uint8Array(userMaskData) : null;
+  },
+
+  // Mask Shape Actions (replaces vars.mask_shape)
+  setMaskDimensions: (dimensions: { width: number; height: number }) => {
+    // Validate input
+    if (!dimensions || typeof dimensions.width !== 'number' || typeof dimensions.height !== 'number' || 
+        dimensions.width <= 0 || dimensions.height <= 0) {
+      console.error('[IRIS] setMaskDimensions: Invalid dimensions', dimensions);
+      return;
+    }
+
+    set({ maskDimensions: dimensions });
+    
+    // Sync with legacy vars during migration (only in browser environment)
+    if (typeof window !== 'undefined') {
+      const w = window as any;
+      if (w.vars) {
+        w.vars.mask_shape = [dimensions.width, dimensions.height];
+      }
+    }
+  },
+
+  getMaskShape: () => {
+    const { maskDimensions } = get();
+    return maskDimensions ? [maskDimensions.width, maskDimensions.height] : null;
   },
 
   // Batch Updates for Performance
@@ -1801,6 +1876,14 @@ if (typeof window !== 'undefined') {
   (window as any).setUserMaskPixelInStore = setUserMaskPixelInStore;
   (window as any).copyMaskFromStore = copyMaskFromStore;
   (window as any).copyUserMaskFromStore = copyUserMaskFromStore;
+  (window as any).getMaskTypeFromStore = getMaskTypeFromStore;
+  (window as any).getClassesFromStore = getClassesFromStore;
+  
+  // CRITICAL: Export mask shape helper functions for legacy JavaScript (vars.mask_shape migration)
+  (window as any).getMaskShapeFromStore = getMaskShapeFromStore;
+  (window as any).setMaskShapeInStore = setMaskShapeInStore;
+  (window as any).getMaskWidthFromStore = getMaskWidthFromStore;
+  (window as any).getMaskHeightFromStore = getMaskHeightFromStore;
   
   // Export history system helper functions
   (window as any).updateHistoryInStore = updateHistoryInStore;
