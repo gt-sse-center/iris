@@ -10,9 +10,26 @@ const mockStore = {
   showControls: true,
   imageId: 'test-image',
   imageLocation: [0, 0] as [number, number],
+  // PHASE 3A: Add missing zoom/pan/canvas state
+  currentView: null,
+  zoomLevel: 1.0,
+  panOffset: { x: 0, y: 0 },
+  canvasDimensions: { width: 400, height: 300 },
+  mousePosition: { x: 0, y: 0 },
+  isMouseDown: false,
+  isDragging: false,
+  // Actions
   getCurrentViews: () => [],
   updateViewDimensions: () => {},
   setImageLocation: () => {},
+  // PHASE 3A: Add missing actions
+  setCurrentView: () => {},
+  updateCanvasDimensions: () => {},
+  updateMousePosition: () => {},
+  setMouseDown: () => {},
+  setDragging: () => {},
+  screenToImageCoordinates: () => ({ x: 0, y: 0 }),
+  imageToScreenCoordinates: () => ({ x: 0, y: 0 }),
   getDebugInfo: () => ({
     hasViews: false,
     viewsCount: 0,
@@ -22,6 +39,14 @@ const mockStore = {
     filters: { contrast: false, invert: false, brightness: 100, saturation: 100 },
     isInitialized: false,
     initializationError: null,
+    // PHASE 3A: Add missing debug info
+    currentView: null,
+    zoomLevel: 1.0,
+    panOffset: { x: 0, y: 0 },
+    canvasDimensions: { width: 400, height: 300 },
+    mousePosition: { x: 0, y: 0 },
+    isMouseDown: false,
+    isDragging: false,
   }),
 };
 

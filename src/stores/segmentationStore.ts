@@ -25,6 +25,81 @@ interface ImageInfo {
   annotation_count: number;
 }
 
+interface ClassConfig {
+  name: string;
+  colour: [number, number, number, number]; // RGBA
+  user_colour?: [number, number, number, number]; // Optional user-specific color
+  description?: string; // Optional description
+}
+
+// PHASE 2: Import new types
+interface ProjectConfig {
+  name: string;
+  host: string;
+  port: number;
+  images: string | string[];
+  classes: ClassConfig[];
+  views: ViewConfig[];
+  view_groups: string[][];
+  segmentation: {
+    mask_path: string;
+    ai_model: AIModelConfig;
+    scoring: {
+      enabled: boolean;
+      metrics: string[];
+    };
+  };
+}
+
+interface ViewConfig {
+  name: string;
+  type: string;
+  bands?: string[];
+  expression?: string;
+  colormap?: string;
+  vmin?: number;
+  vmax?: number;
+}
+
+interface UserInfo {
+  id: number;
+  name: string;
+  admin: boolean;
+  tested: boolean;
+  created: string;
+  image_seed: number;
+  segmentation: {
+    score: number;
+    score_unverified: number;
+    n_masks: number;
+    rank?: number;
+  };
+}
+
+interface ConfusionMatrix {
+  matrix: number[][];
+  classes: string[];
+  accuracy: number;
+  f1_score: number;
+  jaccard_index: number;
+}
+
+interface AIModelConfig {
+  n_estimators: number;
+  max_depth: number;
+  n_leaves: number;
+  train_ratio: number;
+  max_train_pixels: number;
+  use_edge_filter: boolean;
+  use_meshgrid: boolean;
+  meshgrid_cells: string;
+  use_superpixels: boolean;
+  bands: string[];
+  suppression_filter_size: number;
+  suppression_threshold: number;
+  suppression_default_class: number;
+}
+
 interface SegmentationDebugInfo {
   showMask: boolean;
   currentImageId: string | null;
@@ -34,6 +109,21 @@ interface SegmentationDebugInfo {
   saturation: number;
   contrast: boolean;
   invert: boolean;
+  // Core drawing state debug info
+  currentTool: string;
+  toolSize: number;
+  toolResizingMode: boolean;
+  currentClass: number;
+  maskType: string;
+  classesCount: number;
+  totalUserPixels: number;
+  // PHASE 2: Navigation & Actions debug info
+  hasConfig: boolean;
+  hasUser: boolean;
+  hasConfusionMatrix: boolean;
+  maskChanged: boolean;
+  isLoading: boolean;
+  lastSaveTime: string | null;
 }
 
 interface SegmentationState {
@@ -46,8 +136,21 @@ interface SegmentationState {
   showDialogueBeforeNextImage: boolean;
   setShowDialogueBeforeNextImage: (show: boolean) => void;
   
+  // Error Modal
+  errorModal: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+  };
+  showErrorModal: (message: string, title?: string) => void;
+  hideErrorModal: () => void;
+  
   // Debug state
   debugMode: boolean;
+
+  // Cursor Image (replaces vars.cursor_image)
+  cursorImage: [number, number];
+  setCursorImage: (coords: [number, number]) => void;
 
   // Image Navigation
   images: ImageInfo[];
@@ -85,10 +188,76 @@ interface SegmentationState {
   changeSaturation: (up: boolean) => void;
   setExpandedFilterSlider: (sliderId: string | null) => void;
   
+  // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
+  currentTool: 'move' | 'draw' | 'eraser';
+  toolSize: number;
+  toolResizingMode: boolean;
+  currentClass: number;
+  maskType: 'final' | 'user' | 'errors';
+  classes: ClassConfig[];
+  userPixelCounts: { [classId: number]: number; total: number };
+  
+  // PHASE 1: Core Drawing Actions
+  setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => void;
+  setToolSize: (size: number) => void;
+  setToolResizingMode: (resizing: boolean) => void;
+  setCurrentClass: (classId: number) => void;
+  setMaskType: (type: 'final' | 'user' | 'errors') => void;
+  setClasses: (classes: ClassConfig[]) => void;
+  updateUserPixelCounts: (counts: { [classId: number]: number; total: number }) => void;
+  
+  // PHASE 2: Navigation & Actions State (replaces vars.config, vars.user, vars.confusion_matrix)
+  config: ProjectConfig | null;
+  user: UserInfo | null;
+  confusionMatrix: ConfusionMatrix | null;
+  maskChanged: boolean;
+  isLoading: boolean;
+  lastSaveTime: Date | null;
+  
+  // PHASE 2: Navigation & Actions Actions
+  saveCurrentMask: () => Promise<void>;
+  loadMaskForImage: (imageId: string) => Promise<void>;
+  predictMask: () => Promise<void>;
+  updateConfusionMatrix: (matrix: ConfusionMatrix) => void;
+  resetViews: () => void;
+  setConfig: (config: ProjectConfig) => void;
+  setUser: (user: UserInfo) => void;
+  setMaskChanged: (changed: boolean) => void;
+  
   // Debug actions
   setDebugMode: (enabled: boolean) => void;
   getDebugInfo: () => SegmentationDebugInfo;
 }
+
+// Helper function to get tool size from React store (for legacy compatibility)
+const getToolSizeFromStore = () => {
+  return useSegmentationStore.getState().toolSize;
+};
+
+// Helper function to get tool resizing mode from React store (for legacy compatibility)
+const getToolResizingModeFromStore = () => {
+  return useSegmentationStore.getState().toolResizingMode;
+};
+
+// Helper function to get cursor image from React store (for legacy compatibility)
+const getCursorImageFromStore = () => {
+  return useSegmentationStore.getState().cursorImage;
+};
+
+// Helper function to set cursor image in React store (for legacy compatibility)
+const setCursorImageInStore = (x: number, y: number) => {
+  useSegmentationStore.getState().setCursorImage([x, y]);
+};
+
+// Helper function to get current tool from React store (for legacy compatibility)
+const getCurrentToolFromStore = () => {
+  return useSegmentationStore.getState().currentTool;
+};
+
+// Helper function to set current tool in React store (for legacy compatibility)
+const setCurrentToolInStore = (tool: 'move' | 'draw' | 'eraser') => {
+  useSegmentationStore.getState().setCurrentTool(tool);
+};
 
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
@@ -117,6 +286,34 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     set({ showDialogueBeforeNextImage: show });
   },
 
+  // Error Modal State
+  errorModal: {
+    isOpen: false,
+    title: 'Error',
+    message: '',
+  },
+
+  showErrorModal: (message: string, title = 'Error') => {
+    console.log('[IRIS] showErrorModal called:', { message, title });
+    set({
+      errorModal: {
+        isOpen: true,
+        title,
+        message,
+      },
+    });
+  },
+
+  hideErrorModal: () => {
+    set({
+      errorModal: {
+        isOpen: false,
+        title: 'Error',
+        message: '',
+      },
+    });
+  },
+
   // Image Filter State (replaces vars.vm.filters)
   brightness: 100,
   saturation: 100,
@@ -128,6 +325,26 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   
   // Debug state
   debugMode: false,
+
+  // Cursor Image State (replaces vars.cursor_image)
+  cursorImage: [0, 0], // Default cursor position
+
+  // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
+  currentTool: 'draw', // Default tool
+  toolSize: 5, // Default tool size
+  toolResizingMode: false, // Default to zoom mode (not resize mode)
+  currentClass: 0, // Default to first class
+  maskType: 'final', // Default mask type
+  classes: [], // Will be initialized from legacy vars
+  userPixelCounts: { total: 0 }, // Will be updated from legacy vars
+
+  // PHASE 2: Navigation & Actions State (replaces vars.config, vars.user, vars.confusion_matrix)
+  config: null, // Will be initialized from legacy vars
+  user: null, // Will be initialized from legacy vars
+  confusionMatrix: null, // Will be updated from AI predictions
+  maskChanged: false, // Track unsaved changes
+  isLoading: false, // Loading state for async operations
+  lastSaveTime: null, // Track last save time
 
   setBrightness: (value: number) => {
     const clampedValue = Math.max(0, Math.min(800, value));
@@ -208,6 +425,413 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setExpandedFilterSlider: (sliderId: string | null) => {
     set({ expandedFilterSlider: sliderId });
+  },
+
+  setCursorImage: (coords: [number, number]) => {
+    // Validate coordinates are numbers
+    if (!Array.isArray(coords) || coords.length !== 2 || typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
+      console.warn('[IRIS] setCursorImage: Invalid coordinates provided', coords);
+      return;
+    }
+    
+    // Create a copy to ensure immutability
+    const coordsCopy: [number, number] = [coords[0], coords[1]];
+    set({ cursorImage: coordsCopy });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars) {
+      w.vars.cursor_image = coordsCopy;
+    }
+  },
+
+  // PHASE 1: Core Drawing Actions with Legacy Sync
+  setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => {
+    // Validate tool type
+    const validTools = ['move', 'draw', 'eraser'] as const;
+    if (!validTools.includes(tool)) {
+      console.warn('[IRIS] setCurrentTool: Invalid tool type provided', tool);
+      return;
+    }
+    
+    set({ currentTool: tool });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars?.tool) {
+      w.vars.tool.type = tool;
+    }
+    
+    // Update legacy DOM elements
+    if (w.get_object) {
+      // Remove checked class from all tool buttons
+      const tools = ['move', 'draw', 'eraser'];
+      tools.forEach(t => {
+        const btn = w.get_object(`tb_tool_${t}`);
+        if (btn) btn.classList.remove('checked');
+      });
+      
+      // Add checked class to current tool
+      const currentBtn = w.get_object(`tb_tool_${tool}`);
+      if (currentBtn) currentBtn.classList.add('checked');
+    }
+    
+    // Trigger legacy preview render (with safety check for initialization)
+    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+      w.render_preview();
+    } else {
+      console.log('[IRIS] setCurrentTool: Skipping render_preview, ViewManager not initialized yet');
+    }
+  },
+
+  setToolSize: (size: number) => {
+    const clampedSize = Math.max(1, Math.min(size, 100)); // Reasonable bounds: 1-100 pixels
+    set({ toolSize: clampedSize });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars?.tool) {
+      w.vars.tool.size = clampedSize;
+    }
+    
+    // Trigger legacy preview render (with safety check for initialization)
+    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+      w.render_preview();
+    } else {
+      console.log('[IRIS] setToolSize: Skipping render_preview, ViewManager not initialized yet');
+    }
+    
+    // Trigger React preview layer re-render
+    window.dispatchEvent(new CustomEvent('react-preview-render'));
+  },
+
+  setToolResizingMode: (resizing: boolean) => {
+    set({ toolResizingMode: resizing });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars?.tool) {
+      w.vars.tool.resizing_mode = resizing;
+    }
+  },
+
+  setCurrentClass: (classId: number) => {
+    const { classes } = get();
+    
+    // Safety check: ensure we have classes loaded
+    if (classes.length === 0) {
+      console.warn(`[IRIS] setCurrentClass: No classes available yet, skipping class ${classId}`);
+      return;
+    }
+    
+    if (classId < 0 || classId >= classes.length) {
+      console.warn(`Invalid class ID: ${classId}, available classes: 0-${classes.length - 1}`);
+      return;
+    }
+    
+    set({ currentClass: classId });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.current_class = classId;
+    }
+    
+    // Update legacy DOM elements
+    if (w.get_object && classes[classId]) {
+      const classInfo = classes[classId];
+      const nameElement = w.get_object('tb_current_class');
+      const colorElement = w.get_object('tb_select_class');
+      
+      if (nameElement) {
+        nameElement.innerHTML = classInfo.name;
+      }
+      
+      if (colorElement && w.rgba2css) {
+        const cssColor = w.rgba2css(classInfo.colour);
+        colorElement.style.backgroundColor = cssColor;
+      }
+    }
+    
+    // Automatically switch to draw tool (legacy behavior)
+    get().setCurrentTool('draw');
+  },
+
+  setMaskType: (type: 'final' | 'user' | 'errors') => {
+    const { maskType: currentType } = get();
+    set({ maskType: type });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mask_type = type;
+    }
+    
+    // Update legacy DOM elements
+    if (w.get_object) {
+      // Remove checked class from current mask type button
+      const currentBtn = w.get_object(`tb_mask_${currentType}`);
+      if (currentBtn) currentBtn.classList.remove('checked');
+      
+      // Add checked class to new mask type button
+      const newBtn = w.get_object(`tb_mask_${type}`);
+      if (newBtn) newBtn.classList.add('checked');
+    }
+    
+    // Trigger legacy mask reload and render (with comprehensive safety checks)
+    // Only call these functions if the initialization is complete
+    if (w.vars && w.vars.hidden_mask && w.vars.mask_shape && w.vars.mask) {
+      if (w.reload_hidden_mask) {
+        w.reload_hidden_mask();
+      }
+      if (w.render_mask) {
+        w.render_mask();
+      }
+      if (w.show_mask) {
+        w.show_mask(true); // Show mask when type changes
+      }
+    } else {
+      console.log('[IRIS] setMaskType: Skipping legacy function calls, initialization not complete yet');
+    }
+  },
+
+  setClasses: (classes: ClassConfig[]) => {
+    set({ classes });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.classes = classes;
+    }
+  },
+
+  updateUserPixelCounts: (counts: { [classId: number]: number; total: number }) => {
+    set({ userPixelCounts: counts });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.n_user_pixels = counts;
+    }
+    
+    // Update legacy DOM elements
+    if (w.get_object && w.nice_number) {
+      const drawnPixelsElement = w.get_object('drawn-pixels');
+      if (drawnPixelsElement) {
+        drawnPixelsElement.innerHTML = w.nice_number(counts.total);
+      }
+      
+      // Count different classes with significant pixels
+      let differentClasses = 0;
+      Object.keys(counts).forEach(key => {
+        if (key !== 'total' && counts[parseInt(key)] > 10) {
+          differentClasses++;
+        }
+      });
+      
+      const differentClassesElement = w.get_object('different-classes');
+      if (differentClassesElement) {
+        differentClassesElement.innerHTML = differentClasses.toString();
+      }
+      
+      // Update AI recommendation
+      const aiRecommendationElement = w.get_object('ai-recommendation');
+      if (aiRecommendationElement) {
+        if (differentClasses >= 2) {
+          aiRecommendationElement.innerHTML = 'Start the training!';
+        } else {
+          aiRecommendationElement.innerHTML = 'Draw at least 10 pixels from two classes!';
+        }
+      }
+    }
+    
+    // Mark mask as changed when user pixels are updated
+    get().setMaskChanged(true);
+  },
+
+  // PHASE 2: Navigation & Actions Actions
+  saveCurrentMask: async () => {
+    const { currentImageId, isLoading } = get();
+    
+    if (isLoading || !currentImageId) {
+      console.log('[IRIS] saveCurrentMask: Already loading or no current image');
+      return;
+    }
+    
+    set({ isLoading: true });
+    
+    try {
+      // Call legacy legacySaveMask function directly to avoid circular calls
+      const w = window as any;
+      if (w.legacySaveMask) {
+        // Create a promise wrapper around the legacy save function
+        await new Promise<void>((resolve, reject) => {
+          const originalCallback = w.save_mask_finished;
+          
+          // Temporarily override the callback to resolve our promise
+          w.save_mask_finished = async (response: Response, call_afterwards: any) => {
+            try {
+              // Call original callback
+              if (originalCallback) {
+                await originalCallback(response, call_afterwards);
+              }
+              
+              if (response.status === 200) {
+                // Update store state on successful save
+                set({ 
+                  maskChanged: false, 
+                  lastSaveTime: new Date(),
+                  isLoading: false 
+                });
+                resolve();
+              } else {
+                set({ isLoading: false });
+                reject(new Error(`Save failed with status ${response.status}`));
+              }
+            } catch (error) {
+              set({ isLoading: false });
+              reject(error);
+            } finally {
+              // Restore original callback
+              w.save_mask_finished = originalCallback;
+            }
+          };
+          
+          // Call legacy save function directly
+          w.legacySaveMask();
+        });
+      } else {
+        throw new Error('Legacy legacySaveMask function not available');
+      }
+    } catch (error) {
+      console.error('[IRIS] saveCurrentMask failed:', error);
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  loadMaskForImage: async (imageId: string) => {
+    const { isLoading } = get();
+    
+    if (isLoading) {
+      console.log('[IRIS] loadMaskForImage: Already loading');
+      return;
+    }
+    
+    set({ isLoading: true });
+    
+    try {
+      // Call legacy legacyLoadMask function directly to avoid circular calls
+      const w = window as any;
+      if (w.legacyLoadMask) {
+        await w.legacyLoadMask();
+        
+        // Update store state after successful load
+        set({ 
+          currentImageId: imageId,
+          maskChanged: false,
+          isLoading: false 
+        });
+      } else {
+        throw new Error('Legacy legacyLoadMask function not available');
+      }
+    } catch (error) {
+      console.error('[IRIS] loadMaskForImage failed:', error);
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  predictMask: async () => {
+    const { isLoading, userPixelCounts } = get();
+    
+    if (isLoading) {
+      console.log('[IRIS] predictMask: Already loading');
+      return;
+    }
+    
+    // Check if we have enough training data
+    let classesWithEnoughPixels = 0;
+    Object.keys(userPixelCounts).forEach(key => {
+      if (key !== 'total' && userPixelCounts[parseInt(key)] > 10) {
+        classesWithEnoughPixels++;
+      }
+    });
+    
+    if (classesWithEnoughPixels < 2) {
+      throw new Error('You need to draw at least 10 pixels for more than one class to use the AI.');
+    }
+    
+    set({ isLoading: true });
+    
+    try {
+      // Call legacy legacyPredictMask function directly to avoid circular calls
+      const w = window as any;
+      if (w.legacyPredictMask) {
+        await w.legacyPredictMask();
+        
+        // Mark mask as changed after prediction
+        set({ 
+          maskChanged: true,
+          isLoading: false 
+        });
+      } else {
+        throw new Error('Legacy legacyPredictMask function not available');
+      }
+    } catch (error) {
+      console.error('[IRIS] predictMask failed:', error);
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  updateConfusionMatrix: (matrix: ConfusionMatrix) => {
+    set({ confusionMatrix: matrix });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.confusion_matrix = matrix;
+    }
+  },
+
+  resetViews: () => {
+    // Call legacy reset_views function
+    const w = window as any;
+    if (w.reset_views) {
+      w.reset_views();
+    } else {
+      console.warn('[IRIS] resetViews: Legacy reset_views function not available');
+    }
+  },
+
+  setConfig: (config: ProjectConfig) => {
+    set({ config });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.config = config;
+    }
+  },
+
+  setUser: (user: UserInfo) => {
+    set({ user });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.user = user;
+    }
+  },
+
+  setMaskChanged: (changed: boolean) => {
+    set({ maskChanged: changed });
+    
+    // Update dialogue flag based on mask changes
+    if (changed) {
+      get().setShowDialogueBeforeNextImage(true);
+    }
   },
 
   // Image Navigation State
@@ -292,6 +916,21 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       saturation: state.saturation,
       contrast: state.contrast,
       invert: state.invert,
+      // PHASE 1: Core drawing state debug info
+      currentTool: state.currentTool,
+      toolSize: state.toolSize,
+      toolResizingMode: state.toolResizingMode,
+      currentClass: state.currentClass,
+      maskType: state.maskType,
+      classesCount: state.classes.length,
+      totalUserPixels: state.userPixelCounts.total,
+      // PHASE 2: Navigation & Actions debug info
+      hasConfig: state.config !== null,
+      hasUser: state.user !== null,
+      hasConfusionMatrix: state.confusionMatrix !== null,
+      maskChanged: state.maskChanged,
+      isLoading: state.isLoading,
+      lastSaveTime: state.lastSaveTime ? state.lastSaveTime.toISOString() : null,
     };
   },
 }));
@@ -308,17 +947,138 @@ const initializeFiltersFromLegacy = () => {
   }
 };
 
+// PHASE 1: Initialize core drawing state from legacy vars
+const initializeCoreDrawingStateFromLegacy = () => {
+  const w = window as any;
+  if (w.vars) {
+    const store = useSegmentationStore.getState();
+    
+    // Initialize tool state
+    if (w.vars.tool) {
+      if (w.vars.tool.type) {
+        store.setCurrentTool(w.vars.tool.type);
+      }
+      if (w.vars.tool.size) {
+        store.setToolSize(w.vars.tool.size);
+      }
+      if (typeof w.vars.tool.resizing_mode === 'boolean') {
+        store.setToolResizingMode(w.vars.tool.resizing_mode);
+      }
+    }
+    
+    // Initialize classes first (needed for current_class validation)
+    if (w.vars.classes && Array.isArray(w.vars.classes)) {
+      store.setClasses(w.vars.classes);
+    }
+    
+    // Initialize current class (after classes are set)
+    if (typeof w.vars.current_class === 'number' && w.vars.classes && w.vars.classes.length > 0) {
+      store.setCurrentClass(w.vars.current_class);
+    }
+    
+    // Initialize mask type
+    if (w.vars.mask_type) {
+      store.setMaskType(w.vars.mask_type);
+    }
+    
+    // Initialize user pixel counts
+    if (w.vars.n_user_pixels) {
+      store.updateUserPixelCounts(w.vars.n_user_pixels);
+    }
+  }
+};
+
+// PHASE 2: Initialize navigation & actions state from legacy vars
+const initializeNavigationActionsStateFromLegacy = () => {
+  const w = window as any;
+  if (w.vars) {
+    const store = useSegmentationStore.getState();
+    
+    // Initialize project configuration
+    if (w.vars.config) {
+      store.setConfig(w.vars.config);
+    }
+    
+    // Initialize user information
+    if (w.vars.user) {
+      store.setUser(w.vars.user);
+    }
+    
+    // Initialize confusion matrix
+    if (w.vars.confusion_matrix) {
+      store.updateConfusionMatrix(w.vars.confusion_matrix);
+    }
+    
+    // Initialize mask changed state
+    if (typeof w.vars.mask_changed === 'boolean') {
+      store.setMaskChanged(w.vars.mask_changed);
+    }
+  }
+};
+
 // Bridge for legacy JavaScript access during migration
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  (window as any).getToolSizeFromStore = getToolSizeFromStore;
+  (window as any).getToolResizingModeFromStore = getToolResizingModeFromStore;
+  (window as any).getCursorImageFromStore = getCursorImageFromStore;
+  (window as any).setCursorImageInStore = setCursorImageInStore;
+  (window as any).getCurrentToolFromStore = getCurrentToolFromStore;
+  (window as any).setCurrentToolInStore = setCurrentToolInStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
+  (window as any).initializeCoreDrawingStateFromLegacy = initializeCoreDrawingStateFromLegacy;
+  (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
+  
+  // Migration tracking - only log when store is available (no need to spam console)
+  console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;
   if (w.vars?.debug_mode) {
     useSegmentationStore.getState().setDebugMode(true);
   }
+  
+  // Prevent infinite initialization loops
+  let coreDrawingInitialized = false;
+  let navigationActionsInitialized = false;
+  
+  // Auto-initialize core drawing state when legacy vars become available
+  const checkForLegacyVars = () => {
+    // Core drawing state initialization
+    if (!coreDrawingInitialized && w.vars && (w.vars.tool || w.vars.classes || typeof w.vars.current_class === 'number')) {
+      console.log('🔧 SegmentationStore: Auto-initializing core drawing state from detected legacy vars');
+      initializeCoreDrawingStateFromLegacy();
+      coreDrawingInitialized = true;
+    }
+    
+    // PHASE 2: Navigation & actions state initialization
+    if (!navigationActionsInitialized && w.vars && (w.vars.config || w.vars.user || w.vars.confusion_matrix)) {
+      console.log('🔧 SegmentationStore: Auto-initializing navigation & actions state from detected legacy vars');
+      initializeNavigationActionsStateFromLegacy();
+      navigationActionsInitialized = true;
+    }
+  };
+  
+  // Check immediately
+  checkForLegacyVars();
+  
+  // Also check periodically for the first 10 seconds, but only if not already initialized
+  const checkInterval = setInterval(() => {
+    if (!coreDrawingInitialized || !navigationActionsInitialized) {
+      checkForLegacyVars();
+    }
+    
+    // Stop checking if both are initialized
+    if (coreDrawingInitialized && navigationActionsInitialized) {
+      clearInterval(checkInterval);
+    }
+  }, 500);
+  
+  setTimeout(() => clearInterval(checkInterval), 10000);
 }

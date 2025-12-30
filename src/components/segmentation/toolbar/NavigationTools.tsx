@@ -8,7 +8,15 @@ interface NavigationToolsProps {
 }
 
 const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) => {
-  const { getPrevImageId, getNextImageId } = useSegmentationStore();
+  const { 
+    getPrevImageId, 
+    getNextImageId, 
+    navigateNext, 
+    navigatePrev,
+    saveCurrentMask,
+    isLoading,
+    maskChanged
+  } = useSegmentationStore();
   
   const hasPrev = getPrevImageId() !== null;
   const hasNext = getNextImageId() !== null;
@@ -41,16 +49,88 @@ const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) =>
     }
   };
 
+  const handlePrevious = async () => {
+    if (maskChanged) {
+      // Save first, then navigate
+      try {
+        await saveCurrentMask();
+        const prevImageId = navigatePrev();
+        if (prevImageId) {
+          const url = `/segmentation/?image_id=${encodeURIComponent(prevImageId)}`;
+          const w = window as any;
+          if (w.goto_url) {
+            w.goto_url(url);
+          } else {
+            window.location.href = url;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save before navigation:', error);
+      }
+    } else {
+      // Navigate directly
+      const prevImageId = navigatePrev();
+      if (prevImageId) {
+        const url = `/segmentation/?image_id=${encodeURIComponent(prevImageId)}`;
+        const w = window as any;
+        if (w.goto_url) {
+          w.goto_url(url);
+        } else {
+          window.location.href = url;
+        }
+      }
+    }
+  };
+
+  const handleNext = async () => {
+    if (maskChanged) {
+      // Save first, then navigate
+      try {
+        await saveCurrentMask();
+        const nextImageId = navigateNext();
+        if (nextImageId) {
+          const url = `/segmentation/?image_id=${encodeURIComponent(nextImageId)}`;
+          const w = window as any;
+          if (w.goto_url) {
+            w.goto_url(url);
+          } else {
+            window.location.href = url;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save before navigation:', error);
+      }
+    } else {
+      // Navigate directly
+      const nextImageId = navigateNext();
+      if (nextImageId) {
+        const url = `/segmentation/?image_id=${encodeURIComponent(nextImageId)}`;
+        const w = window as any;
+        if (w.goto_url) {
+          w.goto_url(url);
+        } else {
+          window.location.href = url;
+        }
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await saveCurrentMask();
+    } catch (error) {
+      console.error('Failed to save mask:', error);
+      // Error handling is done in the store action
+    }
+  };
+
   return (
     <>
       <ToolButton
         id="tb_previous_image"
         icon="/segmentation/static/icons/previous.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.save_mask && w.prev_image) w.save_mask(w.prev_image);
-        }}
-        disabled={!hasPrev}
+        onClick={handlePrevious}
+        disabled={!hasPrev || isLoading}
         title={hasPrev ? "Previous image" : "No previous image"}
       />
       <ImageNavigationDropdown
@@ -59,26 +139,23 @@ const NavigationTools: React.FC<NavigationToolsProps> = ({ onExportGeoTIFF }) =>
       <ToolButton
         id="tb_next_image"
         icon="/segmentation/static/icons/next.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.save_mask && w.next_image) w.save_mask(w.next_image);
-        }}
-        disabled={!hasNext}
+        onClick={handleNext}
+        disabled={!hasNext || isLoading}
         title={hasNext ? "Next image" : "No more images"}
       />
       <ToolButton
         id="tb_save_mask"
         icon="/segmentation/static/icons/save_mask.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.save_mask) w.save_mask();
-        }}
+        onClick={handleSave}
+        disabled={isLoading}
+        title={isLoading ? "Saving..." : maskChanged ? "Save mask (unsaved changes)" : "Save mask"}
       />
       <ToolButton
         id="tb_export_geotiff"
         icon="/segmentation/static/icons/export.png"
         onClick={onExportGeoTIFF}
         title="Export GeoTIFF"
+        disabled={isLoading}
       />
     </>
   );

@@ -12,6 +12,8 @@ import { addTrackTransforms } from '../../../utils/coordinateTransform';
 
 interface ReactRGBLayerProps extends Omit<ReactBaseLayerProps, 'children'> {
   imageId: string;
+  zoomLevel?: number;
+  panOffset?: { x: number; y: number };
 }
 
 const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
@@ -22,6 +24,8 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
   imageId,
   className = '',
   style = {},
+  zoomLevel = 1.0,
+  panOffset = { x: 0, y: 0 },
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -125,10 +129,10 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     loadImage();
   }, [loadImage]);
   
-  // Re-render when filters change
+  // Re-render when filters or zoom/pan change
   useEffect(() => {
     renderImage();
-  }, [renderImage]);
+  }, [renderImage, zoomLevel, panOffset]);
   
   // Handle canvas size changes
   useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useSegmentationStore } from '../stores/segmentationStore';
 
 interface ClassSelectionModalProps {
   isOpen: boolean;
@@ -12,6 +13,9 @@ interface ClassSelectionModalProps {
  * descriptions, and pixel counts. Allows users to select a class for drawing.
  */
 const ClassSelectionModal: React.FC<ClassSelectionModalProps> = ({ isOpen, onClose }) => {
+  // PHASE 1: Use store hooks instead of direct window.vars access
+  const { classes, userPixelCounts, currentClass, setCurrentClass } = useSegmentationStore();
+  
   // Handle Escape key
   useEffect(() => {
     if (isOpen) {
@@ -30,15 +34,8 @@ const ClassSelectionModal: React.FC<ClassSelectionModalProps> = ({ isOpen, onClo
 
   if (!isOpen) return null;
 
-  // Get classes and pixel counts from window.vars
-  const w = window as any;
-  const classes = w.vars?.classes || [];
-  const nUserPixels = w.vars?.n_user_pixels || [];
-
   const handleClassSelect = (index: number) => {
-    if (w.set_current_class) {
-      w.set_current_class(index);
-    }
+    setCurrentClass(index);
     onClose();
   };
 
@@ -68,7 +65,7 @@ const ClassSelectionModal: React.FC<ClassSelectionModalProps> = ({ isOpen, onClo
                 </tr>
               </thead>
               <tbody>
-                {classes.map((classItem: any, index: number) => (
+                {classes.map((classItem, index) => (
                   <tr key={index}>
                     <td>
                       <button
@@ -76,8 +73,9 @@ const ClassSelectionModal: React.FC<ClassSelectionModalProps> = ({ isOpen, onClo
                           backgroundColor: rgba2css(classItem.colour),
                           width: '100%',
                           padding: '8px 16px',
-                          border: '1px solid #ccc',
-                          cursor: 'pointer'
+                          border: currentClass === index ? '2px solid #000' : '1px solid #ccc',
+                          cursor: 'pointer',
+                          fontWeight: currentClass === index ? 'bold' : 'normal'
                         }}
                         onClick={() => handleClassSelect(index)}
                       >
@@ -85,7 +83,7 @@ const ClassSelectionModal: React.FC<ClassSelectionModalProps> = ({ isOpen, onClo
                       </button>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      {nUserPixels[index] || 0}
+                      {userPixelCounts[index] || 0}
                     </td>
                     <td>{classItem.description || ''}</td>
                   </tr>

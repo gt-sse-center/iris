@@ -110,6 +110,58 @@ export interface ClassConfig {
   user_colour?: number[];
 }
 
+// PHASE 2: Navigation & Actions Types
+export interface ProjectConfig {
+  name: string;
+  host: string;
+  port: number;
+  images: string | string[];
+  classes: ClassConfig[];
+  views: ViewConfig[];
+  view_groups: string[][];
+  segmentation: {
+    mask_path: string;
+    ai_model: AIModelConfig;
+    scoring: {
+      enabled: boolean;
+      metrics: string[];
+    };
+  };
+}
+
+export interface ViewConfig {
+  name: string;
+  type: string;
+  bands?: string[];
+  expression?: string;
+  colormap?: string;
+  vmin?: number;
+  vmax?: number;
+}
+
+export interface UserInfo {
+  id: number;
+  name: string;
+  admin: boolean;
+  tested: boolean;
+  created: string;
+  image_seed: number;
+  segmentation: {
+    score: number;
+    score_unverified: number;
+    n_masks: number;
+    rank?: number;
+  };
+}
+
+export interface ConfusionMatrix {
+  matrix: number[][];
+  classes: string[];
+  accuracy: number;
+  f1_score: number;
+  jaccard_index: number;
+}
+
 export interface UserConfig {
   segmentation: {
     ai_model: AIModelConfig;

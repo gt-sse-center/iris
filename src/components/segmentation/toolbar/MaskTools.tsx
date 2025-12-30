@@ -3,7 +3,8 @@ import ToolButton from './ToolButton';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
 
 const MaskTools: React.FC = () => {
-  const { showMask, toggleMask } = useSegmentationStore();
+  // PHASE 1: Use store hooks for both mask visibility and mask type
+  const { showMask, toggleMask, maskType, setMaskType } = useSegmentationStore();
   
   return (
     <>
@@ -16,26 +17,20 @@ const MaskTools: React.FC = () => {
       <ToolButton
         id="tb_mask_final"
         icon="/segmentation/static/icons/mask_final.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.set_mask_type) w.set_mask_type('final');
-        }}
+        checked={maskType === 'final'}
+        onClick={() => setMaskType('final')}
       />
       <ToolButton
         id="tb_mask_user"
         icon="/segmentation/static/icons/mask_user.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.set_mask_type) w.set_mask_type('user');
-        }}
+        checked={maskType === 'user'}
+        onClick={() => setMaskType('user')}
       />
       <ToolButton
         id="tb_mask_errors"
         icon="/segmentation/static/icons/mask_errors.png"
-        onClick={() => {
-          const w = window as any;
-          if (w.set_mask_type) w.set_mask_type('errors');
-        }}
+        checked={maskType === 'errors'}
+        onClick={() => setMaskType('errors')}
       />
     </>
   );

@@ -38,6 +38,7 @@ const SegmentationApp: React.FC = () => {
   const [isImageInfoOpen, setIsImageInfoOpen] = useState(false);
   const [isConfusionMatrixOpen, setIsConfusionMatrixOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Export GeoTIFF function - memoized to prevent re-renders
   const exportGeoTIFF = useCallback(async () => {
@@ -88,9 +89,31 @@ const SegmentationApp: React.FC = () => {
     }
   }, []);
 
-  // Mark auth as checked immediately - legacy JS handles authentication
+  // Check authentication status
   useEffect(() => {
-    setAuthChecked(true);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/user/get/current', {
+          credentials: 'same-origin'
+        });
+        
+        if (response.ok) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          // Show login form if not authenticated
+          setIsLoginOpen(true);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+        setIsLoginOpen(true);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   // Initialize ViewManager store from legacy vars
@@ -159,10 +182,10 @@ const SegmentationApp: React.FC = () => {
       }
     };
 
-    if (authChecked) {
+    if (authChecked && isAuthenticated) {
       initializeNavigation();
     }
-  }, [authChecked]);
+  }, [authChecked, isAuthenticated]);
 
   // Sync Zustand store with DOM (mask layer visibility)
   // This updates the canvas layers when store changes
@@ -221,9 +244,16 @@ const SegmentationApp: React.FC = () => {
     setIsProfileOpen(true);
   }, []);
 
+  const handleLoginSuccess = useCallback(() => {
+    setIsAuthenticated(true);
+    setIsLoginOpen(false);
+    // Reload the page to reinitialize everything with authenticated state
+    window.location.reload();
+  }, []);
+
   // Setup segmentation with custom hook
   useSegmentationSetup({
-    authChecked,
+    authChecked: authChecked && isAuthenticated,
     onOpenPreferences: handleOpenPreferences,
     onOpenLogin: handleOpenLogin,
     onOpenRegister: handleOpenRegister,
@@ -265,6 +295,7 @@ const SegmentationApp: React.FC = () => {
         profileUserId={profileUserId}
         isLoginOpen={isLoginOpen}
         loginMode={loginMode}
+        onLoginSuccess={handleLoginSuccess}
         isHelpOpen={isHelpOpen}
         onCloseHelp={() => setIsHelpOpen(false)}
         isResetMaskOpen={isResetMaskOpen}
