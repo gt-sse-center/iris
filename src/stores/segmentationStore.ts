@@ -139,6 +139,14 @@ interface SegmentationState {
   // Navigation Confirmation Dialog
   showDialogueBeforeNextImage: boolean;
   setShowDialogueBeforeNextImage: (show: boolean) => void;
+
+  // Initialization Flow Control (replaces vars.next_action)
+  nextAction: (() => Promise<void>) | null;
+  setNextAction: (action: (() => Promise<void>) | null) => void;
+
+  // New User Experience (replaces vars.just_logged_in)
+  justLoggedIn: boolean;
+  setJustLoggedIn: (loggedIn: boolean) => void;
   
   // Error Modal
   errorModal: {
@@ -243,6 +251,26 @@ interface SegmentationState {
   getDebugInfo: () => SegmentationDebugInfo;
 }
 
+// Helper function to get next action from React store (for legacy compatibility)
+const getNextActionFromStore = () => {
+  return useSegmentationStore.getState().nextAction;
+};
+
+// Helper function to set next action in React store (for legacy compatibility)
+const setNextActionInStore = (action: (() => Promise<void>) | null) => {
+  useSegmentationStore.getState().setNextAction(action);
+};
+
+// Helper function to get just logged in from React store (for legacy compatibility)
+const getJustLoggedInFromStore = () => {
+  return useSegmentationStore.getState().justLoggedIn;
+};
+
+// Helper function to set just logged in in React store (for legacy compatibility)
+const setJustLoggedInInStore = (loggedIn: boolean) => {
+  useSegmentationStore.getState().setJustLoggedIn(loggedIn);
+};
+
 // Helper function to get tool size from React store (for legacy compatibility)
 const getToolSizeFromStore = () => {
   return useSegmentationStore.getState().toolSize;
@@ -318,6 +346,32 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   
   setShowDialogueBeforeNextImage: (show: boolean) => {
     set({ showDialogueBeforeNextImage: show });
+  },
+
+  // Initialization Flow Control State (replaces vars.next_action)
+  nextAction: null,
+
+  setNextAction: (action: (() => Promise<void>) | null) => {
+    set({ nextAction: action });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.next_action = action;
+    }
+  },
+
+  // New User Experience State (replaces vars.just_logged_in)
+  justLoggedIn: false,
+
+  setJustLoggedIn: (loggedIn: boolean) => {
+    set({ justLoggedIn: loggedIn });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.just_logged_in = loggedIn;
+    }
   },
 
   // Error Modal State
@@ -928,6 +982,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Update dialogue flag based on mask changes
     if (changed) {
       get().setShowDialogueBeforeNextImage(true);
+    } else {
+      // When mask is saved (changed = false), reset the dialogue flag
+      get().setShowDialogueBeforeNextImage(false);
     }
   },
 
@@ -1121,6 +1178,10 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  (window as any).getNextActionFromStore = getNextActionFromStore;
+  (window as any).setNextActionInStore = setNextActionInStore;
+  (window as any).getJustLoggedInFromStore = getJustLoggedInFromStore;
+  (window as any).setJustLoggedInInStore = setJustLoggedInInStore;
   (window as any).getToolSizeFromStore = getToolSizeFromStore;
   (window as any).getToolResizingModeFromStore = getToolResizingModeFromStore;
   (window as any).getCursorImageFromStore = getCursorImageFromStore;
@@ -1138,6 +1199,8 @@ if (typeof window !== 'undefined') {
   (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
   
   // Migration tracking - only log when store is available (no need to spam console)
+  console.log('[IRIS Migration] Next Action Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Just Logged In Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');

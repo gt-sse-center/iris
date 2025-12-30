@@ -76,6 +76,43 @@ declare global {
   }
 }
 
+describe('segmentationStore - Navigation Dialog Bug Fix', () => {
+  beforeEach(() => {
+    const store = useSegmentationStore.getState();
+    store.setMaskChanged(false);
+    store.setShowDialogueBeforeNextImage(false);
+  });
+
+  it('resets showDialogueBeforeNextImage when mask is saved', () => {
+    // Initially no dialogue needed
+    expect(useSegmentationStore.getState().showDialogueBeforeNextImage).toBe(false);
+    
+    // User makes changes to mask
+    useSegmentationStore.getState().setMaskChanged(true);
+    expect(useSegmentationStore.getState().maskChanged).toBe(true);
+    expect(useSegmentationStore.getState().showDialogueBeforeNextImage).toBe(true);
+    
+    // User saves mask
+    useSegmentationStore.getState().setMaskChanged(false);
+    expect(useSegmentationStore.getState().maskChanged).toBe(false);
+    expect(useSegmentationStore.getState().showDialogueBeforeNextImage).toBe(false); // Bug fix: should be reset
+  });
+
+  it('maintains dialogue flag when mask changes multiple times', () => {
+    // User makes changes
+    useSegmentationStore.getState().setMaskChanged(true);
+    expect(useSegmentationStore.getState().showDialogueBeforeNextImage).toBe(true);
+    
+    // User makes more changes (should stay true)
+    useSegmentationStore.getState().setMaskChanged(true);
+    expect(useSegmentationStore.getState().showDialogueBeforeNextImage).toBe(true);
+    
+    // User saves
+    useSegmentationStore.getState().setMaskChanged(false);
+    expect(useSegmentationStore.getState().showDialogueBeforeNextImage).toBe(false);
+  });
+});
+
 describe('segmentationStore - Filter Functions', () => {
   beforeEach(() => {
     const store = useSegmentationStore.getState();

@@ -112,15 +112,40 @@ function init_segmentation(){
     show_loader("Fetching user information...");
 
     // Before we start, we check for the login, etc.
-    vars.next_action = init_views;
+    // Use React store as primary source
+    if (window.setNextActionInStore) {
+        window.setNextActionInStore(init_views);
+    } else {
+        // Fallback to legacy vars during initialization
+        console.warn('[IRIS Migration] Using legacy vars.next_action fallback');
+        vars.next_action = init_views;
+    }
     fetch_server_update(update_config=true);
 }
 
 function newuser_help_popup(){
     // Open the help menu if the user is new (no saved masks):
-    if (vars.user.segmentation.n_masks == 0 && vars.just_logged_in == true){
+    // Use React store as primary source
+    let justLoggedIn;
+    if (window.getJustLoggedInFromStore) {
+        justLoggedIn = window.getJustLoggedInFromStore();
+    } else {
+        // Fallback to legacy vars during initialization
+        console.warn('[IRIS Migration] Using legacy vars.just_logged_in fallback');
+        justLoggedIn = vars.just_logged_in;
+    }
+    
+    if (vars.user.segmentation.n_masks == 0 && justLoggedIn == true){
         dialogue_help();
-        vars.just_logged_in = false;
+        
+        // Set just_logged_in to false using React store as primary
+        if (window.setJustLoggedInInStore) {
+            window.setJustLoggedInInStore(false);
+        } else {
+            // Fallback to legacy vars
+            console.warn('[IRIS Migration] Using legacy vars.just_logged_in fallback for setting false');
+            vars.just_logged_in = false;
+        }
     }
 }
 function save_config(config){
@@ -1619,7 +1644,15 @@ async function fetch_server_update(update_config=true){
     let response = await fetch(vars.url.user+"get/current");
     if (response.status == 403) {
         dialogue_login();
-        vars.just_logged_in=true;
+        
+        // Use React store as primary source
+        if (window.setJustLoggedInInStore) {
+            window.setJustLoggedInInStore(true);
+        } else {
+            // Fallback to legacy vars during initialization
+            console.warn('[IRIS Migration] Using legacy vars.just_logged_in fallback for setting true');
+            vars.just_logged_in = true;
+        }
         return;
     }
     let user = await response.json();
@@ -1709,6 +1742,23 @@ async function fetch_server_update(update_config=true){
     if (vars.next_action !== null){
         await vars.next_action();
         vars.next_action = null;
+    }
+
+    // Use React store as primary source for next_action
+    let nextAction;
+    if (window.getNextActionFromStore) {
+        nextAction = window.getNextActionFromStore();
+        if (nextAction !== null) {
+            await nextAction();
+            window.setNextActionInStore(null);
+        }
+    } else {
+        // Fallback to legacy vars during initialization
+        if (vars.next_action !== null) {
+            console.warn('[IRIS Migration] Using legacy vars.next_action fallback for execution');
+            await vars.next_action();
+            vars.next_action = null;
+        }
     }
 
     // Check every 15 seconds the current state on the server:
