@@ -48,22 +48,32 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     
     // Get legacy vars for cursor and tool data
     const w = window as any;
-    if (!w.vars?.cursor_image || !w.vars?.image_shape) {
+    
+    // Get cursor image from React store with fallback to legacy vars
+    const cursorImage = (window as any).getCursorImageFromStore ? 
+      (window as any).getCursorImageFromStore() : w.vars?.cursor_image;
+    
+    // Get image shape from React store with fallback to legacy vars
+    const imageShape = (window as any).getImageShapeFromStore ? 
+      (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+    
+    if (!cursorImage) {
+      console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: No cursor image available from React store or legacy vars');
+      return;
+    }
+    
+    if (!imageShape) {
+      console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: No image shape available from React store or legacy vars');
       return;
     }
     
     // Clear canvas using image dimensions (like legacy)
-    const win = window as any;
-    if (win.vars?.image_shape) {
-      ctx.clearRect(0, 0, win.vars.image_shape[1], win.vars.image_shape[0]);
-    } else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
     
     // Get tool offset (from legacy get_tool_offset function)
     let offset = { x: 0, y: 0 };
-    if (win.get_tool_offset) {
-      offset = win.get_tool_offset();
+    if (w.get_tool_offset) {
+      offset = w.get_tool_offset();
     }
     
     // The cursor coordinates are already in image space, and the canvas transformation
@@ -74,7 +84,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     // CRITICAL FIX: The tool size needs to be in image coordinates, not screen coordinates
     // Since we apply a canvas transformation, we need to account for the scaling
     // Legacy uses: canvas.width / vars.image_shape[0] for both X and Y scaling
-    const scale = canvas.width / win.vars.image_shape[0];
+    const scale = canvas.width / imageShape[0];
     
     // The tool size should be consistent in screen pixels, so we need to inverse-scale it
     // to account for the canvas transformation
@@ -99,11 +109,11 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     }
     
     // Draw mask area boundaries
-    if (win.vars.mask_area && win.vars.mask_shape) {
+    if (w.vars.mask_area && w.vars.mask_shape) {
       ctx.beginPath();
       
       // Line width depends on number of views
-      if (win.vars.config?.views && Object.keys(win.vars.config.views).length < 2) {
+      if (w.vars.config?.views && Object.keys(w.vars.config.views).length < 2) {
         ctx.lineWidth = 3;
       } else {
         ctx.lineWidth = 2;
@@ -113,10 +123,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.setLineDash([5, 15]);
       
       // Mask area coordinates are in image space - let canvas transform handle the scaling
-      const maskX = win.vars.mask_area[0];
-      const maskY = win.vars.mask_area[1];
-      const maskWidth = win.vars.mask_shape[0];
-      const maskHeight = win.vars.mask_shape[1];
+      const maskX = w.vars.mask_area[0];
+      const maskY = w.vars.mask_area[1];
+      const maskWidth = w.vars.mask_shape[0];
+      const maskHeight = w.vars.mask_shape[1];
       
       ctx.rect(maskX, maskY, maskWidth, maskHeight);
       ctx.stroke();
@@ -133,9 +143,14 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       canvas.height = height;
       
       const w = window as any;
-      if (w.vars?.image_shape) {
-        const imageWidth = w.vars.image_shape[1];  // width is image_shape[1]
-        const imageHeight = w.vars.image_shape[0]; // height is image_shape[0]
+      
+      // Get image shape from React store with fallback to legacy vars
+      const imageShape = (window as any).getImageShapeFromStore ? 
+        (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+      
+      if (imageShape) {
+        const imageWidth = imageShape[1];  // width is image_shape[1]
+        const imageHeight = imageShape[0]; // height is image_shape[0]
         
         const newTransform = createCoordinateTransform(
           canvas.width, canvas.height,
@@ -157,10 +172,18 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
           addTrackTransforms(ctx);
           
           // CRITICAL: Set the initial transformation matrix to match legacy system exactly
-          // Legacy uses: ctx.canvas.width / vars.image_shape[0] for BOTH X and Y scaling
-          // This maintains square pixels and matches the legacy coordinate system
-          const scale = canvas.width / w.vars.image_shape[0]; // Use image height for both dimensions
-          ctx.setTransform(scale, 0, 0, scale, 0, 0);
+          // Get image shape from React store with fallback to legacy vars
+          const imageShape = (window as any).getImageShapeFromStore ? 
+            (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+          
+          if (imageShape) {
+            // Legacy uses: ctx.canvas.width / vars.image_shape[0] for BOTH X and Y scaling
+            // This maintains square pixels and matches the legacy coordinate system
+            const scale = canvas.width / imageShape[0]; // Use image height for both dimensions
+            ctx.setTransform(scale, 0, 0, scale, 0, 0);
+          } else {
+            console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: No image shape available for canvas transformation - using identity transform');
+          }
         }
       }
       

@@ -822,7 +822,11 @@ if (typeof window !== 'undefined') {
   
   // Helper functions for legacy JavaScript access to image dimensions
   (window as any).getImageShapeFromStore = (): [number, number] | null => {
-    return useViewManagerStore.getState().getImageShape();
+    const shape = useViewManagerStore.getState().getImageShape();
+    if (!shape) {
+      console.warn('⚠️ [IRIS Migration] getImageShapeFromStore: No image dimensions in React store - migration may be incomplete');
+    }
+    return shape;
   };
   
   (window as any).setImageShapeInStore = (width: number, height: number) => {
@@ -831,15 +835,31 @@ if (typeof window !== 'undefined') {
   
   (window as any).getImageWidthFromStore = (): number => {
     const dimensions = useViewManagerStore.getState().imageDimensions;
-    return dimensions ? dimensions.width : 0;
+    if (!dimensions) {
+      console.warn('⚠️ [IRIS Migration] getImageWidthFromStore: No image dimensions in React store - migration may be incomplete');
+      return 0;
+    }
+    return dimensions.width;
   };
   
   (window as any).getImageHeightFromStore = (): number => {
     const dimensions = useViewManagerStore.getState().imageDimensions;
-    return dimensions ? dimensions.height : 0;
+    if (!dimensions) {
+      console.warn('⚠️ [IRIS Migration] getImageHeightFromStore: No image dimensions in React store - migration may be incomplete');
+      return 0;
+    }
+    return dimensions.height;
   };
   
   (window as any).getImageAspectRatioFromStore = (): number => {
-    return useViewManagerStore.getState().getImageAspectRatio();
+    const ratio = useViewManagerStore.getState().getImageAspectRatio();
+    if (ratio === 1) {
+      // Check if this is the default value (no dimensions set)
+      const dimensions = useViewManagerStore.getState().imageDimensions;
+      if (!dimensions) {
+        console.warn('⚠️ [IRIS Migration] getImageAspectRatioFromStore: No image dimensions in React store - using default ratio 1.0');
+      }
+    }
+    return ratio;
   };
 }

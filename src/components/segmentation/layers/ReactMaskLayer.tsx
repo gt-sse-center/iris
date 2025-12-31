@@ -48,8 +48,17 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     // Use image coordinates exactly like legacy - let canvas transform handle scaling
     if (bbox === undefined) {
       // No specific coordinates given, redraw the whole mask
-      // Clear using image dimensions (like legacy)
-      ctx.clearRect(0, 0, w.vars.image_shape[1], w.vars.image_shape[0]);
+      // Get image shape from React store with fallback to legacy vars
+      const imageShape = (window as any).getImageShapeFromStore ? 
+        (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+      
+      if (imageShape) {
+        // Clear using image dimensions (like legacy)
+        ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
+      } else {
+        console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available from React store or legacy vars');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
       
       // Draw mask at mask_area position in image coordinates (like legacy)
       ctx.drawImage(
@@ -101,10 +110,17 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
         // image_shape[0] = height, image_shape[1] = width
         // We need to scale canvas dimensions to image dimensions
         const w = window as any;
-        if (w.vars?.image_shape) {
-          const scaleX = canvas.width / w.vars.image_shape[1];  // canvas width / image width
-          const scaleY = canvas.height / w.vars.image_shape[0]; // canvas height / image height
+        
+        // Get image shape from React store with fallback to legacy vars
+        const imageShape = (window as any).getImageShapeFromStore ? 
+          (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+        
+        if (imageShape) {
+          const scaleX = canvas.width / imageShape[1];  // canvas width / image width
+          const scaleY = canvas.height / imageShape[0]; // canvas height / image height
           ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+        } else {
+          console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available for canvas transformation - using identity transform');
         }
       }
       

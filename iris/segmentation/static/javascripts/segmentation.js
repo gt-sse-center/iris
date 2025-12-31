@@ -788,6 +788,11 @@ function constrain_view(ctx, scale, dx, dy){
         console.warn('[IRIS Migration] constrain_view: No image shape available');
         return;
     }
+    
+    // Warn if falling back to legacy vars
+    if (!window.getImageShapeFromStore && vars.image_shape) {
+        console.warn('⚠️ [IRIS Migration] constrain_view: Using legacy vars.image_shape fallback - React store not available');
+    }
 
     if (transforms.a*scale < ctx.canvas.width / imageShape[0]){
         // We don't want to allow any zooming outside of the image area and reset
@@ -884,6 +889,11 @@ function reset_views(){
     if (!imageShape) {
         console.warn('[IRIS Migration] reset_views: No image shape available');
         return;
+    }
+    
+    // Warn if falling back to legacy vars
+    if (!window.getImageShapeFromStore && vars.image_shape) {
+        console.warn('⚠️ [IRIS Migration] reset_views: Using legacy vars.image_shape fallback - React store not available');
     }
     
     for (let canvas of document.getElementsByClassName('view-canvas')){
@@ -1222,11 +1232,25 @@ function user_draws_on_mask(){
     let canvas = document.getElementsByClassName("view-canvas")[0];
     let ctx = canvas.getContext('2d');
 
+    // Get image shape from React store with fallback to legacy vars
+    const imageShape = window.getImageShapeFromStore ? 
+        window.getImageShapeFromStore() : vars.image_shape;
+    
+    if (!imageShape) {
+        console.warn('[IRIS Migration] user_draws_on_mask: No image shape available');
+        return;
+    }
+    
+    // Warn if falling back to legacy vars
+    if (!window.getImageShapeFromStore && vars.image_shape) {
+        console.warn('⚠️ [IRIS Migration] user_draws_on_mask: Using legacy vars.image_shape fallback - React store not available');
+    }
+
     // Get the area we finally have to render (update) in canvas coordinates.
     // This increases the performances:
     let drawing_area = {
-        'min_x': vars.image_shape[0],
-        'min_y': vars.image_shape[1],
+        'min_x': imageShape[0],
+        'min_y': imageShape[1],
         'max_x': 0,
         'max_y': 0,
     };

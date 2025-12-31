@@ -29,6 +29,11 @@ class MaskLayer extends CanvasLayer{
                 return;
             }
             
+            // Warn if falling back to legacy vars
+            if (!window.getImageShapeFromStore && vars.image_shape) {
+                console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.image_shape fallback - React store not available');
+            }
+            
             ctx.drawImage(
                 hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
@@ -82,6 +87,11 @@ class SuperpixelsLayer extends CanvasLayer{
                 return;
             }
             
+            // Warn if falling back to legacy vars
+            if (!window.getImageShapeFromStore && vars.image_shape) {
+                console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.image_shape fallback - React store not available');
+            }
+            
             ctx.drawImage(
                 hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
@@ -127,6 +137,11 @@ class PreviewLayer extends CanvasLayer{
         } else {
             console.warn('[IRIS Migration] PreviewLayer.render: No image shape available');
             return;
+        }
+        
+        // Warn if falling back to legacy vars
+        if (!window.getImageShapeFromStore && vars.image_shape) {
+            console.warn('⚠️ [IRIS Migration] PreviewLayer.render: Using legacy vars.image_shape fallback - React store not available');
         }
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
         
