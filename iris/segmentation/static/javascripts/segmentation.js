@@ -1896,13 +1896,22 @@ function get_current_mask_and_colours(){
         }
 
         return [mask, colours]
-    } else if (vars.mask_type == "errors"){ // error mask
+    } else if (maskType == "errors"){ // error mask
+        // Get errors mask from React store (primary source) with fallback to legacy vars
+        let errorsMask;
+        if (window.getErrorsMaskDataFromStore) {
+            errorsMask = window.getErrorsMaskDataFromStore();
+        } else {
+            console.warn('[IRIS Migration] get_current_mask_and_colours: Using legacy vars.errors_mask fallback - React store not available yet');
+            errorsMask = vars.errors_mask;
+        }
+        
         var colours = [
             [255, 255, 255,0], // no validation possible
             [0, 255, 0, 70], // correctly predicted
             [255, 70, 70, 255], // wrongly predicted
         ];
-        return [vars.errors_mask, colours]
+        return [errorsMask, colours]
     }
 }
 
@@ -2685,13 +2694,45 @@ async function legacyPredictMask(){
     let cm = createArray(vars.classes.length, vars.classes.length);
     fill2DArray(cm, 0);
 
-    vars.errors_mask = new Uint8Array(vars.mask.length);
-    vars.errors_mask.fill(0);
+    // Create errors mask through React store (primary source)
+    const maskLength = window.getMaskDataFromStore ? window.getMaskDataFromStore()?.length : vars.mask.length;
+    if (maskLength) {
+        const newErrorsMask = new Uint8Array(maskLength);
+        newErrorsMask.fill(0);
+        
+        // Set errors mask through React store (primary source)
+        if (window.setErrorsMaskDataInStore) {
+            window.setErrorsMaskDataInStore(newErrorsMask);
+        } else {
+            console.warn('[IRIS Migration] legacyPredictMask: Using legacy vars.errors_mask fallback - React store not available');
+            vars.errors_mask = newErrorsMask;
+        }
+    } else {
+        console.error('[IRIS Migration] legacyPredictMask: No mask data available for errors mask creation');
+        return;
+    }
 
     let tp = {};
     for (let user_class of user_classes){
         tp[user_class] = 0;
     }
+    
+    // Get current errors mask from React store for pixel updates
+    let currentErrorsMask;
+    if (window.getErrorsMaskDataFromStore) {
+        currentErrorsMask = window.getErrorsMaskDataFromStore();
+    } else {
+        console.warn('[IRIS Migration] legacyPredictMask: Using legacy vars.errors_mask fallback for pixel setting');
+        currentErrorsMask = vars.errors_mask;
+    }
+    
+    if (!currentErrorsMask) {
+        console.error('[IRIS Migration] legacyPredictMask: No errors mask available for pixel setting');
+        return;
+    }
+    
+    // Create a copy for modification
+    const updatedErrorsMask = new Uint8Array(currentErrorsMask);
     
     for (let i of test_indices){
         let mask_index = all_user_pixels[i];
@@ -2700,11 +2741,19 @@ async function legacyPredictMask(){
             tp[all_user_labels[i]] += 1;
 
             // Correct:
-            vars.errors_mask[mask_index] = 1;
+            updatedErrorsMask[mask_index] = 1;
         } else {
             // Incorrect:
-            vars.errors_mask[mask_index] = 2;
+            updatedErrorsMask[mask_index] = 2;
         }
+    }
+    
+    // Update through React store (primary source)
+    if (window.setErrorsMaskDataInStore) {
+        window.setErrorsMaskDataInStore(updatedErrorsMask);
+    } else {
+        console.warn('[IRIS Migration] legacyPredictMask: Using legacy vars.errors_mask fallback for update');
+        vars.errors_mask = updatedErrorsMask;
     }
     let acc_prod = user_classes.length;
     let acc_sum = 0;
