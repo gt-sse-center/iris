@@ -235,7 +235,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     const w = window as any;
     if (w.vars) {
       w.vars.image_shape = [width, height];
-      console.log('🔧 ViewManager: Synced image_shape to legacy vars:', [width, height]);
     }
 
     // Update view dimensions when image dimensions change

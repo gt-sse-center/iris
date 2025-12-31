@@ -214,6 +214,11 @@ interface SegmentationState {
   createHiddenMaskCanvas: (width: number, height: number) => HTMLCanvasElement;
   getHiddenMaskContext: () => CanvasRenderingContext2D | null;
 
+  // Mask Area (replaces vars.mask_area)
+  maskArea: [number, number, number, number] | null;
+  setMaskArea: (area: [number, number, number, number] | null) => void;
+  getMaskArea: () => [number, number, number, number] | null;
+
   // Image Navigation
   images: ImageInfo[];
   currentImageId: string | null;
@@ -381,6 +386,16 @@ const getHiddenMaskContextFromStore = () => {
 // Helper function to create hidden mask canvas from React store (for legacy compatibility)
 const createHiddenMaskCanvasFromStore = (width: number, height: number) => {
   return useSegmentationStore.getState().createHiddenMaskCanvas(width, height);
+};
+
+// Helper function to get mask area from React store (for legacy compatibility)
+const getMaskAreaFromStore = (): [number, number, number, number] | null => {
+  return useSegmentationStore.getState().getMaskArea();
+};
+
+// Helper function to set mask area in React store (for legacy compatibility)
+const setMaskAreaInStore = (area: [number, number, number, number] | null) => {
+  useSegmentationStore.getState().setMaskArea(area);
 };
 
 // CRITICAL: Helper functions for mask data legacy access during migration
@@ -999,6 +1014,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Hidden Mask Canvas State (replaces vars.hidden_mask)
   hiddenMaskCanvas: null, // Default to no canvas
 
+  // Mask Area State (replaces vars.mask_area)
+  maskArea: null, // Default to no mask area
+
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
   toolSize: 5, // Default tool size
@@ -1200,6 +1218,29 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
     
     return ctx;
+  },
+
+  // Mask Area Actions (replaces vars.mask_area)
+  setMaskArea: (area: [number, number, number, number] | null) => {
+    // Validate input
+    if (area !== null) {
+      if (!Array.isArray(area) || area.length !== 4 || !area.every(coord => typeof coord === 'number' && !isNaN(coord))) {
+        console.error('[IRIS] setMaskArea: Invalid mask area coordinates', area);
+        return;
+      }
+    }
+
+    set({ maskArea: area });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mask_area = area;
+    }
+  },
+
+  getMaskArea: () => {
+    return get().maskArea;
   },
 
   // PHASE 1: Core Drawing Actions with Legacy Sync
@@ -1862,6 +1903,10 @@ if (typeof window !== 'undefined') {
   (window as any).getHiddenMaskCanvasFromStore = getHiddenMaskCanvasFromStore;
   (window as any).getHiddenMaskContextFromStore = getHiddenMaskContextFromStore;
   (window as any).createHiddenMaskCanvasFromStore = createHiddenMaskCanvasFromStore;
+  
+  // Export mask area helper functions for legacy JavaScript
+  (window as any).getMaskAreaFromStore = getMaskAreaFromStore;
+  (window as any).setMaskAreaInStore = setMaskAreaInStore;
   
   // CRITICAL: Export mask data helper functions for legacy JavaScript
   (window as any).getMaskDataFromStore = getMaskDataFromStore;

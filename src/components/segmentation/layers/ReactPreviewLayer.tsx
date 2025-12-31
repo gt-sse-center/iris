@@ -109,7 +109,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     }
     
     // Draw mask area boundaries
-    if (w.vars.mask_area && w.vars.mask_shape) {
+    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : w.vars?.mask_area;
+    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : w.vars?.mask_shape;
+    
+    if (maskArea && maskShape) {
       ctx.beginPath();
       
       // Line width depends on number of views
@@ -123,13 +126,20 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.setLineDash([5, 15]);
       
       // Mask area coordinates are in image space - let canvas transform handle the scaling
-      const maskX = w.vars.mask_area[0];
-      const maskY = w.vars.mask_area[1];
-      const maskWidth = w.vars.mask_shape[0];
-      const maskHeight = w.vars.mask_shape[1];
+      const maskX = maskArea[0];
+      const maskY = maskArea[1];
+      const maskWidth = maskShape[0];
+      const maskHeight = maskShape[1];
       
       ctx.rect(maskX, maskY, maskWidth, maskHeight);
       ctx.stroke();
+    } else {
+      console.warn('[IRIS Migration] ReactPreviewLayer: No mask area or mask shape available for rendering');
+    }
+    
+    // Add warning when falling back to legacy vars
+    if (!window.getMaskAreaFromStore && w.vars?.mask_area) {
+      console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: Using legacy vars.mask_area fallback - React store not available');
     }
   }, [toolSize, toolShape, cursorImage]); // Re-render when toolSize, toolShape, or cursorImage changes
   

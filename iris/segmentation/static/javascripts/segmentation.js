@@ -1304,10 +1304,21 @@ function user_draws_on_mask(){
     y_end = Math.min(round_number(canvas_bounds[1].y), y_end);
 
     // Transform into mask coordinates:
-    x_start -= vars.mask_area[0];
-    x_end -= vars.mask_area[0];
-    y_start -= vars.mask_area[1];
-    y_end -= vars.mask_area[1];
+    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+    if (maskArea) {
+        x_start -= maskArea[0];
+        x_end -= maskArea[0];
+        y_start -= maskArea[1];
+        y_end -= maskArea[1];
+    } else {
+        console.warn('[IRIS Migration] No mask area available for coordinate transformation');
+        return; // or use existing logic
+    }
+
+    // Add warning when falling back to legacy vars
+    if (!window.getMaskAreaFromStore && vars.mask_area) {
+        console.warn('⚠️ [IRIS Migration] Using legacy vars.mask_area fallback - React store not available');
+    }
 
     // Make sure we do not draw outside of the masking area:
     x_start = Math.max(0, x_start);
@@ -1463,8 +1474,13 @@ function user_draws_on_mask(){
             for (let x = x_start; x < x_end; x++) {
                 for (let y = y_start; y < y_end; y++) {
                     // Convert mask coordinates back to image coordinates for distance calculation
-                    const imageX = x + vars.mask_area[0];
-                    const imageY = y + vars.mask_area[1];
+                    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+                    if (!maskArea) {
+                        console.warn('[IRIS Migration] No mask area available for distance calculation');
+                        continue;
+                    }
+                    const imageX = x + maskArea[0];
+                    const imageY = y + maskArea[1];
                     
                     // Calculate distance from brush center
                     const dx = imageX - brushCenterX;
@@ -1621,8 +1637,13 @@ function user_draws_on_mask(){
                     for (let x = x_start; x < x_end; x++) {
                         for (let y = y_start; y < y_end; y++) {
                             // Convert mask coordinates back to image coordinates for distance calculation
-                            const imageX = x + vars.mask_area[0];
-                            const imageY = y + vars.mask_area[1];
+                            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+                            if (!maskArea) {
+                                console.warn('[IRIS Migration] No mask area available for distance calculation');
+                                continue;
+                            }
+                            const imageX = x + maskArea[0];
+                            const imageY = y + maskArea[1];
                             
                             // Calculate distance from brush center
                             const dx = imageX - brushCenterX;
@@ -1642,8 +1663,13 @@ function user_draws_on_mask(){
                         for (let x = x_start; x < x_end; x++) {
                             for (let y = y_start; y < y_end; y++) {
                                 // Convert mask coordinates back to image coordinates for distance calculation
-                                const imageX = x + vars.mask_area[0];
-                                const imageY = y + vars.mask_area[1];
+                                const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+                                if (!maskArea) {
+                                    console.warn('[IRIS Migration] No mask area available for distance calculation');
+                                    continue;
+                                }
+                                const imageX = x + maskArea[0];
+                                const imageY = y + maskArea[1];
                                 
                                 // Calculate distance from brush center
                                 const dx = imageX - brushCenterX;
@@ -2117,7 +2143,13 @@ async function fetch_server_update(update_config=true){
     if (update_config){
         vars.config = user.config;
 
-        vars.mask_area = vars.config.segmentation.mask_area;
+        // Set mask area in React store (primary source)
+        if (window.setMaskAreaInStore) {
+            window.setMaskAreaInStore(vars.config.segmentation.mask_area);
+        } else {
+            console.warn('[IRIS Migration] fetch_server_update: Using legacy vars.mask_area fallback - React store not available');
+            vars.mask_area = vars.config.segmentation.mask_area;
+        }
         vars.image_shape = vars.config.images.shape;
         
         // Sync image shape to React store (primary source)
@@ -2146,15 +2178,20 @@ async function fetch_server_update(update_config=true){
         }
 
         // The size (shape) of the mask area:
-        const maskWidth = vars.mask_area[2] - vars.mask_area[0];
-        const maskHeight = vars.mask_area[3] - vars.mask_area[1];
-        vars.mask_shape = [maskWidth, maskHeight];
-        
-        // Update React store with mask dimensions
-        if (window.setMaskShapeInStore) {
-            window.setMaskShapeInStore(maskWidth, maskHeight);
+        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+        if (maskArea) {
+            const maskWidth = maskArea[2] - maskArea[0];
+            const maskHeight = maskArea[3] - maskArea[1];
+            vars.mask_shape = [maskWidth, maskHeight];
+            
+            // Update React store with mask dimensions
+            if (window.setMaskShapeInStore) {
+                window.setMaskShapeInStore(maskWidth, maskHeight);
+            } else {
+                console.warn('[IRIS Migration] setMaskShapeInStore not available, using legacy vars.mask_shape only');
+            }
         } else {
-            console.warn('[IRIS Migration] setMaskShapeInStore not available, using legacy vars.mask_shape only');
+            console.error('[IRIS Migration] No mask area available for calculating mask dimensions');
         }
     }
 

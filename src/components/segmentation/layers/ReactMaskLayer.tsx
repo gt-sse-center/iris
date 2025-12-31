@@ -60,16 +60,32 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       
+      // Get mask area from React store or fallback to legacy
+      const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : w.vars?.mask_area;
+      
+      if (!maskArea) {
+        console.error('[IRIS] ReactMaskLayer: No mask area available for rendering');
+        return;
+      }
+      
       // Draw mask at mask_area position in image coordinates (like legacy)
       ctx.drawImage(
         w.vars.hidden_mask,
-        w.vars.mask_area[0], w.vars.mask_area[1]
+        maskArea[0], maskArea[1]
       );
     } else {
+      // Get mask area from React store or fallback to legacy
+      const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : w.vars?.mask_area;
+      
+      if (!maskArea) {
+        console.error('[IRIS] ReactMaskLayer: No mask area available for rendering');
+        return;
+      }
+      
       // Redraw specific area - use image coordinates (like legacy)
       ctx.clearRect(
-        bbox[0] + w.vars.mask_area[0],
-        bbox[1] + w.vars.mask_area[1],
+        bbox[0] + maskArea[0],
+        bbox[1] + maskArea[1],
         bbox[2], bbox[3]
       );
       
@@ -77,9 +93,14 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
       ctx.drawImage(
         w.vars.hidden_mask,
         bbox[0], bbox[1], bbox[2], bbox[3],
-        bbox[0] + w.vars.mask_area[0], bbox[1] + w.vars.mask_area[1],
+        bbox[0] + maskArea[0], bbox[1] + maskArea[1],
         bbox[2], bbox[3]
       );
+    }
+    
+    // Add warning when falling back to legacy vars
+    if (!window.getMaskAreaFromStore && w.vars?.mask_area) {
+      console.warn('⚠️ [IRIS Migration] ReactMaskLayer: Using legacy vars.mask_area fallback - React store not available');
     }
   }, []);
   
