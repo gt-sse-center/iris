@@ -18,7 +18,17 @@ class MaskLayer extends CanvasLayer{
         
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
-            ctx.clearRect(0, 0, ...vars.image_shape);
+            // Get image shape from React store with fallback to legacy vars
+            const imageShape = window.getImageShapeFromStore ? 
+                window.getImageShapeFromStore() : vars.image_shape;
+            
+            if (imageShape) {
+                ctx.clearRect(0, 0, ...imageShape);
+            } else {
+                console.warn('[IRIS Migration] MaskLayer.render: No image shape available');
+                return;
+            }
+            
             ctx.drawImage(
                 hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
@@ -61,7 +71,17 @@ class SuperpixelsLayer extends CanvasLayer{
         
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
-            ctx.clearRect(0, 0, ...vars.image_shape);
+            // Get image shape from React store with fallback to legacy vars
+            const imageShape = window.getImageShapeFromStore ? 
+                window.getImageShapeFromStore() : vars.image_shape;
+            
+            if (imageShape) {
+                ctx.clearRect(0, 0, ...imageShape);
+            } else {
+                console.warn('[IRIS Migration] SuperpixelsLayer.render: No image shape available');
+                return;
+            }
+            
             ctx.drawImage(
                 hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
@@ -97,7 +117,17 @@ class PreviewLayer extends CanvasLayer{
         let offset = get_tool_offset();
 
         let ctx = this.container.getContext("2d");
-        ctx.clearRect(0, 0, ...vars.image_shape);
+        
+        // Get image shape from React store with fallback to legacy vars
+        const imageShape = window.getImageShapeFromStore ? 
+            window.getImageShapeFromStore() : vars.image_shape;
+        
+        if (imageShape) {
+            ctx.clearRect(0, 0, ...imageShape);
+        } else {
+            console.warn('[IRIS Migration] PreviewLayer.render: No image shape available');
+            return;
+        }
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
         
         // Get tool size from React store (primary source) with fallback to legacy vars

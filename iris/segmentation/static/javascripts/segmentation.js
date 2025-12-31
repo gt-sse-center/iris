@@ -160,7 +160,9 @@ async function init_views(){
         get_object('views-container'),
         vars.config.views, vars.config.view_groups,
         vars.url.main+"image/",
-        image_aspect_ratio=vars.image_shape[0]/vars.image_shape[1]
+        image_aspect_ratio = window.getImageAspectRatioFromStore ? 
+            window.getImageAspectRatioFromStore() : 
+            (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
     );
 
     // Add standard layers to all view ports if the view type is not "bingmap":
@@ -778,12 +780,21 @@ function move(dx, dy){
 function constrain_view(ctx, scale, dx, dy){
     let transforms = ctx.getTransform();
 
-    if (transforms.a*scale < ctx.canvas.width / vars.image_shape[0]){
+    // Get image shape from React store with fallback to legacy vars
+    const imageShape = window.getImageShapeFromStore ? 
+        window.getImageShapeFromStore() : vars.image_shape;
+    
+    if (!imageShape) {
+        console.warn('[IRIS Migration] constrain_view: No image shape available');
+        return;
+    }
+
+    if (transforms.a*scale < ctx.canvas.width / imageShape[0]){
         // We don't want to allow any zooming outside of the image area and reset
         // it to the default view
 
-        transforms.a = ctx.canvas.width / vars.image_shape[0];
-        transforms.d = ctx.canvas.height / vars.image_shape[1];
+        transforms.a = ctx.canvas.width / imageShape[0];
+        transforms.d = ctx.canvas.height / imageShape[1];
         transforms.b = 0;
         transforms.c = 0;
         transforms.e = 0;
@@ -798,7 +809,7 @@ function constrain_view(ctx, scale, dx, dy){
         transforms.f -= top_left.y;
     }
 
-    let bottom_right = ctx.getCanvasCoords(...vars.image_shape);
+    let bottom_right = ctx.getCanvasCoords(...imageShape);
     if (bottom_right.x < ctx.canvas.width){
         transforms.e -= bottom_right.x - ctx.canvas.width;
     }
@@ -866,11 +877,20 @@ function reset_views(){
     // PHASE 3A: For now, use legacy reset until React components fully handle canvas transformations
     console.log('[IRIS] Using legacy reset_views (React canvas transformations not yet implemented)');
     
+    // Get image shape from React store with fallback to legacy vars
+    const imageShape = window.getImageShapeFromStore ? 
+        window.getImageShapeFromStore() : vars.image_shape;
+    
+    if (!imageShape) {
+        console.warn('[IRIS Migration] reset_views: No image shape available');
+        return;
+    }
+    
     for (let canvas of document.getElementsByClassName('view-canvas')){
         let ctx = canvas.getContext('2d');
         ctx.setTransform(
-            ctx.canvas.width / vars.image_shape[0], 0, 0,
-            ctx.canvas.width / vars.image_shape[0], 0, 0
+            ctx.canvas.width / imageShape[0], 0, 0,
+            ctx.canvas.width / imageShape[0], 0, 0
         );
     }
     update_views();
@@ -2075,6 +2095,15 @@ async function fetch_server_update(update_config=true){
 
         vars.mask_area = vars.config.segmentation.mask_area;
         vars.image_shape = vars.config.images.shape;
+        
+        // Sync image shape to React store (primary source)
+        if (vars.image_shape && Array.isArray(vars.image_shape) && vars.image_shape.length >= 2) {
+            const [width, height] = vars.image_shape;
+            if (window.setImageShapeInStore) {
+                window.setImageShapeInStore(width, height);
+            }
+        }
+        
         vars.classes = vars.config.classes;
 
         // Sync classes to React store after loading from config
