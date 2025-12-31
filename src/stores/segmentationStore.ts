@@ -489,8 +489,40 @@ const getMaskTypeFromStore = () => {
   return useSegmentationStore.getState().maskType;
 };
 
-const getClassesFromStore = () => {
+// Helper functions for classes legacy access during migration
+const getClassesFromStore = (): ClassConfig[] => {
   return useSegmentationStore.getState().classes;
+};
+
+const getClassFromStore = (classId: number): ClassConfig | null => {
+  const classes = useSegmentationStore.getState().classes;
+  return (classId >= 0 && classId < classes.length) ? classes[classId] : null;
+};
+
+const getClassColorFromStore = (classId: number): [number, number, number, number] | null => {
+  const classInfo = getClassFromStore(classId);
+  return classInfo ? classInfo.colour : null;
+};
+
+const getClassNameFromStore = (classId: number): string => {
+  const classInfo = getClassFromStore(classId);
+  return classInfo ? classInfo.name : `Class ${classId}`;
+};
+
+const getClassCountFromStore = (): number => {
+  return useSegmentationStore.getState().classes.length;
+};
+
+const setClassesInStore = (classes: ClassConfig[]) => {
+  useSegmentationStore.getState().setClasses(classes);
+};
+
+const getCurrentClassFromStore = (): number => {
+  return useSegmentationStore.getState().currentClass;
+};
+
+const setCurrentClassInStore = (classId: number) => {
+  useSegmentationStore.getState().setCurrentClass(classId);
 };
 
 // History system helper functions
@@ -1351,9 +1383,16 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   setCurrentClass: (classId: number) => {
     const { classes } = get();
     
-    // Safety check: ensure we have classes loaded
+    // Allow setting class even if no classes are loaded yet (for initialization)
     if (classes.length === 0) {
-      console.warn(`[IRIS] setCurrentClass: No classes available yet, skipping class ${classId}`);
+      console.log(`[IRIS] setCurrentClass: No classes available yet, setting class ${classId} for later validation`);
+      set({ currentClass: classId });
+      
+      // Sync with legacy vars during migration
+      const w = window as any;
+      if (w.vars) {
+        w.vars.current_class = classId;
+      }
       return;
     }
     
@@ -1429,12 +1468,47 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setClasses: (classes: ClassConfig[]) => {
-    set({ classes });
-    
+    // Validate input
+    if (!Array.isArray(classes)) {
+      console.error('[IRIS] setClasses: Invalid classes array', classes);
+      return;
+    }
+
+    // Validate each class has required properties
+    const validClasses = classes.filter(cls => {
+      // Check if name exists and is not empty
+      if (!cls.name || cls.name.trim() === '') {
+        console.warn('[IRIS] setClasses: Invalid class definition - missing or empty name', cls);
+        return false;
+      }
+      
+      // Check if colour exists and is a valid RGBA array
+      if (!cls.colour || !Array.isArray(cls.colour) || cls.colour.length !== 4) {
+        console.warn('[IRIS] setClasses: Invalid class definition - invalid colour array', cls);
+        return false;
+      }
+      
+      // Check if all colour values are numbers
+      if (!cls.colour.every(val => typeof val === 'number' && val >= 0 && val <= 255)) {
+        console.warn('[IRIS] setClasses: Invalid class definition - colour values must be numbers 0-255', cls);
+        return false;
+      }
+      
+      return true;
+    });
+
+    set({ classes: validClasses });
+
     // Sync with legacy vars during migration
     const w = window as any;
     if (w.vars) {
-      w.vars.classes = classes;
+      w.vars.classes = validClasses;
+    }
+
+    // Update current class if it's now out of bounds
+    const { currentClass } = get();
+    if (currentClass >= validClasses.length) {
+      get().setCurrentClass(0);
     }
   },
 
@@ -1923,6 +1997,13 @@ if (typeof window !== 'undefined') {
   (window as any).copyUserMaskFromStore = copyUserMaskFromStore;
   (window as any).getMaskTypeFromStore = getMaskTypeFromStore;
   (window as any).getClassesFromStore = getClassesFromStore;
+  (window as any).getClassFromStore = getClassFromStore;
+  (window as any).getClassColorFromStore = getClassColorFromStore;
+  (window as any).getClassNameFromStore = getClassNameFromStore;
+  (window as any).getClassCountFromStore = getClassCountFromStore;
+  (window as any).setClassesInStore = setClassesInStore;
+  (window as any).getCurrentClassFromStore = getCurrentClassFromStore;
+  (window as any).setCurrentClassInStore = setCurrentClassInStore;
   
   // CRITICAL: Export mask shape helper functions for legacy JavaScript (vars.mask_shape migration)
   (window as any).getMaskShapeFromStore = getMaskShapeFromStore;
@@ -1961,32 +2042,29 @@ if (typeof window !== 'undefined') {
   if (w.vars?.debug_mode) {
     useSegmentationStore.getState().setDebugMode(true);
   }
-  
-  // Prevent infinite initialization loops
+
+  // Check for legacy vars periodically and initialize store state
   let coreDrawingInitialized = false;
   let navigationActionsInitialized = false;
-  
-  // Auto-initialize core drawing state when legacy vars become available
+
   const checkForLegacyVars = () => {
-    // Core drawing state initialization
-    if (!coreDrawingInitialized && w.vars && (w.vars.tool || w.vars.classes || typeof w.vars.current_class === 'number')) {
-      console.log('🔧 SegmentationStore: Auto-initializing core drawing state from detected legacy vars');
+    // Initialize core drawing state from legacy vars (once)
+    if (!coreDrawingInitialized && w.vars) {
       initializeCoreDrawingStateFromLegacy();
       coreDrawingInitialized = true;
     }
     
-    // PHASE 2: Navigation & actions state initialization
-    if (!navigationActionsInitialized && w.vars && (w.vars.config || w.vars.user || w.vars.confusion_matrix)) {
-      console.log('🔧 SegmentationStore: Auto-initializing navigation & actions state from detected legacy vars');
+    // Initialize navigation & actions state from legacy vars (once)
+    if (!navigationActionsInitialized && w.vars?.config) {
       initializeNavigationActionsStateFromLegacy();
       navigationActionsInitialized = true;
     }
   };
-  
-  // Check immediately
+
+  // Initial check
   checkForLegacyVars();
-  
-  // Also check periodically for the first 10 seconds, but only if not already initialized
+
+  // Periodic check for legacy vars (in case they're loaded later)
   const checkInterval = setInterval(() => {
     if (!coreDrawingInitialized || !navigationActionsInitialized) {
       checkForLegacyVars();
@@ -2000,3 +2078,15 @@ if (typeof window !== 'undefined') {
   
   setTimeout(() => clearInterval(checkInterval), 10000);
 }
+
+// Export helper functions for testing and external use
+export {
+  getClassesFromStore,
+  getClassFromStore,
+  getClassColorFromStore,
+  getClassNameFromStore,
+  getClassCountFromStore,
+  setClassesInStore,
+  getCurrentClassFromStore,
+  setCurrentClassInStore
+};

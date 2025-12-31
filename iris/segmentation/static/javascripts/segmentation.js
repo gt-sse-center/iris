@@ -234,7 +234,11 @@ async function init_views(){
     vars.vm.showGroup();
 
     set_tool(vars.tool.type);
-    set_current_class(vars.current_class);
+    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in init_views()');
+        return vars.current_class;
+    })();
+    set_current_class(currentClass);
 
     init_events();
     init_toolbar_events();
@@ -334,7 +338,11 @@ function key_down(event){
         // Why do we subtract 1 from this? The class ids start with 0, so we
         // want to make the hotkey easier:
         var class_id = parseInt(key[key.length-1]) - 1;
-        if (class_id < vars.classes.length){
+        const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in key_down()');
+            return vars.classes ? vars.classes.length : 0;
+        })();
+        if (class_id < classCount){
             set_current_class(class_id);
         }
     } else if (key == "KeyD"){
@@ -433,9 +441,16 @@ function set_current_class(class_id){
     // FALLBACK: Legacy behavior (should rarely be used)
     console.log('[IRIS] Using legacy set_current_class fallback, store not available');
     vars.current_class = class_id;
-    var colour = vars.classes[class_id].colour;
-    var css_colour = rgba2css(colour);
-    get_object("tb_current_class").innerHTML = vars.classes[class_id].name;
+    const classColor = window.getClassColorFromStore ? window.getClassColorFromStore(class_id) : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassColorFromStore not available, using legacy vars.classes in set_current_class()');
+        return vars.classes && vars.classes[class_id] ? vars.classes[class_id].colour : [255, 255, 255, 255];
+    })();
+    var css_colour = rgba2css(classColor);
+    const className = window.getClassNameFromStore ? window.getClassNameFromStore(class_id) : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassNameFromStore not available, using legacy vars.classes in set_current_class()');
+        return vars.classes && vars.classes[class_id] ? vars.classes[class_id].name : `Class ${class_id}`;
+    })();
+    get_object("tb_current_class").innerHTML = className;
     get_object("tb_select_class").style["background-color"] = css_colour;
 
     // Convenience - automatically change to drawing tool after selecting class:
@@ -973,7 +988,11 @@ function update_drawn_pixels(){
     vars.n_user_pixels = {
         "total": 0
     };
-    for (var i=0; i < vars.classes.length; i++){
+    const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in update_drawn_pixels()');
+        return vars.classes ? vars.classes.length : 0;
+    })();
+    for (var i=0; i < classCount; i++){
         vars.n_user_pixels[i] = 0;
     }
 
@@ -993,7 +1012,7 @@ function update_drawn_pixels(){
     get_object("drawn-pixels").innerHTML = nice_number(vars.n_user_pixels.total);
 
     var different_classes = 0;
-    for (var i=0; i < vars.classes.length; i++){
+    for (var i=0; i < classCount; i++){
         if (vars.n_user_pixels[i] > 10){
             different_classes += 1;
         }
@@ -1356,7 +1375,11 @@ function user_draws_on_mask(){
             if (currentTool == "eraser"){
                 pixelUpdates.push({x, y, userMaskValue: 0});
             } else {
-                pixelUpdates.push({x, y, maskValue: vars.current_class, userMaskValue: 1});
+                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in drawing');
+                    return vars.current_class;
+                })();
+                pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
             }
             
             // Apply batch update
@@ -1388,7 +1411,11 @@ function user_draws_on_mask(){
                     if (currentTool == "eraser"){
                         pixelUpdates.push({x, y, userMaskValue: 0});
                     } else {
-                        pixelUpdates.push({x, y, maskValue: vars.current_class, userMaskValue: 1});
+                        const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                            console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in cross pattern drawing');
+                            return vars.current_class;
+                        })();
+                        pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
                     }
                 }
             }
@@ -1434,7 +1461,10 @@ function user_draws_on_mask(){
                             if (currentTool == "eraser"){
                                 window.setUserMaskPixelInStore(x, y, 0);
                             } else {
-                                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : vars.current_class;
+                                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in diamond pattern');
+                                    return vars.current_class;
+                                })();
                                 window.setMaskPixelInStore(x, y, currentClass);
                                 window.setUserMaskPixelInStore(x, y, 1);
                             }
@@ -1445,7 +1475,11 @@ function user_draws_on_mask(){
                             if (currentTool == "eraser"){
                                 vars.user_mask[y*vars.mask_shape[0]+x] = 0;
                             } else {
-                                vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
+                                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in diamond pattern legacy fallback');
+                                    return vars.current_class;
+                                })();
+                                vars.mask[y*vars.mask_shape[0]+x] = currentClass;
                                 vars.user_mask[y*vars.mask_shape[0]+x] = 1;
                             }
                         }
@@ -1455,7 +1489,11 @@ function user_draws_on_mask(){
                         if (currentTool == "eraser"){
                             vars.user_mask[y*vars.mask_shape[0]+x] = 0;
                         } else {
-                            vars.mask[y*vars.mask_shape[0]+x] = vars.current_class;
+                            const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                                console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in diamond pattern no-store fallback');
+                                return vars.current_class;
+                            })();
+                            vars.mask[y*vars.mask_shape[0]+x] = currentClass;
                             vars.user_mask[y*vars.mask_shape[0]+x] = 1;
                         }
                     }
@@ -1492,7 +1530,11 @@ function user_draws_on_mask(){
                         if (currentTool == "eraser"){
                             pixelUpdates.push({x, y, userMaskValue: 0});
                         } else {
-                            pixelUpdates.push({x, y, maskValue: vars.current_class, userMaskValue: 1});
+                            const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                                console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in circle drawing');
+                                return vars.current_class;
+                            })();
+                            pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
                         }
                     }
                 }
@@ -1509,7 +1551,11 @@ function user_draws_on_mask(){
                 if (currentTool == "eraser"){
                     pixelUpdates.push({x, y, userMaskValue: 0});
                 } else {
-                    pixelUpdates.push({x, y, maskValue: vars.current_class, userMaskValue: 1});
+                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in single pixel drawing');
+                        return vars.current_class;
+                    })();
+                    pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
                 }
             }
         }
@@ -1544,7 +1590,12 @@ function user_draws_on_mask(){
                 const x = x_start;
                 const y = y_start;
                 
-                if (currentTool == "eraser" || vars.current_class == 0){
+                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in 1-pixel canvas drawing');
+                    return vars.current_class;
+                })();
+                
+                if (currentTool == "eraser" || currentClass == 0){
                     hidden_ctx.clearRect(x, y, 1, 1);
                 } else {
                     // First clear to prevent double-application, then fill
@@ -1571,9 +1622,14 @@ function user_draws_on_mask(){
                     const x = centerX + dx;
                     const y = centerY + dy;
                     
+                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in 3-pixel cross canvas drawing');
+                        return vars.current_class;
+                    })();
+                    
                     // Check bounds
                     if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
-                        if (currentTool == "eraser" || vars.current_class == 0){
+                        if (currentTool == "eraser" || currentClass == 0){
                             hidden_ctx.clearRect(x, y, 1, 1);
                         } else {
                             // First clear to prevent double-application, then fill
@@ -1613,9 +1669,14 @@ function user_draws_on_mask(){
                     const x = centerX + dx;
                     const y = centerY + dy;
                     
+                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in 5-pixel diamond canvas drawing');
+                        return vars.current_class;
+                    })();
+                    
                     // Check bounds
                     if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
-                        if (currentTool == "eraser" || vars.current_class == 0){
+                        if (currentTool == "eraser" || currentClass == 0){
                             hidden_ctx.clearRect(x, y, 1, 1);
                         } else {
                             // First clear to prevent double-application, then fill
@@ -1658,7 +1719,12 @@ function user_draws_on_mask(){
                     }
                 } else {
                     // For drawing, check if we're drawing "clear" class (0) or a real class
-                    if (vars.current_class == 0) {
+                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in circular brush canvas drawing');
+                        return vars.current_class;
+                    })();
+                    
+                    if (currentClass == 0) {
                         // Clear class: clear pixels within the circle
                         for (let x = x_start; x < x_end; x++) {
                             for (let y = y_start; y < y_end; y++) {
@@ -1822,14 +1888,36 @@ function set_mask_type(type){
 }
 
 function get_current_class_colour(){
-    if (vars.mask_type == "user"){
-        if ("user_colour" in vars.classes[vars.current_class]){
-            return vars.classes[vars.current_class].user_colour;
+    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in get_current_class_colour()');
+        return vars.current_class;
+    })();
+    const maskType = window.getMaskTypeFromStore ? window.getMaskTypeFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getMaskTypeFromStore not available, using legacy vars.mask_type in get_current_class_colour()');
+        return vars.mask_type;
+    })();
+    
+    if (maskType == "user"){
+        const classInfo = window.getClassFromStore ? window.getClassFromStore(currentClass) : (vars.classes && vars.classes[currentClass] ? vars.classes[currentClass] : null);
+        if (classInfo && "user_colour" in classInfo){
+            return classInfo.user_colour;
+        } else if (classInfo) {
+            return classInfo.colour;
         } else {
-            return vars.classes[vars.current_class].colour;
+            console.warn('[IRIS Migration] Using legacy vars.classes fallback in get_current_class_colour');
+            return vars.classes && vars.classes[currentClass] ? vars.classes[currentClass].colour : [255, 255, 255, 255];
         }
-    } else { //  if (vars.mask_type == "user"){
-        return vars.classes[vars.current_class].colour;
+    } else {
+        const classColor = window.getClassColorFromStore ? window.getClassColorFromStore(currentClass) : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassColorFromStore not available, using legacy vars.classes in get_current_class_colour()');
+            return null;
+        })();
+        if (classColor) {
+            return classColor;
+        } else {
+            console.warn('[IRIS Migration] Using legacy vars.classes fallback in get_current_class_colour');
+            return vars.classes && vars.classes[currentClass] ? vars.classes[currentClass].colour : [255, 255, 255, 255];
+        }
     }
 }
 
@@ -1850,7 +1938,10 @@ function get_current_mask_and_colours(){
                 maskData = vars.mask;
                 userMaskData = vars.user_mask;
                 maskType = vars.mask_type;
-                classes = vars.classes;
+                classes = window.getClassesFromStore ? window.getClassesFromStore() : (() => {
+                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassesFromStore not available, using legacy vars.classes in get_current_mask_and_colours()');
+                    return vars.classes;
+                })();
             }
         } catch (error) {
             console.error('[IRIS Migration] ❌ React store mask access failed in get_current_mask_and_colours:', error);
@@ -1858,14 +1949,20 @@ function get_current_mask_and_colours(){
             maskData = vars.mask;
             userMaskData = vars.user_mask;
             maskType = vars.mask_type;
-            classes = vars.classes;
+            classes = window.getClassesFromStore ? window.getClassesFromStore() : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassesFromStore not available, using legacy vars.classes in get_current_mask_and_colours() error handler');
+                return vars.classes;
+            })();
         }
     } else {
         console.warn('[IRIS Migration] ⚠️ React store not available in get_current_mask_and_colours, using legacy vars fallback');
         maskData = vars.mask;
         userMaskData = vars.user_mask;
         maskType = vars.mask_type;
-        classes = vars.classes;
+        classes = window.getClassesFromStore ? window.getClassesFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassesFromStore not available, using legacy vars.classes in get_current_mask_and_colours() no store fallback');
+            return vars.classes;
+        })();
     }
 
     if (maskType == "final"){
@@ -2172,7 +2269,26 @@ async function fetch_server_update(update_config=true){
         vars.classes = vars.config.classes;
 
         // Sync classes to React store after loading from config
-        if (window.segmentationStore && vars.classes) {
+        if (window.setClassesInStore && vars.classes) {
+            window.setClassesInStore(vars.classes);
+            
+            // Also set the current class if it's valid
+            const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in fetch_server_update()');
+                return vars.classes.length;
+            })();
+            if (typeof vars.current_class === 'number' && vars.current_class < classCount) {
+                if (window.setCurrentClassInStore) {
+                    window.setCurrentClassInStore(vars.current_class);
+                }
+            } else if (classCount > 0) {
+                // Default to first class if current class is invalid
+                vars.current_class = 0;
+                if (window.setCurrentClassInStore) {
+                    window.setCurrentClassInStore(0);
+                }
+            }
+        } else if (window.segmentationStore) {
             const store = window.segmentationStore.getState();
             store.setClasses(vars.classes);
             
@@ -2573,7 +2689,11 @@ async function predict_mask(){
 
 async function legacyPredictMask(){
     var user_classes = [];
-    for (var i=0; i < vars.classes.length; i++){
+    const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in legacyPredictMask()');
+        return vars.classes ? vars.classes.length : 0;
+    })();
+    for (var i=0; i < classCount; i++){
         if (vars.n_user_pixels[i] > 10){
             user_classes.push(i);
         }
@@ -2691,7 +2811,7 @@ async function legacyPredictMask(){
     }
 
     // Calculate confusion matrix and harmonic mean of accuracies:
-    let cm = createArray(vars.classes.length, vars.classes.length);
+    let cm = createArray(classCount, classCount);
     fill2DArray(cm, 0);
 
     // Create errors mask through React store (primary source)
@@ -2846,7 +2966,11 @@ function update_ai_box(score, cm, tp, user_classes){
         }
     }
     if (worst_label !== null){
-        recommendation = "Could you provide more training pixels for <b>"+vars.classes[worst_label].name+"</b>?";
+        const className = window.getClassNameFromStore ? window.getClassNameFromStore(worst_label) : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassNameFromStore not available, using legacy vars.classes in update_ai_box()');
+            return vars.classes && vars.classes[worst_label] ? vars.classes[worst_label].name : `Class ${worst_label}`;
+        })();
+        recommendation = "Could you provide more training pixels for <b>"+className+"</b>";
     }
 
     get_object("ai-recommendation").innerHTML = recommendation;
