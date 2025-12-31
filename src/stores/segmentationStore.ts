@@ -117,6 +117,10 @@ interface SegmentationDebugInfo {
   maskType: string;
   classesCount: number;
   totalUserPixels: number;
+  // Mouse & Canvas State debug info
+  cursorImage: [number, number];
+  dragStart: [number, number] | null;
+  isDragging: boolean;
   // PHASE 2: Navigation & Actions debug info
   hasConfig: boolean;
   hasUser: boolean;
@@ -135,6 +139,14 @@ interface SegmentationState {
   // Navigation Confirmation Dialog
   showDialogueBeforeNextImage: boolean;
   setShowDialogueBeforeNextImage: (show: boolean) => void;
+
+  // Initialization Flow Control (replaces vars.next_action)
+  nextAction: (() => Promise<void>) | null;
+  setNextAction: (action: (() => Promise<void>) | null) => void;
+
+  // New User Experience (replaces vars.just_logged_in)
+  justLoggedIn: boolean;
+  setJustLoggedIn: (loggedIn: boolean) => void;
   
   // Error Modal
   errorModal: {
@@ -151,6 +163,16 @@ interface SegmentationState {
   // Cursor Image (replaces vars.cursor_image)
   cursorImage: [number, number];
   setCursorImage: (coords: [number, number]) => void;
+
+  // Drag State (replaces vars.drag_start)
+  dragStart: [number, number] | null;
+  setDragStart: (coords: [number, number] | null) => void;
+
+  // Hidden Mask Canvas (replaces vars.hidden_mask)
+  hiddenMaskCanvas: HTMLCanvasElement | null;
+  setHiddenMaskCanvas: (canvas: HTMLCanvasElement | null) => void;
+  createHiddenMaskCanvas: (width: number, height: number) => HTMLCanvasElement;
+  getHiddenMaskContext: () => CanvasRenderingContext2D | null;
 
   // Image Navigation
   images: ImageInfo[];
@@ -191,7 +213,10 @@ interface SegmentationState {
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'move' | 'draw' | 'eraser';
   toolSize: number;
+  toolShape: 'square' | 'round';
   toolResizingMode: boolean;
+  showDrawToolDropdown: boolean;
+  showEraserToolDropdown: boolean;
   currentClass: number;
   maskType: 'final' | 'user' | 'errors';
   classes: ClassConfig[];
@@ -200,7 +225,10 @@ interface SegmentationState {
   // PHASE 1: Core Drawing Actions
   setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => void;
   setToolSize: (size: number) => void;
+  setToolShape: (shape: 'square' | 'round') => void;
   setToolResizingMode: (resizing: boolean) => void;
+  setShowDrawToolDropdown: (show: boolean) => void;
+  setShowEraserToolDropdown: (show: boolean) => void;
   setCurrentClass: (classId: number) => void;
   setMaskType: (type: 'final' | 'user' | 'errors') => void;
   setClasses: (classes: ClassConfig[]) => void;
@@ -228,6 +256,26 @@ interface SegmentationState {
   setDebugMode: (enabled: boolean) => void;
   getDebugInfo: () => SegmentationDebugInfo;
 }
+
+// Helper function to get next action from React store (for legacy compatibility)
+const getNextActionFromStore = () => {
+  return useSegmentationStore.getState().nextAction;
+};
+
+// Helper function to set next action in React store (for legacy compatibility)
+const setNextActionInStore = (action: (() => Promise<void>) | null) => {
+  useSegmentationStore.getState().setNextAction(action);
+};
+
+// Helper function to get just logged in from React store (for legacy compatibility)
+const getJustLoggedInFromStore = () => {
+  return useSegmentationStore.getState().justLoggedIn;
+};
+
+// Helper function to set just logged in in React store (for legacy compatibility)
+const setJustLoggedInInStore = (loggedIn: boolean) => {
+  useSegmentationStore.getState().setJustLoggedIn(loggedIn);
+};
 
 // Helper function to get tool size from React store (for legacy compatibility)
 const getToolSizeFromStore = () => {
@@ -259,6 +307,41 @@ const setCurrentToolInStore = (tool: 'move' | 'draw' | 'eraser') => {
   useSegmentationStore.getState().setCurrentTool(tool);
 };
 
+// Helper function to get drag start from React store (for legacy compatibility)
+const getDragStartFromStore = () => {
+  return useSegmentationStore.getState().dragStart;
+};
+
+// Helper function to set drag start in React store (for legacy compatibility)
+const setDragStartInStore = (coords: [number, number] | null) => {
+  useSegmentationStore.getState().setDragStart(coords);
+};
+
+// Helper function to get tool shape from React store (for legacy compatibility)
+const getToolShapeFromStore = () => {
+  return useSegmentationStore.getState().toolShape;
+};
+
+// Helper function to set tool shape in React store (for legacy compatibility)
+const setToolShapeInStore = (shape: 'square' | 'round') => {
+  useSegmentationStore.getState().setToolShape(shape);
+};
+
+// Helper function to get hidden mask canvas from React store (for legacy compatibility)
+const getHiddenMaskCanvasFromStore = () => {
+  return useSegmentationStore.getState().hiddenMaskCanvas;
+};
+
+// Helper function to get hidden mask context from React store (for legacy compatibility)
+const getHiddenMaskContextFromStore = () => {
+  return useSegmentationStore.getState().getHiddenMaskContext();
+};
+
+// Helper function to create hidden mask canvas from React store (for legacy compatibility)
+const createHiddenMaskCanvasFromStore = (width: number, height: number) => {
+  return useSegmentationStore.getState().createHiddenMaskCanvas(width, height);
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -284,6 +367,32 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   
   setShowDialogueBeforeNextImage: (show: boolean) => {
     set({ showDialogueBeforeNextImage: show });
+  },
+
+  // Initialization Flow Control State (replaces vars.next_action)
+  nextAction: null,
+
+  setNextAction: (action: (() => Promise<void>) | null) => {
+    set({ nextAction: action });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.next_action = action;
+    }
+  },
+
+  // New User Experience State (replaces vars.just_logged_in)
+  justLoggedIn: false,
+
+  setJustLoggedIn: (loggedIn: boolean) => {
+    set({ justLoggedIn: loggedIn });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.just_logged_in = loggedIn;
+    }
   },
 
   // Error Modal State
@@ -329,10 +438,19 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Cursor Image State (replaces vars.cursor_image)
   cursorImage: [0, 0], // Default cursor position
 
+  // Drag State (replaces vars.drag_start)
+  dragStart: null, // Default to no active drag
+
+  // Hidden Mask Canvas State (replaces vars.hidden_mask)
+  hiddenMaskCanvas: null, // Default to no canvas
+
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
   toolSize: 5, // Default tool size
+  toolShape: 'square', // Default tool shape
   toolResizingMode: false, // Default to zoom mode (not resize mode)
+  showDrawToolDropdown: false, // Default to dropdown closed
+  showEraserToolDropdown: false, // Default to dropdown closed
   currentClass: 0, // Default to first class
   maskType: 'final', // Default mask type
   classes: [], // Will be initialized from legacy vars
@@ -445,6 +563,90 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
   },
 
+  setDragStart: (coords: [number, number] | null) => {
+    // Validate coordinates if not null
+    if (coords !== null) {
+      if (!Array.isArray(coords) || coords.length !== 2 || 
+          typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
+        console.warn('[IRIS] setDragStart: Invalid coordinates provided', coords);
+        return;
+      }
+      // Create a copy to ensure immutability
+      const coordsCopy: [number, number] = [coords[0], coords[1]];
+      set({ dragStart: coordsCopy });
+    } else {
+      set({ dragStart: null });
+    }
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars) {
+      w.vars.drag_start = coords;
+    }
+  },
+
+  // Hidden Mask Canvas Actions (replaces vars.hidden_mask)
+  setHiddenMaskCanvas: (canvas: HTMLCanvasElement | null) => {
+    set({ hiddenMaskCanvas: canvas });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.hidden_mask = canvas;
+    }
+  },
+
+  createHiddenMaskCanvas: (width: number, height: number) => {
+    // Validate dimensions
+    if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
+      console.error('[IRIS] createHiddenMaskCanvas: Invalid dimensions provided', { width, height });
+      throw new Error(`Invalid canvas dimensions: ${width}x${height}`);
+    }
+    
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Configure canvas for optimal mask rendering (same as legacy)
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+        ctx.imageSmoothingEnabled = false;
+      } else {
+        console.error('[IRIS] createHiddenMaskCanvas: Failed to get 2D context');
+        throw new Error('Failed to get 2D context for hidden mask canvas');
+      }
+      
+      // Set the canvas in the store
+      get().setHiddenMaskCanvas(canvas);
+      
+      console.log(`[IRIS] Created hidden mask canvas: ${width}x${height}`);
+      return canvas;
+    } catch (error) {
+      console.error('[IRIS] createHiddenMaskCanvas failed:', error);
+      throw error;
+    }
+  },
+
+  getHiddenMaskContext: () => {
+    const canvas = get().hiddenMaskCanvas;
+    if (!canvas) {
+      console.warn('[IRIS] getHiddenMaskContext: No hidden mask canvas available');
+      return null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('[IRIS] getHiddenMaskContext: Failed to get 2D context');
+    }
+    
+    return ctx;
+  },
+
   // PHASE 1: Core Drawing Actions with Legacy Sync
   setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => {
     // Validate tool type
@@ -513,6 +715,41 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars?.tool) {
       w.vars.tool.resizing_mode = resizing;
     }
+  },
+
+  setToolShape: (shape: 'square' | 'round') => {
+    // Validate shape type
+    const validShapes = ['square', 'round'] as const;
+    if (!validShapes.includes(shape)) {
+      console.warn('[IRIS] setToolShape: Invalid shape type provided', shape);
+      return;
+    }
+    
+    set({ toolShape: shape });
+    
+    // Sync with legacy vars during migration for backward compatibility
+    const w = window as any;
+    if (w.vars?.tool) {
+      w.vars.tool.shape = shape;
+    }
+    
+    // Trigger legacy preview render (with safety check for initialization)
+    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+      w.render_preview();
+    } else {
+      console.log('[IRIS] setToolShape: Skipping render_preview, ViewManager not initialized yet');
+    }
+    
+    // Trigger React preview layer re-render
+    window.dispatchEvent(new CustomEvent('react-preview-render'));
+  },
+
+  setShowDrawToolDropdown: (show: boolean) => {
+    set({ showDrawToolDropdown: show });
+  },
+
+  setShowEraserToolDropdown: (show: boolean) => {
+    set({ showEraserToolDropdown: show });
   },
 
   setCurrentClass: (classId: number) => {
@@ -831,6 +1068,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Update dialogue flag based on mask changes
     if (changed) {
       get().setShowDialogueBeforeNextImage(true);
+    } else {
+      // When mask is saved (changed = false), reset the dialogue flag
+      get().setShowDialogueBeforeNextImage(false);
     }
   },
 
@@ -924,6 +1164,10 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskType: state.maskType,
       classesCount: state.classes.length,
       totalUserPixels: state.userPixelCounts.total,
+      // Mouse & Canvas State debug info
+      cursorImage: state.cursorImage,
+      dragStart: state.dragStart,
+      isDragging: state.dragStart !== null,
       // PHASE 2: Navigation & Actions debug info
       hasConfig: state.config !== null,
       hasUser: state.user !== null,
@@ -1020,12 +1264,23 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  (window as any).getNextActionFromStore = getNextActionFromStore;
+  (window as any).setNextActionInStore = setNextActionInStore;
+  (window as any).getJustLoggedInFromStore = getJustLoggedInFromStore;
+  (window as any).setJustLoggedInInStore = setJustLoggedInInStore;
   (window as any).getToolSizeFromStore = getToolSizeFromStore;
   (window as any).getToolResizingModeFromStore = getToolResizingModeFromStore;
   (window as any).getCursorImageFromStore = getCursorImageFromStore;
   (window as any).setCursorImageInStore = setCursorImageInStore;
   (window as any).getCurrentToolFromStore = getCurrentToolFromStore;
   (window as any).setCurrentToolInStore = setCurrentToolInStore;
+  (window as any).getDragStartFromStore = getDragStartFromStore;
+  (window as any).setDragStartInStore = setDragStartInStore;
+  (window as any).getToolShapeFromStore = getToolShapeFromStore;
+  (window as any).setToolShapeInStore = setToolShapeInStore;
+  (window as any).getHiddenMaskCanvasFromStore = getHiddenMaskCanvasFromStore;
+  (window as any).getHiddenMaskContextFromStore = getHiddenMaskContextFromStore;
+  (window as any).createHiddenMaskCanvasFromStore = createHiddenMaskCanvasFromStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
@@ -1033,10 +1288,14 @@ if (typeof window !== 'undefined') {
   (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
   
   // Migration tracking - only log when store is available (no need to spam console)
+  console.log('[IRIS Migration] Next Action Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Just Logged In Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Drag Start Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
+  console.log('[IRIS Migration] Hidden Mask Canvas Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   
   // Initialize debug mode from legacy vars
   const w = window as any;

@@ -6,11 +6,21 @@ class MaskLayer extends CanvasLayer{
     }
     render(bbox=null){
         let ctx = this.container.getContext("2d");
+        
+        // Get hidden canvas from React store or fallback to legacy
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
+            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        
+        if (!hiddenCanvas) {
+            console.error('[IRIS] Hidden mask canvas not available for MaskLayer render');
+            return;
+        }
+        
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
             ctx.clearRect(0, 0, ...vars.image_shape);
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
             );
         } else {
@@ -20,7 +30,7 @@ class MaskLayer extends CanvasLayer{
                 bbox[2], bbox[3]
             );
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 ...bbox,
                 bbox[0]+vars.mask_area[0], bbox[1]+vars.mask_area[1],
                 bbox[2], bbox[3]
@@ -39,11 +49,21 @@ class SuperpixelsLayer extends CanvasLayer{
     }
     render(bbox=null){
         let ctx = this.container.getContext("2d");
+        
+        // Get hidden canvas from React store or fallback to legacy
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
+            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        
+        if (!hiddenCanvas) {
+            console.error('[IRIS] Hidden mask canvas not available for SuperpixelsLayer render');
+            return;
+        }
+        
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
             ctx.clearRect(0, 0, ...vars.image_shape);
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 vars.mask_area[0], vars.mask_area[1]
             );
         } else {
@@ -53,7 +73,7 @@ class SuperpixelsLayer extends CanvasLayer{
                 bbox[2], bbox[3]
             );
             ctx.drawImage(
-                vars.hidden_mask,
+                hiddenCanvas,
                 ...bbox,
                 bbox[0]+vars.mask_area[0], bbox[1]+vars.mask_area[1],
                 bbox[2], bbox[3]
@@ -98,11 +118,33 @@ class PreviewLayer extends CanvasLayer{
             cursorImage = vars.cursor_image; // Fallback during initialization
         }
         
-        ctx.fillRect(
-            cursorImage[0]+offset.x,
-            cursorImage[1]+offset.y,
-            toolSize, toolSize
-        );
+        // Get tool shape from React store (primary source) with fallback to legacy vars
+        let toolShape;
+        if (window.getToolShapeFromStore) {
+            toolShape = window.getToolShapeFromStore();
+        } else {
+            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.shape fallback - React store not available yet');
+            toolShape = vars.tool.shape || 'square'; // Fallback during initialization
+        }
+        
+        // Draw tool cursor preview based on shape
+        if (toolShape === 'round') {
+            // Draw circular cursor
+            const radius = toolSize / 2;
+            const centerX = cursorImage[0] + offset.x + radius;
+            const centerY = cursorImage[1] + offset.y + radius;
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        } else {
+            // Draw square cursor (default)
+            ctx.fillRect(
+                cursorImage[0]+offset.x,
+                cursorImage[1]+offset.y,
+                toolSize, toolSize
+            );
+        }
 
         // Draw the boundaries of the masking area
         ctx.beginPath();

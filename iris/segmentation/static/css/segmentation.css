@@ -268,3 +268,111 @@ body {
   background: #ddd;
   border: none;
 }
+
+/* Paintbrush Selector Styles */
+.paintbrush-selector-container {
+  position: relative;
+  display: inline-block;
+}
+
+.paintbrush-selector-container .toolbutton.dropdown-open {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.paintbrush-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 2px solid black;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 320px;
+  padding: 8px;
+}
+
+.paintbrush-dropdown-header {
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  font-weight: bold;
+  font-size: 12px;
+  color: #333;
+  margin: -8px -8px 8px -8px;
+  border-radius: 2px 2px 0 0;
+}
+
+.brush-row {
+  margin-bottom: 12px;
+}
+
+.brush-row:last-child {
+  margin-bottom: 0;
+}
+
+.brush-row-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.brush-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.brush-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 40px;
+}
+
+.brush-option:hover {
+  border-color: #999;
+  background: #f9f9f9;
+}
+
+.brush-option.selected {
+  border-color: #007cba;
+  background: #e3f2fd;
+}
+
+.brush-preview {
+  background: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brush-preview.square {
+  /* Square shape - no additional styling needed */
+}
+
+.brush-preview.round {
+  border-radius: 50%;
+}
+
+.brush-size-label {
+  font-size: 10px;
+  color: #666;
+  font-weight: bold;
+}
+
+.brush-option.selected .brush-size-label {
+  color: #007cba;
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
 import ToolButton from './ToolButton';
+import PaintbrushSelector from './PaintbrushSelector';
 
 interface DrawingToolsProps {
   onResetMask: () => void;
@@ -53,19 +54,23 @@ const DrawingTools: React.FC<DrawingToolsProps> = ({ onResetMask }) => {
         disabled={isLoading}
         title="Reset views"
       />
-      <ToolButton
+      <PaintbrushSelector
         id="tb_tool_draw"
         icon="/segmentation/static/icons/pencil.png"
         checked={currentTool === 'draw'}
         onClick={() => setCurrentTool('draw')}
         disabled={isLoading}
+        title="Draw pixels"
+        dropdownType="draw"
       />
-      <ToolButton
+      <PaintbrushSelector
         id="tb_tool_eraser"
         icon="/segmentation/static/icons/eraser.png"
         checked={currentTool === 'eraser'}
         onClick={() => setCurrentTool('eraser')}
         disabled={isLoading}
+        title="Erase pixels"
+        dropdownType="eraser"
       />
       <ToolButton
         id="tb_reset_mask"
