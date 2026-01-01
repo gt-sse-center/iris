@@ -20,7 +20,6 @@ interface ReactViewPortProps {
   height: number;
   showControls: boolean;
   imageId: string;
-  imageLocation: [number, number];
   onImageLocationChange: (location: [number, number]) => void;
   // PHASE 3A: New zoom/pan/interaction props
   zoomLevel?: number;
@@ -36,7 +35,6 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
   height,
   showControls,
   imageId,
-  imageLocation,
   onImageLocationChange,
   // PHASE 3A: New props with defaults
   zoomLevel = 1.0,
@@ -134,7 +132,6 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
             view={view}
             width={width}
             height={height}
-            imageLocation={imageLocation}
             onLocationChange={onImageLocationChange}
             zIndex={1}
             zoomLevel={zoomLevel}

@@ -110,12 +110,32 @@
                 setTimeout(initializeImageIdInStore, 100);
             }
         }
+
+        // Initialize React store with image location when available
+        function initializeImageLocationInStore() {
+            if (window.viewManagerStore && window.setImageLocationInStore) {
+                const location = {{image_location|tojson}};
+                if (location && Array.isArray(location) && location.length === 2) {
+                    window.setImageLocationInStore(location);
+                    console.log('[IRIS] Image location initialized in React store:', location);
+                } else {
+                    console.warn('[IRIS] No valid image location available for React store initialization');
+                }
+            } else {
+                // Retry after a short delay if store not ready
+                setTimeout(initializeImageLocationInStore, 100);
+            }
+        }
         
         // Initialize when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeImageIdInStore);
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeImageIdInStore();
+                initializeImageLocationInStore();
+            });
         } else {
             initializeImageIdInStore();
+            initializeImageLocationInStore();
         }
     </script>
 

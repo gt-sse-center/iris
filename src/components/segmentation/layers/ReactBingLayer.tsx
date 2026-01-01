@@ -2,14 +2,14 @@
  * React Bing Layer Component
  * 
  * This component replaces the legacy BingLayer class.
- * It handles Bing Maps iframe embedding.
+ * It handles Bing Maps iframe embedding with geographic coordinates from React store.
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import ReactBaseLayer, { ReactBaseLayerProps } from './ReactBaseLayer';
+import { useViewManagerStore } from '../../../stores/viewManagerStore';
 
 interface ReactBingLayerProps extends Omit<ReactBaseLayerProps, 'children'> {
-  imageLocation: [number, number];
   onLocationChange?: (location: [number, number]) => void;
   zoomLevel?: number;
   panOffset?: { x: number; y: number };
@@ -20,7 +20,6 @@ const ReactBingLayer: React.FC<ReactBingLayerProps> = ({
   width,
   height,
   zIndex,
-  imageLocation,
   className = '',
   style = {},
   zoomLevel: _zoomLevel = 1.0,
@@ -28,12 +27,22 @@ const ReactBingLayer: React.FC<ReactBingLayerProps> = ({
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
+  // Get image location from React store
+  const imageLocation = useViewManagerStore(state => state.imageLocation);
+  const validateImageLocation = useViewManagerStore(state => state.validateImageLocation);
+  
   // Update Bing Maps URL
   const updateBingMap = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
     
-    // Default location
+    // Validate coordinates before using them
+    if (!validateImageLocation(imageLocation)) {
+      console.warn('[IRIS] ReactBingLayer: Invalid image location coordinates, skipping map update', imageLocation);
+      return;
+    }
+    
+    // Format location for Bing Maps
     const location = `${imageLocation[0]}~${imageLocation[1]}`;
     
     let url = "https://www.bing.com/maps/embed?";
@@ -43,7 +52,7 @@ const ReactBingLayer: React.FC<ReactBingLayerProps> = ({
     url += "&lvl=12&typ=d&sty=a&src=SHELL&FORM=MBEDV8";
     
     iframe.src = url;
-  }, [imageLocation, width, height]);
+  }, [imageLocation, width, height, validateImageLocation]);
   
   // Update when size changes
   useEffect(() => {

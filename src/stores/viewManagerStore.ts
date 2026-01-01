@@ -91,6 +91,8 @@ export interface ViewManagerState {
   setCurrentGroup: (group: string) => void;
   setImage: (imageId: string, location: [number, number]) => void;
   setImageLocation: (location: [number, number]) => void;
+  validateImageLocation: (location: [number, number]) => boolean;
+  getImageLocationDebugInfo: () => { lat: number; lon: number; valid: boolean };
   setImageAspectRatio: (ratio: number) => void;
   setShowControls: (show: boolean) => void;
   toggleControls: () => void;
@@ -212,8 +214,58 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     set({ imageId, imageLocation });
   },
   
-  setImageLocation: (imageLocation) => {
-    set({ imageLocation });
+  setImageLocation: (location) => {
+    // Validate geographic coordinates
+    if (!Array.isArray(location) || location.length !== 2 || 
+        typeof location[0] !== 'number' || typeof location[1] !== 'number' ||
+        isNaN(location[0]) || isNaN(location[1])) {
+      console.warn('[IRIS] setImageLocation: Invalid coordinates', location);
+      return;
+    }
+
+    const [lat, lon] = location;
+    
+    // Validate geographic bounds
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      console.warn('[IRIS] setImageLocation: Coordinates out of geographic bounds', { lat, lon });
+      return;
+    }
+
+    const locationCopy: [number, number] = [lat, lon];
+    set({ imageLocation: locationCopy });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.image_location = locationCopy;
+    }
+  },
+
+  validateImageLocation: (location) => {
+    if (!Array.isArray(location) || location.length !== 2) {
+      return false;
+    }
+    
+    const [lat, lon] = location;
+    
+    if (typeof lat !== 'number' || typeof lon !== 'number' ||
+        isNaN(lat) || isNaN(lon)) {
+      return false;
+    }
+    
+    // Validate geographic bounds
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+  },
+
+  getImageLocationDebugInfo: () => {
+    const { imageLocation } = get();
+    const [lat, lon] = imageLocation;
+    
+    return {
+      lat,
+      lon,
+      valid: get().validateImageLocation(imageLocation)
+    };
   },
   
   setImageAspectRatio: (imageAspectRatio) => {
@@ -878,6 +930,27 @@ if (typeof window !== 'undefined') {
   
   (window as any).setCanvasMousePositionInStore = (x: number, y: number) => {
     useViewManagerStore.getState().setCanvasMousePosition([x, y]);
+  };
+
+  // Helper functions for legacy JavaScript access to image location
+  (window as any).getImageLocationFromStore = (): [number, number] => {
+    const location = useViewManagerStore.getState().imageLocation;
+    if (!location || !useViewManagerStore.getState().validateImageLocation(location)) {
+      console.warn('⚠️ [IRIS Migration] getImageLocationFromStore: Invalid image location in React store - migration may be incomplete');
+    }
+    return location;
+  };
+
+  (window as any).setImageLocationInStore = (location: [number, number]) => {
+    useViewManagerStore.getState().setImageLocation(location);
+  };
+
+  (window as any).validateImageLocation = (location: [number, number]): boolean => {
+    return useViewManagerStore.getState().validateImageLocation(location);
+  };
+
+  (window as any).getImageLocationDebugInfo = () => {
+    return useViewManagerStore.getState().getImageLocationDebugInfo();
   };
   
   // Initialize debug mode from legacy vars

@@ -252,7 +252,10 @@ async function init_views(){
             console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in init_views() - React store not available');
             return vars.image_id;
         })(), 
-        vars.image_location
+        window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_location in init_views() - React store not available');
+            return vars.image_location;
+        })()
     );
     vars.vm.showGroup();
 

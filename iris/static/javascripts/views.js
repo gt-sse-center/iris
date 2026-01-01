@@ -24,14 +24,41 @@ class ViewManager{
     setImage(image_id, image_location){
         this.clear();
         this.image_id = image_id;
-        this.image_location = image_location;
+        
+        // Primary source: React store, fallback: legacy vars
+        const location = window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_location - React store not available');
+            return image_location;
+        })();
+        
+        this.image_location = location;
+        
+        // Update React store if available
+        if (window.setImageLocationInStore) {
+            window.setImageLocationInStore(location);
+        }
+        
         this.source = {};
     }
     setImageLocation(location){
-        this.image_location = location;
+        // Primary source: React store, fallback: legacy vars
+        const validatedLocation = window.validateImageLocation && window.validateImageLocation(location) ? 
+            location : (() => {
+                console.warn('[IRIS Migration] ⚠️ Invalid image location coordinates:', location);
+                return this.image_location; // Keep current location
+            })();
+        
+        this.image_location = validatedLocation;
+        
+        // Update React store if available
+        if (window.setImageLocationInStore) {
+            window.setImageLocationInStore(validatedLocation);
+        } else {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: React store not available for setImageLocation');
+        }
 
         for (let port of this.ports){
-            port.imageLocationChanged(location);
+            port.imageLocationChanged(validatedLocation);
         }
     }
     showNextGroup(){
@@ -441,8 +468,14 @@ class BingLayer extends ViewLayer{
         this.update();
     }
     update(){
+        // Primary source: React store, fallback: legacy vars
+        const imageLocation = window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy this.vm.image_location - React store not available');
+            return this.vm.image_location;
+        })();
+        
         // Default location
-        let location = this.vm.image_location[0]+"~"+this.vm.image_location[1];
+        let location = imageLocation[0]+"~"+imageLocation[1];
 
         let url = "https://www.bing.com/maps/embed?";
         // container height and width are given in pixels (e.g. 410px). However,
