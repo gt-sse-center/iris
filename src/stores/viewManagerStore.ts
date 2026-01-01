@@ -128,7 +128,20 @@ export interface ViewManagerState {
   removeView: (position: number) => void;
   replaceView: (position: number, name: string) => void;
   showNextGroup: () => void;
+  showGroup: (groupName: string) => void;
   getCurrentViews: () => ViewConfig[];
+  
+  // Layer management
+  addStandardLayer: (layerType: string, filter?: (view: ViewConfig) => boolean) => void;
+  getLayers: (layerType?: string) => any[];
+  
+  // Rendering methods
+  render: () => void;
+  renderMask: () => void;
+  renderPreview: () => void;
+  
+  // Size management
+  updateSize: () => void;
   
   // Canvas sizing
   calculateViewDimensions: () => [number, number];
@@ -488,10 +501,94 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     }
   },
   
+  showGroup: (groupName) => {
+    const { viewGroups } = get();
+    if (viewGroups[groupName]) {
+      set({ currentGroup: groupName });
+      
+      // Show message (if available)
+      const w = window as any;
+      if (w.show_message) {
+        w.show_message(`Group: <i>${groupName}</i>`);
+      }
+    } else {
+      console.warn(`[ViewManager] Group '${groupName}' not found`);
+    }
+  },
+  
   getCurrentViews: () => {
     const { views, viewGroups, currentGroup } = get();
     const viewNames = viewGroups[currentGroup] || [];
     return viewNames.map(name => views[name]).filter(Boolean);
+  },
+  
+  // Layer management
+  addStandardLayer: (layerType, filter) => {
+    // This is a placeholder implementation for compatibility
+    // In the legacy system, this would add layers to the canvas
+    console.log(`[ViewManager] addStandardLayer: ${layerType}`, { filter });
+    
+    // For now, just log the operation - actual layer management
+    // will be handled by React components in the new system
+  },
+  
+  getLayers: (layerType) => {
+    // This is a placeholder implementation for compatibility
+    // In the legacy system, this would return canvas layers
+    console.log(`[ViewManager] getLayers: ${layerType || 'all'}`);
+    
+    // Return empty array for now - actual layer management
+    // will be handled by React components in the new system
+    return [];
+  },
+  
+  // Rendering methods
+  render: () => {
+    // This is a placeholder implementation for compatibility
+    // In the legacy system, this would trigger canvas rendering
+    console.log('[ViewManager] render: Triggering render');
+    
+    // Trigger legacy render if available
+    const w = window as any;
+    if (w.render_views) {
+      w.render_views();
+    }
+  },
+  
+  renderMask: () => {
+    // This is a placeholder implementation for compatibility
+    console.log('[ViewManager] renderMask: Triggering mask render');
+    
+    // Trigger legacy mask render if available
+    const w = window as any;
+    if (w.render_mask) {
+      w.render_mask();
+    }
+  },
+  
+  renderPreview: () => {
+    // This is a placeholder implementation for compatibility
+    console.log('[ViewManager] renderPreview: Triggering preview render');
+    
+    // Trigger legacy preview render if available
+    const w = window as any;
+    if (w.render_preview) {
+      w.render_preview();
+    }
+  },
+  
+  // Size management
+  updateSize: () => {
+    // Update view dimensions based on current state
+    get().updateViewDimensions();
+    
+    // Trigger legacy size update if available
+    const w = window as any;
+    if (w.update_canvas_size) {
+      w.update_canvas_size();
+    }
+    
+    console.log('[ViewManager] updateSize: Updated canvas dimensions');
   },
   
   // Canvas sizing

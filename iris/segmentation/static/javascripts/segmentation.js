@@ -149,17 +149,34 @@ function newuser_help_popup(){
     }
 }
 function save_config(config){
-    fetch(vars.url.user+'save_config', {
+    // Use React store as primary source, fallback to legacy vars
+    const userUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('user') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.user - React store not available');
+        return vars.url.user;
+    })();
+
+    if (!userUrl) {
+        console.error('[IRIS Migration] ❌ No user URL available for save_config');
+        return;
+    }
+
+    fetch(userUrl + 'save_config', {
         method: "POST",
         body: JSON.stringify(config)
     })
 }
 async function init_views(){
     show_loader("Loading views...");
+    // Use React store as primary source, fallback to legacy vars
+    const mainUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main - React store not available');
+        return vars.url.main;
+    })();
+
     vars.vm = new ViewManager(
         get_object('views-container'),
         vars.config.views, vars.config.view_groups,
-        vars.url.main+"image/",
+        mainUrl+"image/",
         image_aspect_ratio = window.getImageAspectRatioFromStore ? 
             window.getImageAspectRatioFromStore() : 
             (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
@@ -2178,11 +2195,34 @@ function login_finished(){
 
 function logout_finished(){
     save_mask();
-    goto_url(vars.url.segmentation+'?image_id='+vars.image_id);
+    
+    // Use React store as primary source, fallback to legacy vars
+    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
+        return vars.url.segmentation;
+    })();
+
+    if (!segmentationUrl) {
+        console.error('[IRIS Migration] ❌ No segmentation URL available for logout_finished');
+        return;
+    }
+
+    goto_url(segmentationUrl + '?image_id=' + vars.image_id);
 }
 
 async function fetch_server_update(update_config=true){
-    let response = await fetch(vars.url.user+"get/current");
+    // Use React store as primary source, fallback to legacy vars
+    const userUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('user') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.user - React store not available');
+        return vars.url.user;
+    })();
+
+    if (!userUrl) {
+        console.error('[IRIS Migration] ❌ No user URL available for fetch_server_update');
+        return;
+    }
+
+    let response = await fetch(userUrl + "get/current");
     if (response.status == 403) {
         dialogue_login();
         
@@ -2198,8 +2238,14 @@ async function fetch_server_update(update_config=true){
     }
     let user = await response.json();
 
+    // Use React store as primary source, fallback to legacy vars
+    const mainUrlForImageInfo = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main for image info - React store not available');
+        return vars.url.main;
+    })();
+
     // Get more information about the current image:
-    response = await fetch(vars.url.main+"image_info/"+vars.image_id);
+    response = await fetch(mainUrlForImageInfo+"image_info/"+vars.image_id);
     if (response.status != 404) {
         image = await response.json();
 
@@ -2373,8 +2419,20 @@ async function load_mask(){
 async function legacyLoadMask(){
     show_loader("Loading masks...");
 
+    // Use React store as primary source, fallback to legacy vars
+    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
+        return vars.url.segmentation;
+    })();
+
+    if (!segmentationUrl) {
+        console.error('[IRIS Migration] ❌ No segmentation URL available for legacyLoadMask');
+        hide_loader();
+        return;
+    }
+
     var results = await download(
-        vars.url.segmentation+"load_mask/" + vars.image_id
+        segmentationUrl + "load_mask/" + vars.image_id
     );
 
     if (results.response.status != 200 && results.response.status != 404) {
@@ -2500,7 +2558,20 @@ async function dialogue_before_next_image(){
     }
 
     show_loader("Making some checks...")
-    let response = await fetch(`${vars.url.main}get_action_info/${vars.image_id}/segmentation`);
+    
+    // Use React store as primary source, fallback to legacy vars
+    const mainUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main - React store not available');
+        return vars.url.main;
+    })();
+
+    if (!mainUrl) {
+        console.error('[IRIS Migration] ❌ No main URL available for dialogue_before_next_image');
+        hide_loader();
+        return;
+    }
+
+    let response = await fetch(`${mainUrl}get_action_info/${vars.image_id}/segmentation`);
     if (response.status >= 400){
         // Continue without any dialogue
         hide_loader(); // Fix: Hide the loader before continuing
@@ -2551,9 +2622,15 @@ function dialogue_before_next_image_save_and_continue(action_id){
         "notes": get_object('dbni-notes').value
     }
 
+    // Use React store as primary source, fallback to legacy vars
+    const mainUrlForActionInfo = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main for action info - React store not available');
+        return vars.url.main;
+    })();
+
     console.log('action',action_info.complete)
 
-    fetch(`${vars.url.main}set_action_info/${action_id}`, {
+    fetch(`${mainUrlForActionInfo}set_action_info/${action_id}`, {
         method: "POST",
         body: JSON.stringify(action_info)
     })
@@ -2643,7 +2720,21 @@ function legacySaveMask(call_afterwards=null){
     data.set(userMaskData, m_length+1);
     data.set(padding, 2*m_length+1);
 
-    fetch(vars.url.segmentation+"save_mask/" + vars.image_id, {
+    // Use React store as primary source, fallback to legacy vars
+    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
+        return vars.url.segmentation;
+    })();
+
+    if (!segmentationUrl) {
+        console.error('[IRIS Migration] ❌ No segmentation URL available for legacySaveMask');
+        if (call_afterwards !== null) {
+            call_afterwards();
+        }
+        return;
+    }
+
+    fetch(segmentationUrl + "save_mask/" + vars.image_id, {
         method: "POST",
         body: data,
         headers: {
@@ -2788,8 +2879,21 @@ async function legacyPredictMask(){
     }
 
     show_loader("Train AI...");
+    
+    // Use React store as primary source, fallback to legacy vars
+    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
+        return vars.url.segmentation;
+    })();
+
+    if (!segmentationUrl) {
+        console.error('[IRIS Migration] ❌ No segmentation URL available for legacyPredictMask');
+        hide_loader();
+        return;
+    }
+
     let results = await download(
-            vars.url.segmentation+"predict_mask/" + vars.image_id,
+            segmentationUrl + "predict_mask/" + vars.image_id,
             {
                 method: "POST",
                 body: JSON.stringify({

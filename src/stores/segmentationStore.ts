@@ -100,6 +100,14 @@ interface AIModelConfig {
   suppression_default_class: number;
 }
 
+interface ApiUrls {
+  main: string;
+  segmentation: string;
+  user: string;
+  admin: string;
+  help: string;
+}
+
 interface SegmentationDebugInfo {
   showMask: boolean;
   currentImageId: string | null;
@@ -128,6 +136,8 @@ interface SegmentationDebugInfo {
   maskChanged: boolean;
   isLoading: boolean;
   lastSaveTime: string | null;
+  // API URLs debug info
+  hasApiUrls: boolean;
 }
 
 interface SegmentationState {
@@ -147,6 +157,11 @@ interface SegmentationState {
   // New User Experience (replaces vars.just_logged_in)
   justLoggedIn: boolean;
   setJustLoggedIn: (loggedIn: boolean) => void;
+
+  // CRITICAL: API URLs (replaces vars.url)
+  apiUrls: ApiUrls | null;
+  setApiUrls: (urls: ApiUrls) => void;
+  getApiUrl: (endpoint: keyof ApiUrls) => string | null;
 
   // CRITICAL: Core Mask Data (replaces vars.mask, vars.user_mask, vars.errors_mask)
   maskData: Uint8Array | null;
@@ -302,6 +317,21 @@ interface SegmentationState {
   setDebugMode: (enabled: boolean) => void;
   getDebugInfo: () => SegmentationDebugInfo;
 }
+
+// Helper function to get API URLs from React store (for legacy compatibility)
+const getApiUrlsFromStore = (): ApiUrls | null => {
+  return useSegmentationStore.getState().apiUrls;
+};
+
+// Helper function to get specific API URL from React store (for legacy compatibility)
+const getApiUrlFromStore = (endpoint: keyof ApiUrls): string | null => {
+  return useSegmentationStore.getState().getApiUrl(endpoint);
+};
+
+// Helper function to set API URLs in React store (for legacy compatibility)
+const setApiUrlsInStore = (urls: ApiUrls) => {
+  useSegmentationStore.getState().setApiUrls(urls);
+};
 
 // Helper function to get next action from React store (for legacy compatibility)
 const getNextActionFromStore = () => {
@@ -601,6 +631,51 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars) {
       w.vars.just_logged_in = loggedIn;
     }
+  },
+
+  // CRITICAL: API URLs State (replaces vars.url)
+  apiUrls: null,
+
+  setApiUrls: (urls: ApiUrls) => {
+    // Validate input
+    if (!urls || typeof urls !== 'object') {
+      console.error('[IRIS] setApiUrls: Invalid URLs object', urls);
+      return;
+    }
+
+    // Validate required endpoints
+    const requiredEndpoints: (keyof ApiUrls)[] = ['main', 'segmentation', 'user', 'admin', 'help'];
+    const missingEndpoints = requiredEndpoints.filter(endpoint => !urls[endpoint] || typeof urls[endpoint] !== 'string' || urls[endpoint].trim() === '');
+    
+    if (missingEndpoints.length > 0) {
+      console.error('[IRIS] setApiUrls: Missing or invalid endpoints', missingEndpoints);
+      return;
+    }
+
+    set({ apiUrls: urls });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.url = urls;
+    }
+
+    console.log('[IRIS] API URLs initialized:', urls);
+  },
+
+  getApiUrl: (endpoint: keyof ApiUrls) => {
+    const { apiUrls } = get();
+    if (!apiUrls) {
+      console.warn(`[IRIS] getApiUrl: No API URLs available for endpoint '${endpoint}'`);
+      return null;
+    }
+    
+    if (!apiUrls[endpoint]) {
+      console.warn(`[IRIS] getApiUrl: Endpoint '${endpoint}' not found in API URLs`);
+      return null;
+    }
+    
+    return apiUrls[endpoint];
   },
 
   // CRITICAL: Core Mask Data State (replaces vars.mask, vars.user_mask, vars.errors_mask)
@@ -1871,6 +1946,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskChanged: state.maskChanged,
       isLoading: state.isLoading,
       lastSaveTime: state.lastSaveTime ? state.lastSaveTime.toISOString() : null,
+      // API URLs debug info
+      hasApiUrls: state.apiUrls !== null,
     };
   },
 }));
@@ -1960,6 +2037,9 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  (window as any).getApiUrlsFromStore = getApiUrlsFromStore;
+  (window as any).getApiUrlFromStore = getApiUrlFromStore;
+  (window as any).setApiUrlsInStore = setApiUrlsInStore;
   (window as any).getNextActionFromStore = getNextActionFromStore;
   (window as any).setNextActionInStore = setNextActionInStore;
   (window as any).getJustLoggedInFromStore = getJustLoggedInFromStore;
@@ -2025,6 +2105,7 @@ if (typeof window !== 'undefined') {
   (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
   
   // Migration tracking - only log when store is available (no need to spam console)
+  console.log('[IRIS Migration] API URLs Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Next Action Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Just Logged In Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
