@@ -418,7 +418,7 @@ const createHiddenMaskCanvasFromStore = (width: number, height: number) => {
   return useSegmentationStore.getState().createHiddenMaskCanvas(width, height);
 };
 
-// Helper function to get mask area from React store (for legacy compatibility)
+// CRITICAL: Helper functions for mask area legacy access during migration (vars.mask_area)
 const getMaskAreaFromStore = (): [number, number, number, number] | null => {
   return useSegmentationStore.getState().getMaskArea();
 };
@@ -1855,9 +1855,25 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setCurrentImage: (imageId) => {
+    // Validate input
+    if (typeof imageId !== 'string' || imageId.trim() === '') {
+      console.error('[IRIS] setCurrentImage: Invalid image ID', imageId);
+      return;
+    }
+
     const images = get().images;
     const index = images.findIndex(img => img.image_id === imageId);
+    
+    // Update store state
     set({ currentImageId: imageId, currentImageIndex: index });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.image_id = imageId;
+    }
+
+    console.log('[IRIS] Current image set:', imageId, 'index:', index);
   },
 
   navigateNext: () => {
@@ -1896,14 +1912,14 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   getNextImageId: () => {
     const { images, currentImageIndex } = get();
-    return currentImageIndex < images.length - 1 
+    return (currentImageIndex >= 0 && currentImageIndex < images.length - 1) 
       ? images[currentImageIndex + 1].image_id 
       : null;
   },
 
   getPrevImageId: () => {
     const { images, currentImageIndex } = get();
-    return currentImageIndex > 0 
+    return (currentImageIndex > 0 && currentImageIndex < images.length) 
       ? images[currentImageIndex - 1].image_id 
       : null;
   },

@@ -247,7 +247,13 @@ async function init_views(){
     // Load mask (now properly awaited):
     await load_mask();
 
-    vars.vm.setImage(vars.image_id, vars.image_location);
+    vars.vm.setImage(
+        window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in init_views() - React store not available');
+            return vars.image_id;
+        })(), 
+        vars.image_location
+    );
     vars.vm.showGroup();
 
     set_tool(vars.tool.type);
@@ -2207,7 +2213,12 @@ function logout_finished(){
         return;
     }
 
-    goto_url(segmentationUrl + '?image_id=' + vars.image_id);
+    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in logout_finished() - React store not available');
+        return vars.image_id;
+    })();
+
+    goto_url(segmentationUrl + '?image_id=' + currentImageId);
 }
 
 async function fetch_server_update(update_config=true){
@@ -2245,7 +2256,12 @@ async function fetch_server_update(update_config=true){
     })();
 
     // Get more information about the current image:
-    response = await fetch(mainUrlForImageInfo+"image_info/"+vars.image_id);
+    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in fetch_server_update() - React store not available');
+        return vars.image_id;
+    })();
+
+    response = await fetch(mainUrlForImageInfo+"image_info/"+currentImageId);
     if (response.status != 404) {
         image = await response.json();
 
@@ -2402,12 +2418,22 @@ async function load_mask(){
     // PHASE 2: Check React store first (new source of truth)
     if (window.segmentationStore) {
         const store = window.segmentationStore.getState();
-        try {
-            await store.loadMaskForImage(vars.image_id);
-            return; // Store handles everything
-        } catch (error) {
-            console.error('[IRIS] Store load_mask failed:', error);
-            // Fall back to legacy behavior on error
+        const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in load_mask() - React store not available');
+            return vars.image_id;
+        })();
+        
+        if (currentImageId) {
+            try {
+                await store.loadMaskForImage(currentImageId);
+                return; // Store handles everything
+            } catch (error) {
+                console.error('[IRIS] Store load_mask failed:', error);
+                // Fall back to legacy behavior on error
+            }
+        } else {
+            console.error('[IRIS] No current image ID available for load_mask');
+            return;
         }
     }
     
@@ -2431,8 +2457,13 @@ async function legacyLoadMask(){
         return;
     }
 
+    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in legacyLoadMask() - React store not available');
+        return vars.image_id;
+    })();
+
     var results = await download(
-        segmentationUrl + "load_mask/" + vars.image_id
+        segmentationUrl + "load_mask/" + currentImageId
     );
 
     if (results.response.status != 200 && results.response.status != 404) {
@@ -2571,7 +2602,12 @@ async function dialogue_before_next_image(){
         return;
     }
 
-    let response = await fetch(`${mainUrl}get_action_info/${vars.image_id}/segmentation`);
+    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in dialogue_before_next_image() - React store not available');
+        return vars.image_id;
+    })();
+
+    let response = await fetch(`${mainUrl}get_action_info/${currentImageId}/segmentation`);
     if (response.status >= 400){
         // Continue without any dialogue
         hide_loader(); // Fix: Hide the loader before continuing
@@ -2734,7 +2770,12 @@ function legacySaveMask(call_afterwards=null){
         return;
     }
 
-    fetch(segmentationUrl + "save_mask/" + vars.image_id, {
+    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in legacySaveMask() - React store not available');
+        return vars.image_id;
+    })();
+
+    fetch(segmentationUrl + "save_mask/" + currentImageId, {
         method: "POST",
         body: data,
         headers: {
@@ -2892,8 +2933,13 @@ async function legacyPredictMask(){
         return;
     }
 
+    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in legacyPredictMask() - React store not available');
+        return vars.image_id;
+    })();
+
     let results = await download(
-            segmentationUrl + "predict_mask/" + vars.image_id,
+            segmentationUrl + "predict_mask/" + currentImageId,
             {
                 method: "POST",
                 body: JSON.stringify({

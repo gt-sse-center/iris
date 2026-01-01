@@ -94,6 +94,29 @@
         }
 
         // React will call init_segmentation when ready
+        
+        // Initialize React store with image ID when available
+        function initializeImageIdInStore() {
+            if (window.segmentationStore && window.setCurrentImageIdInStore) {
+                const imageId = {{image_id|tojson}};
+                if (imageId) {
+                    window.setCurrentImageIdInStore(imageId);
+                    console.log('[IRIS] Image ID initialized in React store:', imageId);
+                } else {
+                    console.warn('[IRIS] No image ID available for React store initialization');
+                }
+            } else {
+                // Retry after a short delay if store not ready
+                setTimeout(initializeImageIdInStore, 100);
+            }
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeImageIdInStore);
+        } else {
+            initializeImageIdInStore();
+        }
     </script>
 
     <!-- Load React Segmentation SPA -->
