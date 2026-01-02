@@ -233,7 +233,15 @@ class PreviewLayer extends CanvasLayer{
 
         // Draw the boundaries of the masking area
         ctx.beginPath();
-        if (vars.config.views.length < 2){
+        
+        // Primary source: React store, fallback: legacy vars
+        const views = window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for line width - React store not available');
+            return vars.config.views;
+        })();
+        
+        const viewCount = views ? (Array.isArray(views) ? views.length : Object.keys(views).length) : 0;
+        if (viewCount < 2){
             ctx.lineWidth = "3";
         } else {
             ctx.lineWidth = "2";
