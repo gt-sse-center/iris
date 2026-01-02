@@ -30,7 +30,6 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
     viewHeight,
     showControls,
     imageId,
-    imageLocation,
     // PHASE 3A: New zoom/pan/canvas state
     currentView,
     zoomLevel,
@@ -232,7 +231,6 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
           height={viewHeight}
           showControls={showControls}
           imageId={imageId}
-          imageLocation={imageLocation}
           onImageLocationChange={handleImageLocationChange}
           // PHASE 3A: Pass zoom/pan state to ViewPorts
           zoomLevel={zoomLevel}

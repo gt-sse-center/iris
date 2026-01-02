@@ -94,6 +94,49 @@
         }
 
         // React will call init_segmentation when ready
+        
+        // Initialize React store with image ID when available
+        function initializeImageIdInStore() {
+            if (window.segmentationStore && window.setCurrentImageIdInStore) {
+                const imageId = {{image_id|tojson}};
+                if (imageId) {
+                    window.setCurrentImageIdInStore(imageId);
+                    console.log('[IRIS] Image ID initialized in React store:', imageId);
+                } else {
+                    console.warn('[IRIS] No image ID available for React store initialization');
+                }
+            } else {
+                // Retry after a short delay if store not ready
+                setTimeout(initializeImageIdInStore, 100);
+            }
+        }
+
+        // Initialize React store with image location when available
+        function initializeImageLocationInStore() {
+            if (window.viewManagerStore && window.setImageLocationInStore) {
+                const location = {{image_location|tojson}};
+                if (location && Array.isArray(location) && location.length === 2) {
+                    window.setImageLocationInStore(location);
+                    console.log('[IRIS] Image location initialized in React store:', location);
+                } else {
+                    console.warn('[IRIS] No valid image location available for React store initialization');
+                }
+            } else {
+                // Retry after a short delay if store not ready
+                setTimeout(initializeImageLocationInStore, 100);
+            }
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeImageIdInStore();
+                initializeImageLocationInStore();
+            });
+        } else {
+            initializeImageIdInStore();
+            initializeImageLocationInStore();
+        }
     </script>
 
     <!-- Load React Segmentation SPA -->

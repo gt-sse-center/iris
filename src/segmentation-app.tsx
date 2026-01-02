@@ -116,6 +116,34 @@ const SegmentationApp: React.FC = () => {
     checkAuth();
   }, []);
 
+  // Initialize legacy segmentation system
+  useEffect(() => {
+    const initializeLegacySystem = () => {
+      const w = window as any;
+      
+      // Wait for legacy scripts to be loaded
+      if (typeof w.init_segmentation === 'function') {
+        console.log('🔧 Calling legacy init_segmentation...');
+        w.init_segmentation();
+      } else {
+        console.warn('❌ Legacy scripts failed to load - init_segmentation not found');
+      }
+    };
+
+    // Try multiple times with increasing delays to ensure scripts are loaded
+    const tryInit = (attempt: number = 1) => {
+      if (typeof window.init_segmentation === 'function') {
+        initializeLegacySystem();
+      } else if (attempt < 10) {
+        setTimeout(() => tryInit(attempt + 1), attempt * 100);
+      } else {
+        console.error('❌ Failed to find init_segmentation after 10 attempts');
+      }
+    };
+
+    tryInit();
+  }, []);
+
   // Initialize ViewManager store from legacy vars
   useEffect(() => {
     const initializeViewManager = () => {

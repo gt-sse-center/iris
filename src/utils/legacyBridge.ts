@@ -50,6 +50,68 @@ export const renderAllReactLayers = (layerType?: string) => {
 if (typeof window !== 'undefined') {
   const w = window as any;
   
+  // Image ID bridge functions for legacy JavaScript access
+  w.getCurrentImageIdFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().currentImageId;
+    }
+    console.warn('[IRIS Migration] getCurrentImageIdFromStore: React store not available');
+    return null;
+  };
+  
+  w.setCurrentImageIdInStore = (imageId: string) => {
+    if (w.segmentationStore) {
+      w.segmentationStore.getState().setCurrentImage(imageId);
+    } else {
+      console.warn('[IRIS Migration] setCurrentImageIdInStore: React store not available');
+    }
+  };
+  
+  w.getImageInfoFromStore = (imageId: string) => {
+    if (w.segmentationStore) {
+      const { images } = w.segmentationStore.getState();
+      return images.find((img: any) => img.image_id === imageId) || null;
+    }
+    console.warn('[IRIS Migration] getImageInfoFromStore: React store not available');
+    return null;
+  };
+  
+  w.getCurrentImageInfoFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getCurrentImage();
+    }
+    console.warn('[IRIS Migration] getCurrentImageInfoFromStore: React store not available');
+    return null;
+  };
+  
+  w.validateImageIdFromStore = (imageId: string) => {
+    if (w.segmentationStore) {
+      if (typeof imageId !== 'string' || imageId.trim() === '') {
+        return false;
+      }
+      const { images } = w.segmentationStore.getState();
+      return images.some((img: any) => img.image_id === imageId);
+    }
+    console.warn('[IRIS Migration] validateImageIdFromStore: React store not available');
+    return false;
+  };
+  
+  w.getNextImageIdFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getNextImageId();
+    }
+    console.warn('[IRIS Migration] getNextImageIdFromStore: React store not available');
+    return null;
+  };
+  
+  w.getPrevImageIdFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getPrevImageId();
+    }
+    console.warn('[IRIS Migration] getPrevImageIdFromStore: React store not available');
+    return null;
+  };
+  
   // Override legacy render_mask function to also trigger React renders
   const originalRenderMask = w.render_mask;
   w.render_mask = (bbox?: [number, number, number, number]) => {    

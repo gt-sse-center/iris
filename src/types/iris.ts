@@ -217,5 +217,64 @@ declare global {
       openUserProfile?: (userId?: string) => void;
       openPreferences?: () => void;
     };
+    
+    // Segmentation Store Helper Functions (Legacy Bridge)
+    segmentationStore?: any;
+    getNextActionFromStore?: () => (() => Promise<void>) | null;
+    setNextActionInStore?: (action: (() => Promise<void>) | null) => void;
+    getJustLoggedInFromStore?: () => boolean;
+    setJustLoggedInInStore?: (loggedIn: boolean) => void;
+    getToolSizeFromStore?: () => number;
+    getToolResizingModeFromStore?: () => boolean;
+    getCursorImageFromStore?: () => [number, number];
+    setCursorImageInStore?: (x: number, y: number) => void;
+    getCurrentToolFromStore?: () => 'move' | 'draw' | 'eraser';
+    setCurrentToolInStore?: (tool: 'move' | 'draw' | 'eraser') => void;
+    getDragStartFromStore?: () => [number, number] | null;
+    setDragStartInStore?: (coords: [number, number] | null) => void;
+    getToolShapeFromStore?: () => 'square' | 'round';
+    setToolShapeInStore?: (shape: 'square' | 'round') => void;
+    getHiddenMaskCanvasFromStore?: () => HTMLCanvasElement | null;
+    getHiddenMaskContextFromStore?: () => CanvasRenderingContext2D | null;
+    createHiddenMaskCanvasFromStore?: (width: number, height: number) => HTMLCanvasElement;
+    
+    // Mask Data Helper Functions
+    getMaskDataFromStore?: () => Uint8Array | null;
+    setMaskDataInStore?: (data: Uint8Array, width: number, height: number) => void;
+    getUserMaskDataFromStore?: () => Uint8Array | null;
+    setUserMaskDataInStore?: (data: Uint8Array) => void;
+    getErrorsMaskDataFromStore?: () => Uint8Array | null;
+    setErrorsMaskDataInStore?: (data: Uint8Array) => void;
+    getMaskPixelFromStore?: (x: number, y: number) => number;
+    setMaskPixelInStore?: (x: number, y: number, classId: number) => void;
+    getUserMaskPixelFromStore?: (x: number, y: number) => number;
+    setUserMaskPixelInStore?: (x: number, y: number, value: number) => void;
+    copyMaskFromStore?: () => Uint8Array | null;
+    copyUserMaskFromStore?: () => Uint8Array | null;
+    getMaskTypeFromStore?: () => 'final' | 'user' | 'errors';
+    getClassesFromStore?: () => any[];
+    
+    // Mask Shape Helper Functions
+    getMaskShapeFromStore?: () => [number, number] | null;
+    setMaskShapeInStore?: (width: number, height: number) => void;
+    getMaskWidthFromStore?: () => number;
+    getMaskHeightFromStore?: () => number;
+    
+    // Mask Area Helper Functions (NEW)
+    getMaskAreaFromStore?: () => [number, number, number, number] | null;
+    setMaskAreaInStore?: (area: [number, number, number, number] | null) => void;
+    
+    // History System Helper Functions
+    updateHistoryInStore?: () => void;
+    undoInStore?: () => void;
+    redoInStore?: () => void;
+    discardFutureInStore?: () => void;
+    canUndoFromStore?: () => boolean;
+    canRedoFromStore?: () => boolean;
+    
+    // Initialization Functions
+    initializeFiltersFromLegacy?: () => void;
+    initializeCoreDrawingStateFromLegacy?: () => void;
+    initializeNavigationActionsStateFromLegacy?: () => void;
   }
 }

@@ -91,6 +91,8 @@ export interface ViewManagerState {
   setCurrentGroup: (group: string) => void;
   setImage: (imageId: string, location: [number, number]) => void;
   setImageLocation: (location: [number, number]) => void;
+  validateImageLocation: (location: [number, number]) => boolean;
+  getImageLocationDebugInfo: () => { lat: number; lon: number; valid: boolean };
   setImageAspectRatio: (ratio: number) => void;
   setShowControls: (show: boolean) => void;
   toggleControls: () => void;
@@ -128,7 +130,20 @@ export interface ViewManagerState {
   removeView: (position: number) => void;
   replaceView: (position: number, name: string) => void;
   showNextGroup: () => void;
+  showGroup: (groupName: string) => void;
   getCurrentViews: () => ViewConfig[];
+  
+  // Layer management
+  addStandardLayer: (layerType: string, filter?: (view: ViewConfig) => boolean) => void;
+  getLayers: (layerType?: string) => any[];
+  
+  // Rendering methods
+  render: () => void;
+  renderMask: () => void;
+  renderPreview: () => void;
+  
+  // Size management
+  updateSize: () => void;
   
   // Canvas sizing
   calculateViewDimensions: () => [number, number];
@@ -199,8 +214,58 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     set({ imageId, imageLocation });
   },
   
-  setImageLocation: (imageLocation) => {
-    set({ imageLocation });
+  setImageLocation: (location) => {
+    // Validate geographic coordinates
+    if (!Array.isArray(location) || location.length !== 2 || 
+        typeof location[0] !== 'number' || typeof location[1] !== 'number' ||
+        isNaN(location[0]) || isNaN(location[1])) {
+      console.warn('[IRIS] setImageLocation: Invalid coordinates', location);
+      return;
+    }
+
+    const [lat, lon] = location;
+    
+    // Validate geographic bounds
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      console.warn('[IRIS] setImageLocation: Coordinates out of geographic bounds', { lat, lon });
+      return;
+    }
+
+    const locationCopy: [number, number] = [lat, lon];
+    set({ imageLocation: locationCopy });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.image_location = locationCopy;
+    }
+  },
+
+  validateImageLocation: (location) => {
+    if (!Array.isArray(location) || location.length !== 2) {
+      return false;
+    }
+    
+    const [lat, lon] = location;
+    
+    if (typeof lat !== 'number' || typeof lon !== 'number' ||
+        isNaN(lat) || isNaN(lon)) {
+      return false;
+    }
+    
+    // Validate geographic bounds
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+  },
+
+  getImageLocationDebugInfo: () => {
+    const { imageLocation } = get();
+    const [lat, lon] = imageLocation;
+    
+    return {
+      lat,
+      lon,
+      valid: get().validateImageLocation(imageLocation)
+    };
   },
   
   setImageAspectRatio: (imageAspectRatio) => {
@@ -235,7 +300,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     const w = window as any;
     if (w.vars) {
       w.vars.image_shape = [width, height];
-      console.log('🔧 ViewManager: Synced image_shape to legacy vars:', [width, height]);
     }
 
     // Update view dimensions when image dimensions change
@@ -489,10 +553,94 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     }
   },
   
+  showGroup: (groupName) => {
+    const { viewGroups } = get();
+    if (viewGroups[groupName]) {
+      set({ currentGroup: groupName });
+      
+      // Show message (if available)
+      const w = window as any;
+      if (w.show_message) {
+        w.show_message(`Group: <i>${groupName}</i>`);
+      }
+    } else {
+      console.warn(`[ViewManager] Group '${groupName}' not found`);
+    }
+  },
+  
   getCurrentViews: () => {
     const { views, viewGroups, currentGroup } = get();
     const viewNames = viewGroups[currentGroup] || [];
     return viewNames.map(name => views[name]).filter(Boolean);
+  },
+  
+  // Layer management
+  addStandardLayer: (layerType, filter) => {
+    // This is a placeholder implementation for compatibility
+    // In the legacy system, this would add layers to the canvas
+    console.log(`[ViewManager] addStandardLayer: ${layerType}`, { filter });
+    
+    // For now, just log the operation - actual layer management
+    // will be handled by React components in the new system
+  },
+  
+  getLayers: (layerType) => {
+    // This is a placeholder implementation for compatibility
+    // In the legacy system, this would return canvas layers
+    console.log(`[ViewManager] getLayers: ${layerType || 'all'}`);
+    
+    // Return empty array for now - actual layer management
+    // will be handled by React components in the new system
+    return [];
+  },
+  
+  // Rendering methods
+  render: () => {
+    // This is a placeholder implementation for compatibility
+    // In the legacy system, this would trigger canvas rendering
+    console.log('[ViewManager] render: Triggering render');
+    
+    // Trigger legacy render if available
+    const w = window as any;
+    if (w.render_views) {
+      w.render_views();
+    }
+  },
+  
+  renderMask: () => {
+    // This is a placeholder implementation for compatibility
+    console.log('[ViewManager] renderMask: Triggering mask render');
+    
+    // Trigger legacy mask render if available
+    const w = window as any;
+    if (w.render_mask) {
+      w.render_mask();
+    }
+  },
+  
+  renderPreview: () => {
+    // This is a placeholder implementation for compatibility
+    console.log('[ViewManager] renderPreview: Triggering preview render');
+    
+    // Trigger legacy preview render if available
+    const w = window as any;
+    if (w.render_preview) {
+      w.render_preview();
+    }
+  },
+  
+  // Size management
+  updateSize: () => {
+    // Update view dimensions based on current state
+    get().updateViewDimensions();
+    
+    // Trigger legacy size update if available
+    const w = window as any;
+    if (w.update_canvas_size) {
+      w.update_canvas_size();
+    }
+    
+    console.log('[ViewManager] updateSize: Updated canvas dimensions');
   },
   
   // Canvas sizing
@@ -782,6 +930,27 @@ if (typeof window !== 'undefined') {
   
   (window as any).setCanvasMousePositionInStore = (x: number, y: number) => {
     useViewManagerStore.getState().setCanvasMousePosition([x, y]);
+  };
+
+  // Helper functions for legacy JavaScript access to image location
+  (window as any).getImageLocationFromStore = (): [number, number] => {
+    const location = useViewManagerStore.getState().imageLocation;
+    if (!location || !useViewManagerStore.getState().validateImageLocation(location)) {
+      console.warn('⚠️ [IRIS Migration] getImageLocationFromStore: Invalid image location in React store - migration may be incomplete');
+    }
+    return location;
+  };
+
+  (window as any).setImageLocationInStore = (location: [number, number]) => {
+    useViewManagerStore.getState().setImageLocation(location);
+  };
+
+  (window as any).validateImageLocation = (location: [number, number]): boolean => {
+    return useViewManagerStore.getState().validateImageLocation(location);
+  };
+
+  (window as any).getImageLocationDebugInfo = () => {
+    return useViewManagerStore.getState().getImageLocationDebugInfo();
   };
   
   // Initialize debug mode from legacy vars

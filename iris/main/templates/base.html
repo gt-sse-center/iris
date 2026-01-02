@@ -22,6 +22,28 @@
             // 'show_dialogue_before_next_image': MIGRATED to React store (segmentationStore)
         };
 
+        // Initialize React store with API URLs when available
+        function initializeApiUrls() {
+            if (window.setApiUrlsInStore && vars.url) {
+                try {
+                    window.setApiUrlsInStore(vars.url);
+                    console.log('[IRIS Migration] ✅ API URLs initialized in React store');
+                } catch (error) {
+                    console.error('[IRIS Migration] ❌ Failed to initialize API URLs in React store:', error);
+                }
+            } else {
+                // Retry after a short delay if React store isn't ready yet
+                setTimeout(initializeApiUrls, 100);
+            }
+        }
+
+        // Initialize API URLs when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApiUrls);
+        } else {
+            initializeApiUrls();
+        }
+
         function goto_url(url){
             window.location = url;
         }

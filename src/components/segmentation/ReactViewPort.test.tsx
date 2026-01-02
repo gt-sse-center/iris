@@ -18,7 +18,6 @@ describe('ReactViewPort', () => {
         height={300}
         showControls={true}
         imageId="test-image"
-        imageLocation={[0, 0]}
         onImageLocationChange={() => {}}
       />
     );
@@ -34,7 +33,6 @@ describe('ReactViewPort', () => {
         height={300}
         showControls={false}
         imageId="test-image"
-        imageLocation={[0, 0]}
         onImageLocationChange={() => {}}
       />
     );

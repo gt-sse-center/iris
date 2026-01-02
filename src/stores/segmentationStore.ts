@@ -100,6 +100,14 @@ interface AIModelConfig {
   suppression_default_class: number;
 }
 
+interface ApiUrls {
+  main: string;
+  segmentation: string;
+  user: string;
+  admin: string;
+  help: string;
+}
+
 interface SegmentationDebugInfo {
   showMask: boolean;
   currentImageId: string | null;
@@ -128,6 +136,8 @@ interface SegmentationDebugInfo {
   maskChanged: boolean;
   isLoading: boolean;
   lastSaveTime: string | null;
+  // API URLs debug info
+  hasApiUrls: boolean;
 }
 
 interface SegmentationState {
@@ -147,6 +157,11 @@ interface SegmentationState {
   // New User Experience (replaces vars.just_logged_in)
   justLoggedIn: boolean;
   setJustLoggedIn: (loggedIn: boolean) => void;
+
+  // CRITICAL: API URLs (replaces vars.url)
+  apiUrls: ApiUrls | null;
+  setApiUrls: (urls: ApiUrls) => void;
+  getApiUrl: (endpoint: keyof ApiUrls) => string | null;
 
   // CRITICAL: Core Mask Data (replaces vars.mask, vars.user_mask, vars.errors_mask)
   maskData: Uint8Array | null;
@@ -213,6 +228,11 @@ interface SegmentationState {
   setHiddenMaskCanvas: (canvas: HTMLCanvasElement | null) => void;
   createHiddenMaskCanvas: (width: number, height: number) => HTMLCanvasElement;
   getHiddenMaskContext: () => CanvasRenderingContext2D | null;
+
+  // Mask Area (replaces vars.mask_area)
+  maskArea: [number, number, number, number] | null;
+  setMaskArea: (area: [number, number, number, number] | null) => void;
+  getMaskArea: () => [number, number, number, number] | null;
 
   // Image Navigation
   images: ImageInfo[];
@@ -298,6 +318,21 @@ interface SegmentationState {
   getDebugInfo: () => SegmentationDebugInfo;
 }
 
+// Helper function to get API URLs from React store (for legacy compatibility)
+const getApiUrlsFromStore = (): ApiUrls | null => {
+  return useSegmentationStore.getState().apiUrls;
+};
+
+// Helper function to get specific API URL from React store (for legacy compatibility)
+const getApiUrlFromStore = (endpoint: keyof ApiUrls): string | null => {
+  return useSegmentationStore.getState().getApiUrl(endpoint);
+};
+
+// Helper function to set API URLs in React store (for legacy compatibility)
+const setApiUrlsInStore = (urls: ApiUrls) => {
+  useSegmentationStore.getState().setApiUrls(urls);
+};
+
 // Helper function to get next action from React store (for legacy compatibility)
 const getNextActionFromStore = () => {
   return useSegmentationStore.getState().nextAction;
@@ -381,6 +416,16 @@ const getHiddenMaskContextFromStore = () => {
 // Helper function to create hidden mask canvas from React store (for legacy compatibility)
 const createHiddenMaskCanvasFromStore = (width: number, height: number) => {
   return useSegmentationStore.getState().createHiddenMaskCanvas(width, height);
+};
+
+// CRITICAL: Helper functions for mask area legacy access during migration (vars.mask_area)
+const getMaskAreaFromStore = (): [number, number, number, number] | null => {
+  return useSegmentationStore.getState().getMaskArea();
+};
+
+// Helper function to set mask area in React store (for legacy compatibility)
+const setMaskAreaInStore = (area: [number, number, number, number] | null) => {
+  useSegmentationStore.getState().setMaskArea(area);
 };
 
 // CRITICAL: Helper functions for mask data legacy access during migration
@@ -474,8 +519,40 @@ const getMaskTypeFromStore = () => {
   return useSegmentationStore.getState().maskType;
 };
 
-const getClassesFromStore = () => {
+// Helper functions for classes legacy access during migration
+const getClassesFromStore = (): ClassConfig[] => {
   return useSegmentationStore.getState().classes;
+};
+
+const getClassFromStore = (classId: number): ClassConfig | null => {
+  const classes = useSegmentationStore.getState().classes;
+  return (classId >= 0 && classId < classes.length) ? classes[classId] : null;
+};
+
+const getClassColorFromStore = (classId: number): [number, number, number, number] | null => {
+  const classInfo = getClassFromStore(classId);
+  return classInfo ? classInfo.colour : null;
+};
+
+const getClassNameFromStore = (classId: number): string => {
+  const classInfo = getClassFromStore(classId);
+  return classInfo ? classInfo.name : `Class ${classId}`;
+};
+
+const getClassCountFromStore = (): number => {
+  return useSegmentationStore.getState().classes.length;
+};
+
+const setClassesInStore = (classes: ClassConfig[]) => {
+  useSegmentationStore.getState().setClasses(classes);
+};
+
+const getCurrentClassFromStore = (): number => {
+  return useSegmentationStore.getState().currentClass;
+};
+
+const setCurrentClassInStore = (classId: number) => {
+  useSegmentationStore.getState().setCurrentClass(classId);
 };
 
 // History system helper functions
@@ -554,6 +631,51 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars) {
       w.vars.just_logged_in = loggedIn;
     }
+  },
+
+  // CRITICAL: API URLs State (replaces vars.url)
+  apiUrls: null,
+
+  setApiUrls: (urls: ApiUrls) => {
+    // Validate input
+    if (!urls || typeof urls !== 'object') {
+      console.error('[IRIS] setApiUrls: Invalid URLs object', urls);
+      return;
+    }
+
+    // Validate required endpoints
+    const requiredEndpoints: (keyof ApiUrls)[] = ['main', 'segmentation', 'user', 'admin', 'help'];
+    const missingEndpoints = requiredEndpoints.filter(endpoint => !urls[endpoint] || typeof urls[endpoint] !== 'string' || urls[endpoint].trim() === '');
+    
+    if (missingEndpoints.length > 0) {
+      console.error('[IRIS] setApiUrls: Missing or invalid endpoints', missingEndpoints);
+      return;
+    }
+
+    set({ apiUrls: urls });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.url = urls;
+    }
+
+    console.log('[IRIS] API URLs initialized:', urls);
+  },
+
+  getApiUrl: (endpoint: keyof ApiUrls) => {
+    const { apiUrls } = get();
+    if (!apiUrls) {
+      console.warn(`[IRIS] getApiUrl: No API URLs available for endpoint '${endpoint}'`);
+      return null;
+    }
+    
+    if (!apiUrls[endpoint]) {
+      console.warn(`[IRIS] getApiUrl: Endpoint '${endpoint}' not found in API URLs`);
+      return null;
+    }
+    
+    return apiUrls[endpoint];
   },
 
   // CRITICAL: Core Mask Data State (replaces vars.mask, vars.user_mask, vars.errors_mask)
@@ -999,6 +1121,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Hidden Mask Canvas State (replaces vars.hidden_mask)
   hiddenMaskCanvas: null, // Default to no canvas
 
+  // Mask Area State (replaces vars.mask_area)
+  maskArea: null, // Default to no mask area
+
   // PHASE 1: Core Drawing State (replaces vars.tool, vars.current_class, vars.mask_type, vars.classes)
   currentTool: 'draw', // Default tool
   toolSize: 5, // Default tool size
@@ -1202,6 +1327,29 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     return ctx;
   },
 
+  // Mask Area Actions (replaces vars.mask_area)
+  setMaskArea: (area: [number, number, number, number] | null) => {
+    // Validate input
+    if (area !== null) {
+      if (!Array.isArray(area) || area.length !== 4 || !area.every(coord => typeof coord === 'number' && !isNaN(coord))) {
+        console.error('[IRIS] setMaskArea: Invalid mask area coordinates', area);
+        return;
+      }
+    }
+
+    set({ maskArea: area });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.mask_area = area;
+    }
+  },
+
+  getMaskArea: () => {
+    return get().maskArea;
+  },
+
   // PHASE 1: Core Drawing Actions with Legacy Sync
   setCurrentTool: (tool: 'move' | 'draw' | 'eraser') => {
     // Validate tool type
@@ -1310,9 +1458,16 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   setCurrentClass: (classId: number) => {
     const { classes } = get();
     
-    // Safety check: ensure we have classes loaded
+    // Allow setting class even if no classes are loaded yet (for initialization)
     if (classes.length === 0) {
-      console.warn(`[IRIS] setCurrentClass: No classes available yet, skipping class ${classId}`);
+      console.log(`[IRIS] setCurrentClass: No classes available yet, setting class ${classId} for later validation`);
+      set({ currentClass: classId });
+      
+      // Sync with legacy vars during migration
+      const w = window as any;
+      if (w.vars) {
+        w.vars.current_class = classId;
+      }
       return;
     }
     
@@ -1388,12 +1543,47 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setClasses: (classes: ClassConfig[]) => {
-    set({ classes });
-    
+    // Validate input
+    if (!Array.isArray(classes)) {
+      console.error('[IRIS] setClasses: Invalid classes array', classes);
+      return;
+    }
+
+    // Validate each class has required properties
+    const validClasses = classes.filter(cls => {
+      // Check if name exists and is not empty
+      if (!cls.name || cls.name.trim() === '') {
+        console.warn('[IRIS] setClasses: Invalid class definition - missing or empty name', cls);
+        return false;
+      }
+      
+      // Check if colour exists and is a valid RGBA array
+      if (!cls.colour || !Array.isArray(cls.colour) || cls.colour.length !== 4) {
+        console.warn('[IRIS] setClasses: Invalid class definition - invalid colour array', cls);
+        return false;
+      }
+      
+      // Check if all colour values are numbers
+      if (!cls.colour.every(val => typeof val === 'number' && val >= 0 && val <= 255)) {
+        console.warn('[IRIS] setClasses: Invalid class definition - colour values must be numbers 0-255', cls);
+        return false;
+      }
+      
+      return true;
+    });
+
+    set({ classes: validClasses });
+
     // Sync with legacy vars during migration
     const w = window as any;
     if (w.vars) {
-      w.vars.classes = classes;
+      w.vars.classes = validClasses;
+    }
+
+    // Update current class if it's now out of bounds
+    const { currentClass } = get();
+    if (currentClass >= validClasses.length) {
+      get().setCurrentClass(0);
     }
   },
 
@@ -1665,9 +1855,25 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setCurrentImage: (imageId) => {
+    // Validate input
+    if (typeof imageId !== 'string' || imageId.trim() === '') {
+      console.error('[IRIS] setCurrentImage: Invalid image ID', imageId);
+      return;
+    }
+
     const images = get().images;
     const index = images.findIndex(img => img.image_id === imageId);
+    
+    // Update store state
     set({ currentImageId: imageId, currentImageIndex: index });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.image_id = imageId;
+    }
+
+    console.log('[IRIS] Current image set:', imageId, 'index:', index);
   },
 
   navigateNext: () => {
@@ -1706,14 +1912,14 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   getNextImageId: () => {
     const { images, currentImageIndex } = get();
-    return currentImageIndex < images.length - 1 
+    return (currentImageIndex >= 0 && currentImageIndex < images.length - 1) 
       ? images[currentImageIndex + 1].image_id 
       : null;
   },
 
   getPrevImageId: () => {
     const { images, currentImageIndex } = get();
-    return currentImageIndex > 0 
+    return (currentImageIndex > 0 && currentImageIndex < images.length) 
       ? images[currentImageIndex - 1].image_id 
       : null;
   },
@@ -1756,6 +1962,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskChanged: state.maskChanged,
       isLoading: state.isLoading,
       lastSaveTime: state.lastSaveTime ? state.lastSaveTime.toISOString() : null,
+      // API URLs debug info
+      hasApiUrls: state.apiUrls !== null,
     };
   },
 }));
@@ -1845,6 +2053,9 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  (window as any).getApiUrlsFromStore = getApiUrlsFromStore;
+  (window as any).getApiUrlFromStore = getApiUrlFromStore;
+  (window as any).setApiUrlsInStore = setApiUrlsInStore;
   (window as any).getNextActionFromStore = getNextActionFromStore;
   (window as any).setNextActionInStore = setNextActionInStore;
   (window as any).getJustLoggedInFromStore = getJustLoggedInFromStore;
@@ -1863,6 +2074,10 @@ if (typeof window !== 'undefined') {
   (window as any).getHiddenMaskContextFromStore = getHiddenMaskContextFromStore;
   (window as any).createHiddenMaskCanvasFromStore = createHiddenMaskCanvasFromStore;
   
+  // Export mask area helper functions for legacy JavaScript
+  (window as any).getMaskAreaFromStore = getMaskAreaFromStore;
+  (window as any).setMaskAreaInStore = setMaskAreaInStore;
+  
   // CRITICAL: Export mask data helper functions for legacy JavaScript
   (window as any).getMaskDataFromStore = getMaskDataFromStore;
   (window as any).setMaskDataInStore = setMaskDataInStore;
@@ -1878,6 +2093,13 @@ if (typeof window !== 'undefined') {
   (window as any).copyUserMaskFromStore = copyUserMaskFromStore;
   (window as any).getMaskTypeFromStore = getMaskTypeFromStore;
   (window as any).getClassesFromStore = getClassesFromStore;
+  (window as any).getClassFromStore = getClassFromStore;
+  (window as any).getClassColorFromStore = getClassColorFromStore;
+  (window as any).getClassNameFromStore = getClassNameFromStore;
+  (window as any).getClassCountFromStore = getClassCountFromStore;
+  (window as any).setClassesInStore = setClassesInStore;
+  (window as any).getCurrentClassFromStore = getCurrentClassFromStore;
+  (window as any).setCurrentClassInStore = setCurrentClassInStore;
   
   // CRITICAL: Export mask shape helper functions for legacy JavaScript (vars.mask_shape migration)
   (window as any).getMaskShapeFromStore = getMaskShapeFromStore;
@@ -1899,6 +2121,7 @@ if (typeof window !== 'undefined') {
   (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
   
   // Migration tracking - only log when store is available (no need to spam console)
+  console.log('[IRIS Migration] API URLs Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Next Action Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Just Logged In Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
   console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
@@ -1916,32 +2139,29 @@ if (typeof window !== 'undefined') {
   if (w.vars?.debug_mode) {
     useSegmentationStore.getState().setDebugMode(true);
   }
-  
-  // Prevent infinite initialization loops
+
+  // Check for legacy vars periodically and initialize store state
   let coreDrawingInitialized = false;
   let navigationActionsInitialized = false;
-  
-  // Auto-initialize core drawing state when legacy vars become available
+
   const checkForLegacyVars = () => {
-    // Core drawing state initialization
-    if (!coreDrawingInitialized && w.vars && (w.vars.tool || w.vars.classes || typeof w.vars.current_class === 'number')) {
-      console.log('🔧 SegmentationStore: Auto-initializing core drawing state from detected legacy vars');
+    // Initialize core drawing state from legacy vars (once)
+    if (!coreDrawingInitialized && w.vars) {
       initializeCoreDrawingStateFromLegacy();
       coreDrawingInitialized = true;
     }
     
-    // PHASE 2: Navigation & actions state initialization
-    if (!navigationActionsInitialized && w.vars && (w.vars.config || w.vars.user || w.vars.confusion_matrix)) {
-      console.log('🔧 SegmentationStore: Auto-initializing navigation & actions state from detected legacy vars');
+    // Initialize navigation & actions state from legacy vars (once)
+    if (!navigationActionsInitialized && w.vars?.config) {
       initializeNavigationActionsStateFromLegacy();
       navigationActionsInitialized = true;
     }
   };
-  
-  // Check immediately
+
+  // Initial check
   checkForLegacyVars();
-  
-  // Also check periodically for the first 10 seconds, but only if not already initialized
+
+  // Periodic check for legacy vars (in case they're loaded later)
   const checkInterval = setInterval(() => {
     if (!coreDrawingInitialized || !navigationActionsInitialized) {
       checkForLegacyVars();
@@ -1955,3 +2175,15 @@ if (typeof window !== 'undefined') {
   
   setTimeout(() => clearInterval(checkInterval), 10000);
 }
+
+// Export helper functions for testing and external use
+export {
+  getClassesFromStore,
+  getClassFromStore,
+  getClassColorFromStore,
+  getClassNameFromStore,
+  getClassCountFromStore,
+  setClassesInStore,
+  getCurrentClassFromStore,
+  setCurrentClassInStore
+};

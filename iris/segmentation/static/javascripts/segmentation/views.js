@@ -29,25 +29,45 @@ class MaskLayer extends CanvasLayer{
                 return;
             }
             
+            // Get mask area from React store or fallback to legacy
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            
+            if (!maskArea) {
+                console.error('[IRIS] Mask area not available for MaskLayer render');
+                return;
+            }
+            
             // Warn if falling back to legacy vars
             if (!window.getImageShapeFromStore && vars.image_shape) {
                 console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.image_shape fallback - React store not available');
             }
             
+            if (!window.getMaskAreaFromStore && vars.mask_area) {
+                console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.mask_area fallback - React store not available');
+            }
+            
             ctx.drawImage(
                 hiddenCanvas,
-                vars.mask_area[0], vars.mask_area[1]
+                maskArea[0], maskArea[1]
             );
         } else {
+            // Get mask area from React store or fallback to legacy
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            
+            if (!maskArea) {
+                console.error('[IRIS] Mask area not available for MaskLayer render');
+                return;
+            }
+            
             ctx.clearRect(
-                bbox[0]+vars.mask_area[0],
-                bbox[1]+vars.mask_area[1],
+                bbox[0]+maskArea[0],
+                bbox[1]+maskArea[1],
                 bbox[2], bbox[3]
             );
             ctx.drawImage(
                 hiddenCanvas,
                 ...bbox,
-                bbox[0]+vars.mask_area[0], bbox[1]+vars.mask_area[1],
+                bbox[0]+maskArea[0], bbox[1]+maskArea[1],
                 bbox[2], bbox[3]
             );
         }
@@ -92,20 +112,40 @@ class SuperpixelsLayer extends CanvasLayer{
                 console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.image_shape fallback - React store not available');
             }
             
+            // Get mask area from React store or fallback to legacy
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            
+            if (!maskArea) {
+                console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
+                return;
+            }
+            
+            if (!window.getMaskAreaFromStore && vars.mask_area) {
+                console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.mask_area fallback - React store not available');
+            }
+            
             ctx.drawImage(
                 hiddenCanvas,
-                vars.mask_area[0], vars.mask_area[1]
+                maskArea[0], maskArea[1]
             );
         } else {
+            // Get mask area from React store or fallback to legacy
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            
+            if (!maskArea) {
+                console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
+                return;
+            }
+            
             ctx.clearRect(
-                bbox[0]+vars.mask_area[0],
-                bbox[1]+vars.mask_area[1],
+                bbox[0]+maskArea[0],
+                bbox[1]+maskArea[1],
                 bbox[2], bbox[3]
             );
             ctx.drawImage(
                 hiddenCanvas,
                 ...bbox,
-                bbox[0]+vars.mask_area[0], bbox[1]+vars.mask_area[1],
+                bbox[0]+maskArea[0], bbox[1]+maskArea[1],
                 bbox[2], bbox[3]
             );
         }
@@ -202,14 +242,16 @@ class PreviewLayer extends CanvasLayer{
         ctx.strokeStyle = "red";
         ctx.setLineDash([5, 15]);
         const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : vars.mask_shape;
-        if (maskShape) {
+        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+        
+        if (maskShape && maskArea) {
             ctx.rect(
-                vars.mask_area[0], vars.mask_area[1],
+                maskArea[0], maskArea[1],
                 ...maskShape
             );
             ctx.stroke();
         } else {
-            console.warn('[IRIS Migration] No mask shape available for ViewLayer rendering');
+            console.warn('[IRIS Migration] No mask shape or mask area available for ViewLayer rendering');
         }
     }
 }
