@@ -95,7 +95,7 @@ describe('imageLocation', () => {
     ];
     
     outOfBoundsInputs.forEach(coords => {
-      store.setImageLocation(coords);
+      store.setImageLocation(coords as [number, number]);
       expect(useViewManagerStore.getState().imageLocation).toEqual([35.6762, 139.6503]);
     });
     
@@ -114,7 +114,7 @@ describe('imageLocation', () => {
     ];
     
     validCoords.forEach(coords => {
-      store.setImageLocation(coords);
+      store.setImageLocation(coords as [number, number]);
       expect(useViewManagerStore.getState().imageLocation).toEqual(coords);
     });
   });
