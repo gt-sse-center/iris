@@ -74,10 +74,15 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     if (!ctx) return;
     
     // Clear canvas using image dimensions (like legacy)
-    const win = window as any;
-    if (win.vars?.image_shape) {
-      ctx.clearRect(0, 0, win.vars.image_shape[1], win.vars.image_shape[0]);
+    // Get image shape from React store with fallback to legacy vars
+    const w = window as any;
+    const imageShape = (window as any).getImageShapeFromStore ? 
+      (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+    
+    if (imageShape) {
+      ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
     } else {
+      console.warn('⚠️ [IRIS Migration] ReactRGBLayer: No image shape available from React store or legacy vars');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     
@@ -99,13 +104,18 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     canvas.style.filter = filterParts.join(' ');
     
     // Draw image at image dimensions (canvas transform will handle scaling)
-    ctx.drawImage(image, 0, 0, win.vars.image_shape[1], win.vars.image_shape[0]);
+    if (imageShape) {
+      ctx.drawImage(image, 0, 0, imageShape[1], imageShape[0]); // width, height
+    } else {
+      console.warn('⚠️ [IRIS Migration] ReactRGBLayer: No image shape available for image drawing - using canvas dimensions');
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    }
     
     // Trigger mask visibility update if needed
-    if (win.segmentationStore) {
-      const showMask = win.segmentationStore.getState().showMask;
-      if (win.show_mask) {
-        win.show_mask(showMask);
+    if (w.segmentationStore) {
+      const showMask = w.segmentationStore.getState().showMask;
+      if (w.show_mask) {
+        w.show_mask(showMask);
       }
     }
   }, [brightness, saturation, contrast, invert]);
@@ -160,10 +170,17 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
         // image_shape[0] = height, image_shape[1] = width
         // We need to scale canvas dimensions to image dimensions
         const w = window as any;
-        if (w.vars?.image_shape) {
-          const scaleX = canvas.width / w.vars.image_shape[1];  // canvas width / image width
-          const scaleY = canvas.height / w.vars.image_shape[0]; // canvas height / image height
+        
+        // Get image shape from React store with fallback to legacy vars
+        const imageShape = (window as any).getImageShapeFromStore ? 
+          (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+        
+        if (imageShape) {
+          const scaleX = canvas.width / imageShape[1];  // canvas width / image width
+          const scaleY = canvas.height / imageShape[0]; // canvas height / image height
           ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+        } else {
+          console.warn('⚠️ [IRIS Migration] ReactRGBLayer: No image shape available for canvas transformation - using identity transform');
         }
       }
       

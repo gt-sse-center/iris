@@ -55,6 +55,9 @@ export interface ViewManagerState {
   imageAspectRatio: number;
   showControls: boolean;
   
+  // Image dimensions (replaces vars.image_shape)
+  imageDimensions: { width: number; height: number } | null;
+  
   // PHASE 3A: View Management State
   currentView: string | null;
   
@@ -91,6 +94,11 @@ export interface ViewManagerState {
   setImageAspectRatio: (ratio: number) => void;
   setShowControls: (show: boolean) => void;
   toggleControls: () => void;
+  
+  // Image dimensions actions (replaces vars.image_shape)
+  setImageDimensions: (width: number, height: number) => void;
+  getImageShape: () => [number, number] | null;
+  getImageAspectRatio: () => number;
   
   // PHASE 3A: View Management Actions
   setCurrentView: (viewName: string | null) => void;
@@ -146,6 +154,9 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   imageLocation: [0, 0],
   imageAspectRatio: 1,
   showControls: false,
+  
+  // Image dimensions (replaces vars.image_shape)
+  imageDimensions: null,
   
   // PHASE 3A: View Management State
   currentView: null,
@@ -203,6 +214,42 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   toggleControls: () => {
     const { showControls } = get();
     set({ showControls: !showControls });
+  },
+  
+  // Image dimensions actions (replaces vars.image_shape)
+  setImageDimensions: (width, height) => {
+    // Validate input
+    if (typeof width !== 'number' || typeof height !== 'number' || 
+        width <= 0 || height <= 0 || isNaN(width) || isNaN(height)) {
+      console.error('[IRIS] setImageDimensions: Invalid dimensions', { width, height });
+      return;
+    }
+
+    const aspectRatio = width / height;
+    set({ 
+      imageDimensions: { width, height },
+      imageAspectRatio: aspectRatio
+    });
+
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.image_shape = [width, height];
+      console.log('🔧 ViewManager: Synced image_shape to legacy vars:', [width, height]);
+    }
+
+    // Update view dimensions when image dimensions change
+    get().updateViewDimensions();
+  },
+
+  getImageShape: () => {
+    const { imageDimensions } = get();
+    return imageDimensions ? [imageDimensions.width, imageDimensions.height] : null;
+  },
+
+  getImageAspectRatio: () => {
+    const { imageDimensions } = get();
+    return imageDimensions ? imageDimensions.width / imageDimensions.height : 1;
   },
   
   // PHASE 3A: View Management Actions
@@ -450,8 +497,13 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // Canvas sizing
   calculateViewDimensions: () => {
-    const { imageAspectRatio } = get();
+    const { imageDimensions } = get();
     const currentViews = get().getCurrentViews();
+    
+    // Use imageDimensions for aspect ratio if available, fallback to imageAspectRatio
+    const aspectRatio = imageDimensions ? 
+      imageDimensions.width / imageDimensions.height : 
+      get().imageAspectRatio;
     
     const horizontalSpacing = 10;
     const verticalSpacing = 150;
@@ -463,16 +515,16 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     
     const idealWidth = Math.min(
       allowedWidth,
-      allowedHeight * imageAspectRatio
+      allowedHeight * aspectRatio
     );
     const idealHeight = Math.min(
-      idealWidth / imageAspectRatio,
+      idealWidth / aspectRatio,
       allowedHeight
     );
     
     const scaleFromVerticalLimit = Math.max(1, idealHeight / allowedHeight);
     const width = Math.round(idealWidth / scaleFromVerticalLimit);
-    const height = Math.round(width / imageAspectRatio);
+    const height = Math.round(width / aspectRatio);
     
     return [width, height];
   },
@@ -600,9 +652,11 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       
       // Set image aspect ratio from legacy vars
       if (w.vars.image_shape && w.vars.image_shape.length >= 2) {
-        const aspectRatio = w.vars.image_shape[0] / w.vars.image_shape[1];
-        console.log('🔧 ViewManager: Setting aspect ratio:', aspectRatio);
-        store.setImageAspectRatio(aspectRatio);
+        const [width, height] = w.vars.image_shape;
+        console.log('🔧 ViewManager: Setting image dimensions:', width, 'x', height);
+        store.setImageDimensions(width, height);
+      } else {
+        console.warn('⚠️ ViewManager: No image shape found in legacy vars');
       }
       
       // Sync filters with segmentation store
@@ -764,5 +818,48 @@ if (typeof window !== 'undefined') {
     console.log('React store:', useViewManagerStore.getState());
     console.log('Views type:', typeof w.vars?.config?.views);
     console.log('Views keys:', w.vars?.config?.views ? Object.keys(w.vars.config.views) : []);
+  };
+  
+  // Helper functions for legacy JavaScript access to image dimensions
+  (window as any).getImageShapeFromStore = (): [number, number] | null => {
+    const shape = useViewManagerStore.getState().getImageShape();
+    if (!shape) {
+      console.warn('⚠️ [IRIS Migration] getImageShapeFromStore: No image dimensions in React store - migration may be incomplete');
+    }
+    return shape;
+  };
+  
+  (window as any).setImageShapeInStore = (width: number, height: number) => {
+    useViewManagerStore.getState().setImageDimensions(width, height);
+  };
+  
+  (window as any).getImageWidthFromStore = (): number => {
+    const dimensions = useViewManagerStore.getState().imageDimensions;
+    if (!dimensions) {
+      console.warn('⚠️ [IRIS Migration] getImageWidthFromStore: No image dimensions in React store - migration may be incomplete');
+      return 0;
+    }
+    return dimensions.width;
+  };
+  
+  (window as any).getImageHeightFromStore = (): number => {
+    const dimensions = useViewManagerStore.getState().imageDimensions;
+    if (!dimensions) {
+      console.warn('⚠️ [IRIS Migration] getImageHeightFromStore: No image dimensions in React store - migration may be incomplete');
+      return 0;
+    }
+    return dimensions.height;
+  };
+  
+  (window as any).getImageAspectRatioFromStore = (): number => {
+    const ratio = useViewManagerStore.getState().getImageAspectRatio();
+    if (ratio === 1) {
+      // Check if this is the default value (no dimensions set)
+      const dimensions = useViewManagerStore.getState().imageDimensions;
+      if (!dimensions) {
+        console.warn('⚠️ [IRIS Migration] getImageAspectRatioFromStore: No image dimensions in React store - using default ratio 1.0');
+      }
+    }
+    return ratio;
   };
 }

@@ -52,9 +52,7 @@ if (typeof window !== 'undefined') {
   
   // Override legacy render_mask function to also trigger React renders
   const originalRenderMask = w.render_mask;
-  w.render_mask = (bbox?: [number, number, number, number]) => {
-    console.log('[IRIS] Legacy bridge render_mask called with bbox:', bbox);
-    
+  w.render_mask = (bbox?: [number, number, number, number]) => {    
     // Call original legacy function
     if (originalRenderMask) {
       originalRenderMask(bbox);
@@ -65,7 +63,6 @@ if (typeof window !== 'undefined') {
     let reactBbox = bbox;
     if (bbox && w.getToolShapeFromStore) {
       const toolShape = w.getToolShapeFromStore();
-      console.log('[IRIS] Legacy bridge detected tool shape:', toolShape);
       if (toolShape === 'round') {
         // For round brushes, force full re-render to show circular shape properly
         console.log('[IRIS] Legacy bridge: forcing full re-render for round brush');
@@ -73,7 +70,6 @@ if (typeof window !== 'undefined') {
       }
     }
     
-    console.log('[IRIS] Legacy bridge: triggering React render with bbox:', reactBbox);
     // Trigger React mask renders
     triggerReactMaskRender(reactBbox);
   };
