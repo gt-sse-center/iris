@@ -149,6 +149,14 @@ function newuser_help_popup(){
     }
 }
 function save_config(config){
+    // Primary destination: React store, fallback: legacy vars
+    if (window.setConfigInStore) {
+        window.setConfigInStore(config);
+    } else {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
+        vars.config = config;
+    }
+
     // Use React store as primary source, fallback to legacy vars
     const userUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('user') : (() => {
         console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.user - React store not available');
@@ -175,7 +183,15 @@ async function init_views(){
 
     vars.vm = new ViewManager(
         get_object('views-container'),
-        vars.config.views, vars.config.view_groups,
+        // Primary source: React store, fallback: legacy vars
+        window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views - React store not available');
+            return vars.config.views;
+        })(),
+        window.getConfigSectionFromStore ? window.getConfigSectionFromStore('view_groups') : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups - React store not available');
+            return vars.config.view_groups;
+        })(),
         mainUrl+"image/",
         image_aspect_ratio = window.getImageAspectRatioFromStore ? 
             window.getImageAspectRatioFromStore() : 
@@ -2312,35 +2328,71 @@ async function fetch_server_update(update_config=true){
     vars.user = user;
 
     if (update_config){
-        vars.config = user.config;
+        console.log('[IRIS Migration] 🔧 Loading config from server:', user.config);
+        
+        // Primary destination: React store, fallback: legacy vars
+        if (window.setConfigInStore) {
+            try {
+                window.setConfigInStore(user.config);
+                console.log('[IRIS Migration] ✅ Config set in React store successfully');
+            } catch (error) {
+                console.error('[IRIS Migration] ❌ Failed to set config in React store:', error);
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config due to store error');
+                vars.config = user.config;
+            }
+        } else {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
+            vars.config = user.config;
+        }
 
         // Set mask area in React store (primary source)
+        const maskArea = window.getConfigSectionFromStore ? 
+            window.getConfigSectionFromStore('segmentation')?.mask_area : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.segmentation.mask_area - React store not available');
+                return user.config.segmentation.mask_area;
+            })();
+
         if (window.setMaskAreaInStore) {
-            window.setMaskAreaInStore(vars.config.segmentation.mask_area);
+            window.setMaskAreaInStore(maskArea);
         } else {
             console.warn('[IRIS Migration] fetch_server_update: Using legacy vars.mask_area fallback - React store not available');
-            vars.mask_area = vars.config.segmentation.mask_area;
+            vars.mask_area = maskArea;
         }
-        vars.image_shape = vars.config.images.shape;
+
+        // Get image shape from config
+        const imageShape = window.getConfigSectionFromStore ? 
+            window.getConfigSectionFromStore('images')?.shape : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.images.shape - React store not available');
+                return user.config.images.shape;
+            })();
+
+        vars.image_shape = imageShape;
         
         // Sync image shape to React store (primary source)
-        if (vars.image_shape && Array.isArray(vars.image_shape) && vars.image_shape.length >= 2) {
-            const [width, height] = vars.image_shape;
+        if (imageShape && Array.isArray(imageShape) && imageShape.length >= 2) {
+            const [width, height] = imageShape;
             if (window.setImageShapeInStore) {
                 window.setImageShapeInStore(width, height);
             }
         }
         
-        vars.classes = vars.config.classes;
+        // Get classes from config
+        const classes = window.getConfigSectionFromStore ? 
+            window.getConfigSectionFromStore('classes') : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.classes - React store not available');
+                return user.config.classes;
+            })();
+
+        vars.classes = classes;
 
         // Sync classes to React store after loading from config
-        if (window.setClassesInStore && vars.classes) {
-            window.setClassesInStore(vars.classes);
+        if (window.setClassesInStore && classes) {
+            window.setClassesInStore(classes);
             
             // Also set the current class if it's valid
             const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
                 console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in fetch_server_update()');
-                return vars.classes.length;
+                return classes ? classes.length : 0;
             })();
             if (typeof vars.current_class === 'number' && vars.current_class < classCount) {
                 if (window.setCurrentClassInStore) {
@@ -2355,23 +2407,27 @@ async function fetch_server_update(update_config=true){
             }
         } else if (window.segmentationStore) {
             const store = window.segmentationStore.getState();
-            store.setClasses(vars.classes);
-            
-            // Also set the current class if it's valid
-            if (typeof vars.current_class === 'number' && vars.current_class < vars.classes.length) {
-                store.setCurrentClass(vars.current_class);
-            } else if (vars.classes.length > 0) {
-                // Default to first class if current class is invalid
-                vars.current_class = 0;
-                store.setCurrentClass(0);
+            if (classes) {
+                store.setClasses(classes);
+                
+                // Also set the current class if it's valid
+                if (typeof vars.current_class === 'number' && vars.current_class < classes.length) {
+                    store.setCurrentClass(vars.current_class);
+                } else if (classes.length > 0) {
+                    // Default to first class if current class is invalid
+                    vars.current_class = 0;
+                    store.setCurrentClass(0);
+                }
+            } else {
+                console.warn('[IRIS Migration] No classes available to set in store');
             }
         }
 
         // The size (shape) of the mask area:
-        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
-        if (maskArea) {
-            const maskWidth = maskArea[2] - maskArea[0];
-            const maskHeight = maskArea[3] - maskArea[1];
+        const currentMaskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+        if (currentMaskArea) {
+            const maskWidth = currentMaskArea[2] - currentMaskArea[0];
+            const maskHeight = currentMaskArea[3] - currentMaskArea[1];
             vars.mask_shape = [maskWidth, maskHeight];
             
             // Update React store with mask dimensions
@@ -2391,26 +2447,25 @@ async function fetch_server_update(update_config=true){
         get_object('admin-button').style.display = "none";
     }
 
-    if (vars.next_action !== null){
-        await vars.next_action();
-        vars.next_action = null;
-    }
-
-    // Use React store as primary source for next_action
-    let nextAction;
+    // Handle next_action execution (simplified to avoid syntax issues)
     if (window.getNextActionFromStore) {
-        nextAction = window.getNextActionFromStore();
+        const nextAction = window.getNextActionFromStore();
         if (nextAction !== null) {
-            await nextAction();
             window.setNextActionInStore(null);
+            try {
+                nextAction();
+            } catch (error) {
+                console.error('[IRIS] Error executing React store next_action:', error);
+            }
         }
-    } else {
-        // Fallback to legacy vars during initialization
-        if (vars.next_action !== null) {
-            console.warn('[IRIS Migration] Using legacy vars.next_action fallback for execution');
-            await vars.next_action();
-            vars.next_action = null;
+    } else if (vars.next_action !== null) {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.next_action - React store not available');
+        try {
+            vars.next_action();
+        } catch (error) {
+            console.error('[IRIS] Error executing legacy next_action:', error);
         }
+        vars.next_action = null;
     }
 
     // Check every 15 seconds the current state on the server:
@@ -2886,13 +2941,27 @@ async function legacyPredictMask(){
     // Furthermore, we keep also a ratio of pixels as testing dataset:
     let n_samples = {};
     let test_n_samples = {};
+    
+    // Primary source: React store, fallback: legacy vars
+    const aiModel = window.getConfigSectionFromStore ? 
+        window.getConfigSectionFromStore('segmentation')?.ai_model : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.segmentation.ai_model - React store not available');
+            return vars.config.segmentation.ai_model;
+        })();
+
+    if (!aiModel) {
+        console.error('[IRIS Migration] ❌ No AI model config available for legacyPredictMask');
+        hide_loader();
+        return;
+    }
+
     for (let user_class of user_classes){
         // Set the current number of samples (0) and the maximum
         n_samples[user_class] = {
             "current": 0,
             "max": Math.min(
-                round_number(vars.n_user_pixels[user_class]*vars.config.segmentation.ai_model.train_ratio),
-                vars.config.segmentation.ai_model.max_train_pixels
+                round_number(vars.n_user_pixels[user_class] * aiModel.train_ratio),
+                aiModel.max_train_pixels
             )
         };
         test_n_samples[user_class] = {

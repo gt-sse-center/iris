@@ -3,7 +3,26 @@
  * 
  * Helper functions to bridge between legacy JavaScript and React components
  * during the migration process.
+ * 
+ * Migration Status:
+ * - [x] API URLs (vars.url) - COMPLETE
+ * - [x] Next Action (vars.next_action) - COMPLETE  
+ * - [x] Just Logged In (vars.just_logged_in) - COMPLETE
+ * - [x] Tool Size (vars.tool.size) - COMPLETE
+ * - [x] Tool Resizing Mode (vars.tool.resizing_mode) - COMPLETE
+ * - [x] Cursor Image (vars.cursor_image) - COMPLETE
+ * - [x] Current Tool (vars.tool.type) - COMPLETE
+ * - [x] Drag Start (vars.drag_start) - COMPLETE
+ * - [x] Tool Shape (vars.tool.shape) - COMPLETE
+ * - [x] Hidden Mask Canvas (vars.hidden_mask) - COMPLETE
+ * - [x] Mask Area (vars.mask_area) - COMPLETE
+ * - [x] Mask Data (vars.mask, vars.user_mask, vars.errors_mask) - COMPLETE
+ * - [x] Mask Shape (vars.mask_shape) - COMPLETE
+ * - [x] Classes (vars.classes) - COMPLETE
+ * - [x] Config (vars.config) - COMPLETE
  */
+
+import type { ProjectConfig, ClassConfig } from '../types/iris';
 
 // Bridge function to trigger React mask layer renders from legacy code
 export const triggerReactMaskRender = (bbox?: [number, number, number, number]) => {
@@ -50,6 +69,117 @@ export const renderAllReactLayers = (layerType?: string) => {
 if (typeof window !== 'undefined') {
   const w = window as any;
   
+  // Config Helper Functions (NEW - vars.config migration)
+  w.getConfigFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().config;
+    }
+    console.warn('[IRIS Migration] getConfigFromStore: React store not available');
+    return null;
+  };
+
+  w.setConfigInStore = (config: ProjectConfig) => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      
+      if (!store.validateConfig(config)) {
+        console.error('[IRIS] setConfigInStore: Invalid config structure', config);
+        return;
+      }
+      
+      store.setConfig(config);
+      
+      // Sync related data to other stores
+      if (config.classes && w.setClassesInStore) {
+        w.setClassesInStore(config.classes);
+      }
+      if (config.segmentation?.mask_area && w.setMaskAreaInStore) {
+        w.setMaskAreaInStore(config.segmentation.mask_area);
+      }
+    } else {
+      console.warn('[IRIS Migration] setConfigInStore: React store not available');
+    }
+  };
+
+  w.getConfigSectionFromStore = (section: keyof ProjectConfig) => {
+    if (w.segmentationStore) {
+      const config = w.segmentationStore.getState().config;
+      return config ? config[section] : null;
+    }
+    console.warn('[IRIS Migration] getConfigSectionFromStore: React store not available');
+    return null;
+  };
+
+  w.updateConfigSectionInStore = (section: keyof ProjectConfig, data: any) => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      const currentConfig = store.config;
+      
+      if (!currentConfig) {
+        console.error('[IRIS] updateConfigSectionInStore: No config available to update');
+        return;
+      }
+      
+      const updatedConfig = { ...currentConfig, [section]: data };
+      
+      if (!store.validateConfig(updatedConfig)) {
+        console.error('[IRIS] updateConfigSectionInStore: Invalid config after update', { section, data });
+        return;
+      }
+      
+      store.setConfig(updatedConfig);
+      
+      // Sync specific sections to related stores
+      if (section === 'classes' && w.setClassesInStore) {
+        w.setClassesInStore(data as ClassConfig[]);
+      }
+      if (section === 'segmentation' && data?.mask_area && w.setMaskAreaInStore) {
+        w.setMaskAreaInStore(data.mask_area);
+      }
+    } else {
+      console.warn('[IRIS Migration] updateConfigSectionInStore: React store not available');
+    }
+  };
+
+  w.validateConfigFromStore = () => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      const config = store.config;
+      return config ? store.validateConfig(config) : false;
+    }
+    console.warn('[IRIS Migration] validateConfigFromStore: React store not available');
+    return false;
+  };
+
+  w.getConfigDebugInfoFromStore = () => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      const config = store.config;
+      
+      return {
+        loaded: config !== null,
+        sections: config ? Object.keys(config) : [],
+        valid: config ? store.validateConfig(config) : false,
+        hasClasses: config?.classes ? config.classes.length : 0,
+        hasViews: config?.views ? config.views.length : 0,
+        hasViewGroups: config?.view_groups ? config.view_groups.length : 0,
+        hasSegmentation: !!config?.segmentation,
+        hasAIModel: !!config?.segmentation?.ai_model
+      };
+    }
+    console.warn('[IRIS Migration] getConfigDebugInfoFromStore: React store not available');
+    return {
+      loaded: false,
+      sections: [],
+      valid: false,
+      hasClasses: 0,
+      hasViews: 0,
+      hasViewGroups: 0,
+      hasSegmentation: false,
+      hasAIModel: false
+    };
+  };
+
   // Image ID bridge functions for legacy JavaScript access
   w.getCurrentImageIdFromStore = () => {
     if (w.segmentationStore) {

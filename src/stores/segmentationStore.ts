@@ -17,87 +17,20 @@
  */
 
 import { create } from 'zustand';
+import type { 
+  ProjectConfig, 
+  ClassConfig, 
+  ViewConfig, 
+  UserInfo, 
+  ConfusionMatrix, 
+  AIModelConfig 
+} from '../types/iris';
 
 interface ImageInfo {
   image_id: string;
   has_user_annotation: boolean;
   has_any_annotation: boolean;
   annotation_count: number;
-}
-
-interface ClassConfig {
-  name: string;
-  colour: [number, number, number, number]; // RGBA
-  user_colour?: [number, number, number, number]; // Optional user-specific color
-  description?: string; // Optional description
-}
-
-// PHASE 2: Import new types
-interface ProjectConfig {
-  name: string;
-  host: string;
-  port: number;
-  images: string | string[];
-  classes: ClassConfig[];
-  views: ViewConfig[];
-  view_groups: string[][];
-  segmentation: {
-    mask_path: string;
-    ai_model: AIModelConfig;
-    scoring: {
-      enabled: boolean;
-      metrics: string[];
-    };
-  };
-}
-
-interface ViewConfig {
-  name: string;
-  type: string;
-  bands?: string[];
-  expression?: string;
-  colormap?: string;
-  vmin?: number;
-  vmax?: number;
-}
-
-interface UserInfo {
-  id: number;
-  name: string;
-  admin: boolean;
-  tested: boolean;
-  created: string;
-  image_seed: number;
-  segmentation: {
-    score: number;
-    score_unverified: number;
-    n_masks: number;
-    rank?: number;
-  };
-}
-
-interface ConfusionMatrix {
-  matrix: number[][];
-  classes: string[];
-  accuracy: number;
-  f1_score: number;
-  jaccard_index: number;
-}
-
-interface AIModelConfig {
-  n_estimators: number;
-  max_depth: number;
-  n_leaves: number;
-  train_ratio: number;
-  max_train_pixels: number;
-  use_edge_filter: boolean;
-  use_meshgrid: boolean;
-  meshgrid_cells: string;
-  use_superpixels: boolean;
-  bands: string[];
-  suppression_filter_size: number;
-  suppression_threshold: number;
-  suppression_default_class: number;
 }
 
 interface ApiUrls {
@@ -313,10 +246,95 @@ interface SegmentationState {
   setUser: (user: UserInfo) => void;
   setMaskChanged: (changed: boolean) => void;
   
+  // Config Helper Methods
+  getConfigSection: <T extends keyof ProjectConfig>(section: T) => ProjectConfig[T] | null;
+  updateConfigSection: <T extends keyof ProjectConfig>(section: T, data: ProjectConfig[T]) => void;
+  validateConfig: (config: ProjectConfig) => boolean;
+  getConfigDebugInfo: () => { loaded: boolean; sections: string[]; valid: boolean; hasClasses: number; hasViews: number; hasViewGroups: number; hasSegmentation: boolean; hasAIModel: boolean };
+  
   // Debug actions
   setDebugMode: (enabled: boolean) => void;
   getDebugInfo: () => SegmentationDebugInfo;
 }
+
+// CRITICAL: Helper functions for config legacy access during migration (vars.config)
+const getConfigFromStore = (): ProjectConfig | null => {
+  return useSegmentationStore.getState().config;
+};
+
+const setConfigInStore = (config: ProjectConfig) => {
+  const store = useSegmentationStore.getState();
+  
+  // Validate config structure
+  if (!store.validateConfig(config)) {
+    console.error('[IRIS] setConfigInStore: Invalid config structure', config);
+    return;
+  }
+  
+  store.setConfig(config);
+  
+  // Sync related data to other stores
+  if (config.classes && window.setClassesInStore) {
+    window.setClassesInStore(config.classes);
+  }
+  if (config.segmentation?.mask_area && window.setMaskAreaInStore) {
+    window.setMaskAreaInStore(config.segmentation.mask_area);
+  }
+};
+
+const getConfigSectionFromStore = <T extends keyof ProjectConfig>(section: T): ProjectConfig[T] | null => {
+  const config = useSegmentationStore.getState().config;
+  return config ? config[section] : null;
+};
+
+const updateConfigSectionInStore = <T extends keyof ProjectConfig>(section: T, data: ProjectConfig[T]) => {
+  const store = useSegmentationStore.getState();
+  const currentConfig = store.config;
+  
+  if (!currentConfig) {
+    console.error('[IRIS] updateConfigSectionInStore: No config available to update');
+    return;
+  }
+  
+  const updatedConfig = { ...currentConfig, [section]: data };
+  
+  if (!store.validateConfig(updatedConfig)) {
+    console.error('[IRIS] updateConfigSectionInStore: Invalid config after update', { section, data });
+    return;
+  }
+  
+  store.setConfig(updatedConfig);
+  
+  // Sync specific sections to related stores
+  if (section === 'classes' && window.setClassesInStore) {
+    window.setClassesInStore(data as ClassConfig[]);
+  }
+  if (section === 'segmentation' && (data as any)?.mask_area && window.setMaskAreaInStore) {
+    window.setMaskAreaInStore((data as any).mask_area);
+  }
+};
+
+const validateConfigFromStore = (): boolean => {
+  const store = useSegmentationStore.getState();
+  const config = store.config;
+  return config ? store.validateConfig(config) : false;
+};
+
+const getConfigDebugInfoFromStore = () => {
+  const store = useSegmentationStore.getState();
+  const config = store.config;
+  
+  return {
+    loaded: config !== null,
+    sections: config ? Object.keys(config) : [],
+    valid: config ? store.validateConfig(config) : false,
+    hasClasses: config?.classes ? config.classes.length : 0,
+    hasViews: config?.views ? (Array.isArray(config.views) ? config.views.length : Object.keys(config.views).length) : 0,
+    hasViewGroups: config?.view_groups ? (Array.isArray(config.view_groups) ? config.view_groups.length : Object.keys(config.view_groups).length) : 0,
+    hasSegmentation: !!config?.segmentation,
+    hasAIModel: !!config?.segmentation?.ai_model
+  };
+};
 
 // Helper function to get API URLs from React store (for legacy compatibility)
 const getApiUrlsFromStore = (): ApiUrls | null => {
@@ -1814,13 +1832,39 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setConfig: (config: ProjectConfig) => {
+    // Validate config structure before setting
+    if (!get().validateConfig(config)) {
+      console.error('[IRIS] setConfig: Invalid config structure', config);
+      return;
+    }
+    
+    // Use set to update the store state
     set({ config });
+    
+    // Verify the config was actually set
+    const currentState = get();
+    if (currentState.config !== config) {
+      console.error('[IRIS] setConfig: Failed to set config in store!', {
+        expected: config.name,
+        actual: currentState.config?.name || 'null'
+      });
+    }
     
     // Sync with legacy vars during migration
     const w = window as any;
     if (w.vars) {
       w.vars.config = config;
     }
+    
+    // Sync related data with legacy functions
+    if (w.setClassesInStore && config.classes) {
+      w.setClassesInStore(config.classes);
+    }
+    if (w.setMaskAreaInStore && config.segmentation?.mask_area) {
+      w.setMaskAreaInStore(config.segmentation.mask_area);
+    }
+    
+    console.log('[IRIS] Project config updated:', config.name);
   },
 
   setUser: (user: UserInfo) => {
@@ -1843,6 +1887,238 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       // When mask is saved (changed = false), reset the dialogue flag
       get().setShowDialogueBeforeNextImage(false);
     }
+  },
+
+  // Config Helper Methods
+  getConfigSection: <T extends keyof ProjectConfig>(section: T) => {
+    const { config } = get();
+    return config ? config[section] : null;
+  },
+
+  updateConfigSection: <T extends keyof ProjectConfig>(section: T, data: ProjectConfig[T]) => {
+    const { config } = get();
+    if (!config) {
+      console.error('[IRIS] updateConfigSection: No config available to update');
+      return;
+    }
+    
+    const updatedConfig = { ...config, [section]: data };
+    
+    if (!get().validateConfig(updatedConfig)) {
+      console.error('[IRIS] updateConfigSection: Invalid config after update', { section, data });
+      return;
+    }
+    
+    get().setConfig(updatedConfig);
+    
+    // Sync specific sections with legacy functions
+    const w = window as any;
+    if (section === 'classes' && w.setClassesInStore) {
+      w.setClassesInStore(data);
+    }
+    if (section === 'segmentation' && w.setMaskAreaInStore) {
+      const segmentationData = data as ProjectConfig['segmentation'];
+      if (segmentationData.mask_area) {
+        w.setMaskAreaInStore(segmentationData.mask_area);
+      }
+    }
+  },
+
+  validateConfig: (config: ProjectConfig) => {
+    try {
+      // Basic structure validation
+      if (!config || typeof config !== 'object') {
+        console.error('[IRIS] validateConfig: Config is not an object');
+        return false;
+      }
+      
+      // Required fields validation
+      const requiredFields = ['name', 'host', 'port', 'images', 'classes', 'views', 'view_groups', 'segmentation'];
+      for (const field of requiredFields) {
+        if (!(field in config)) {
+          console.error(`[IRIS] validateConfig: Missing required field: ${field}`);
+          return false;
+        }
+      }
+      
+      // Validate name
+      if (typeof config.name !== 'string' || config.name.trim() === '') {
+        console.error('[IRIS] validateConfig: Invalid name');
+        return false;
+      }
+      
+      // Validate host
+      if (typeof config.host !== 'string' || config.host.trim() === '') {
+        console.error('[IRIS] validateConfig: Invalid host');
+        return false;
+      }
+      
+      // Validate port
+      if (typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
+        console.error('[IRIS] validateConfig: Invalid port');
+        return false;
+      }
+      
+      // Validate classes
+      if (!Array.isArray(config.classes)) {
+        console.error('[IRIS] validateConfig: Classes must be an array');
+        return false;
+      }
+      
+      for (let i = 0; i < config.classes.length; i++) {
+        const cls = config.classes[i];
+        if (!cls || typeof cls !== 'object') {
+          console.error(`[IRIS] validateConfig: Invalid class at index ${i}`);
+          return false;
+        }
+        if (typeof cls.name !== 'string' || cls.name.trim() === '') {
+          console.error(`[IRIS] validateConfig: Invalid class name at index ${i}`);
+          return false;
+        }
+        if (!Array.isArray(cls.colour) || cls.colour.length !== 4) {
+          console.error(`[IRIS] validateConfig: Invalid colour array length at index ${i}, expected 4 elements`);
+          return false;
+        }
+        for (const colorValue of cls.colour) {
+          if (typeof colorValue !== 'number' || colorValue < 0 || colorValue > 255) {
+            console.error(`[IRIS] validateConfig: Invalid colour value at index ${i}, values must be 0-255`);
+            return false;
+          }
+        }
+      }
+      
+      // Validate views (can be array or object format)
+      if (!config.views || (typeof config.views !== 'object')) {
+        console.error('[IRIS] validateConfig: Views must be an array or object');
+        return false;
+      }
+      
+      if (Array.isArray(config.views)) {
+        // Array format validation
+        for (let i = 0; i < config.views.length; i++) {
+          const view = config.views[i];
+          if (!view || typeof view !== 'object') {
+            console.error(`[IRIS] validateConfig: Invalid view at index ${i}`);
+            return false;
+          }
+          if (typeof view.name !== 'string' || view.name.trim() === '') {
+            console.error(`[IRIS] validateConfig: Invalid view name at index ${i}`);
+            return false;
+          }
+          if (typeof view.type !== 'string' || view.type.trim() === '') {
+            console.error(`[IRIS] validateConfig: Invalid view type at index ${i}`);
+            return false;
+          }
+        }
+      } else {
+        // Object format validation (current IRIS format)
+        const viewNames = Object.keys(config.views);
+        if (viewNames.length === 0) {
+          console.error('[IRIS] validateConfig: Views object is empty');
+          return false;
+        }
+        
+        for (const viewName of viewNames) {
+          const view = config.views[viewName];
+          if (!view || typeof view !== 'object') {
+            console.error(`[IRIS] validateConfig: Invalid view '${viewName}'`);
+            return false;
+          }
+          // View type is optional in object format, defaults to 'image'
+          if (view.type && (typeof view.type !== 'string' || view.type.trim() === '')) {
+            console.error(`[IRIS] validateConfig: Invalid view type for '${viewName}'`);
+            return false;
+          }
+        }
+      }
+      
+      // Validate view_groups (can be array or object format)
+      if (!config.view_groups || (typeof config.view_groups !== 'object')) {
+        console.error('[IRIS] validateConfig: View groups must be an array or object');
+        return false;
+      }
+      
+      if (Array.isArray(config.view_groups)) {
+        // Array format validation (legacy)
+        for (let i = 0; i < config.view_groups.length; i++) {
+          const group = config.view_groups[i];
+          if (!Array.isArray(group)) {
+            console.error(`[IRIS] validateConfig: Invalid view group at index ${i} - must be array`);
+            return false;
+          }
+          for (let j = 0; j < group.length; j++) {
+            if (typeof group[j] !== 'string' || group[j].trim() === '') {
+              console.error(`[IRIS] validateConfig: Invalid view name in group ${i} at index ${j}`);
+              return false;
+            }
+          }
+        }
+      } else {
+        // Object format validation (current IRIS format)
+        const groupNames = Object.keys(config.view_groups);
+        if (groupNames.length === 0) {
+          console.error('[IRIS] validateConfig: View groups object is empty');
+          return false;
+        }
+        
+        for (const groupName of groupNames) {
+          const group = config.view_groups[groupName];
+          if (!Array.isArray(group)) {
+            console.error(`[IRIS] validateConfig: Invalid view group '${groupName}' - must be array`);
+            return false;
+          }
+          for (let j = 0; j < group.length; j++) {
+            if (typeof group[j] !== 'string' || group[j].trim() === '') {
+              console.error(`[IRIS] validateConfig: Invalid view name in group '${groupName}' at index ${j}`);
+              return false;
+            }
+          }
+        }
+      }
+      
+      // Validate segmentation
+      if (!config.segmentation || typeof config.segmentation !== 'object') {
+        console.error('[IRIS] validateConfig: Invalid segmentation section');
+        return false;
+      }
+      
+      // Validate AI model if present
+      if (config.segmentation.ai_model) {
+        const aiModel = config.segmentation.ai_model;
+        if (typeof aiModel.n_estimators !== 'number' || aiModel.n_estimators <= 0) {
+          console.error('[IRIS] validateConfig: Invalid AI model field: n_estimators');
+          return false;
+        }
+        if (typeof aiModel.max_depth !== 'number' || aiModel.max_depth <= 0) {
+          console.error('[IRIS] validateConfig: Invalid AI model field: max_depth');
+          return false;
+        }
+        if (typeof aiModel.n_leaves !== 'number' || aiModel.n_leaves <= 0) {
+          console.error('[IRIS] validateConfig: Invalid AI model field: n_leaves');
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('[IRIS] validateConfig: Validation error:', error);
+      return false;
+    }
+  },
+
+  getConfigDebugInfo: () => {
+    const { config } = get();
+    
+    return {
+      loaded: config !== null,
+      sections: config ? Object.keys(config) : [],
+      valid: config ? get().validateConfig(config) : false,
+      hasClasses: config?.classes ? config.classes.length : 0,
+      hasViews: config?.views ? (Array.isArray(config.views) ? config.views.length : Object.keys(config.views).length) : 0,
+      hasViewGroups: config?.view_groups ? (Array.isArray(config.view_groups) ? config.view_groups.length : Object.keys(config.view_groups).length) : 0,
+      hasSegmentation: !!config?.segmentation,
+      hasAIModel: !!config?.segmentation?.ai_model
+    };
   },
 
   // Image Navigation State
@@ -2114,6 +2390,14 @@ if (typeof window !== 'undefined') {
   (window as any).discardFutureInStore = discardFutureInStore;
   (window as any).canUndoFromStore = canUndoFromStore;
   (window as any).canRedoFromStore = canRedoFromStore;
+  
+  // Export config helper functions for legacy JavaScript
+  (window as any).getConfigFromStore = getConfigFromStore;
+  (window as any).setConfigInStore = setConfigInStore;
+  (window as any).getConfigSectionFromStore = getConfigSectionFromStore;
+  (window as any).updateConfigSectionInStore = updateConfigSectionInStore;
+  (window as any).validateConfigFromStore = validateConfigFromStore;
+  (window as any).getConfigDebugInfoFromStore = getConfigDebugInfoFromStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;

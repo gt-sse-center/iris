@@ -104,10 +104,10 @@ export interface AIModelConfig {
 
 export interface ClassConfig {
   name: string;
-  colour: number[];
-  css_colour: string;
+  colour: [number, number, number, number]; // RGBA tuple
+  css_colour?: string; // Optional CSS color string (computed)
   description?: string;
-  user_colour?: number[];
+  user_colour?: [number, number, number, number]; // Optional user-specific color
 }
 
 // PHASE 2: Navigation & Actions Types
@@ -117,10 +117,11 @@ export interface ProjectConfig {
   port: number;
   images: string | string[];
   classes: ClassConfig[];
-  views: ViewConfig[];
-  view_groups: string[][];
+  views: ViewConfig[] | { [key: string]: ViewConfig }; // Support both array and object formats
+  view_groups: string[][] | { [key: string]: string[] }; // Support both array and object formats
   segmentation: {
     mask_path: string;
+    mask_area?: [number, number, number, number]; // Optional mask area coordinates
     ai_model: AIModelConfig;
     scoring: {
       enabled: boolean;
@@ -271,6 +272,14 @@ declare global {
     discardFutureInStore?: () => void;
     canUndoFromStore?: () => boolean;
     canRedoFromStore?: () => boolean;
+    
+    // Config Helper Functions (NEW)
+    getConfigFromStore?: () => any | null;
+    setConfigInStore?: (config: any) => void;
+    getConfigSectionFromStore?: (section: string) => any | null;
+    updateConfigSectionInStore?: (section: string, data: any) => void;
+    validateConfigFromStore?: () => boolean;
+    getConfigDebugInfoFromStore?: () => { loaded: boolean; sections: string[]; valid: boolean; hasClasses: number; hasViews: number; hasViewGroups: number; hasSegmentation: boolean; hasAIModel: boolean };
     
     // Initialization Functions
     initializeFiltersFromLegacy?: () => void;

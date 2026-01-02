@@ -155,6 +155,7 @@ export interface ViewManagerState {
   
   // Debug actions
   setDebugMode: (enabled: boolean) => void;
+  setInitialized: (initialized: boolean) => void;
   getDebugInfo: () => DebugInfo;
   initializeFromLegacy: () => Promise<void>;
   retryInitialization: () => void;
@@ -701,6 +702,8 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // Debug actions
   setDebugMode: (debugMode) => set({ debugMode }),
+  
+  setInitialized: (isInitialized) => set({ isInitialized }),
   
   getDebugInfo: () => {
     const state = get();
