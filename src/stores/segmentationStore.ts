@@ -20,10 +20,8 @@ import { create } from 'zustand';
 import type { 
   ProjectConfig, 
   ClassConfig, 
-  ViewConfig, 
   UserInfo, 
-  ConfusionMatrix, 
-  AIModelConfig 
+  ConfusionMatrix
 } from '../types/iris';
 
 interface ImageInfo {
@@ -274,11 +272,11 @@ const setConfigInStore = (config: ProjectConfig) => {
   store.setConfig(config);
   
   // Sync related data to other stores
-  if (config.classes && window.setClassesInStore) {
-    window.setClassesInStore(config.classes);
+  if (config.classes && (window as any).setClassesInStore) {
+    (window as any).setClassesInStore(config.classes);
   }
-  if (config.segmentation?.mask_area && window.setMaskAreaInStore) {
-    window.setMaskAreaInStore(config.segmentation.mask_area);
+  if (config.segmentation?.mask_area && (window as any).setMaskAreaInStore) {
+    (window as any).setMaskAreaInStore(config.segmentation.mask_area);
   }
 };
 
@@ -306,11 +304,11 @@ const updateConfigSectionInStore = <T extends keyof ProjectConfig>(section: T, d
   store.setConfig(updatedConfig);
   
   // Sync specific sections to related stores
-  if (section === 'classes' && window.setClassesInStore) {
-    window.setClassesInStore(data as ClassConfig[]);
+  if (section === 'classes' && (window as any).setClassesInStore) {
+    (window as any).setClassesInStore(data as ClassConfig[]);
   }
-  if (section === 'segmentation' && (data as any)?.mask_area && window.setMaskAreaInStore) {
-    window.setMaskAreaInStore((data as any).mask_area);
+  if (section === 'segmentation' && (data as any)?.mask_area && (window as any).setMaskAreaInStore) {
+    (window as any).setMaskAreaInStore((data as any).mask_area);
   }
 };
 
@@ -1857,11 +1855,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
     
     // Sync related data with legacy functions
-    if (w.setClassesInStore && config.classes) {
-      w.setClassesInStore(config.classes);
+    if ((w as any).setClassesInStore && config.classes) {
+      (w as any).setClassesInStore(config.classes);
     }
-    if (w.setMaskAreaInStore && config.segmentation?.mask_area) {
-      w.setMaskAreaInStore(config.segmentation.mask_area);
+    if ((w as any).setMaskAreaInStore && config.segmentation?.mask_area) {
+      (w as any).setMaskAreaInStore(config.segmentation.mask_area);
     }
     
     console.log('[IRIS] Project config updated:', config.name);
