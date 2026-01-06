@@ -3215,7 +3215,15 @@ async function legacyPredictMask(){
 
 
 function update_ai_box(score, cm, tp, user_classes){
-    get_object("ai-score").innerHTML = round_number(score*100) + "%";
+    // CRITICAL: Don't update AI score DOM directly when React is available
+    // React AIScore component handles this via the store
+    if (!window.segmentationStore) {
+        // Fallback: Update DOM directly only if React store not available
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Updating AI score DOM directly - React store not available');
+        get_object("ai-score").innerHTML = round_number(score*100) + "%";
+    } else {
+        console.log('[IRIS Migration] ✅ Skipping AI score DOM update - React AIScore component handles this');
+    }
 
     let recommendation = "Draw more training pixels!";
 

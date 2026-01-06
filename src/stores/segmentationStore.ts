@@ -2009,26 +2009,41 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       }
     }
     
-    // Calculate per-class accuracy
+    // Calculate per-class accuracy using the EXACT same logic as legacy code
     const perClassAccuracy: number[] = [];
     let minAccuracy = 1.0;
     let worstClass: number | null = null;
     let accSum = 0;
-    let accProd = userClasses.length;
+    let accProd = userClasses.length; // Start with user_classes.length like legacy code
     
-    // Get user pixel counts from store or legacy vars
-    const userPixelCounts = get().userPixelCounts;
+    // Get test_n_samples from legacy vars (this is what the original code uses)
     const w = window as any;
-    const nUserPixels = userPixelCounts || w.vars?.n_user_pixels || {};
+    const testNSamples = w.vars?.test_n_samples || {};
     
     for (const classId of userClasses) {
       const tp = truePositives[classId] || 0;
-      const totalForClass = nUserPixels[classId] || 1; // Avoid division by zero
+      
+      // Use test_n_samples.current like the original code, fallback to calculating from matrix
+      let totalForClass = testNSamples[classId]?.current;
+      
+      if (!totalForClass) {
+        // Fallback: calculate total samples for this class from the confusion matrix
+        // This is the sum of the row (actual class samples)
+        totalForClass = 0;
+        if (classId < matrix.length) {
+          for (let j = 0; j < matrix[classId].length; j++) {
+            totalForClass += matrix[classId][j];
+          }
+        }
+        // Ensure we don't divide by zero
+        totalForClass = Math.max(totalForClass, 1);
+      }
+      
       const accuracy = tp / totalForClass;
       
       perClassAccuracy[classId] = accuracy;
       accSum += accuracy;
-      accProd *= accuracy;
+      accProd *= accuracy; // Multiply by accuracy like legacy code
       
       if (accuracy < minAccuracy) {
         minAccuracy = accuracy;
@@ -2036,7 +2051,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       }
     }
     
-    const overallAccuracy = userClasses.length > 0 ? accProd / accSum : 0;
+    // Calculate overall accuracy using EXACT same formula as legacy: acc_prod / acc_sum
+    const overallAccuracy = userClasses.length > 0 && accSum > 0 ? accProd / accSum : 0;
     
     return {
       matrix,
@@ -2559,9 +2575,33 @@ const initializeNavigationActionsStateFromLegacy = () => {
       store.setUser(w.vars.user);
     }
     
-    // Initialize confusion matrix
-    if (w.vars.confusion_matrix) {
-      store.updateConfusionMatrix(w.vars.confusion_matrix);
+    // Initialize confusion matrix - NOTE: confusion_matrix is now managed by React store
+    // Legacy vars.confusion_matrix is only used as fallback during migration
+    if (w.vars.confusion_matrix && Array.isArray(w.vars.confusion_matrix)) {
+      // Handle legacy 2D array format - convert to structured format
+      console.warn('[IRIS Migration] Found legacy confusion_matrix format, converting to React store format');
+      const matrix = w.vars.confusion_matrix;
+      const classCount = matrix.length;
+      const classNames = w.vars.classes ? w.vars.classes.map((cls: any) => cls.name) : 
+                        Array.from({length: classCount}, (_, i) => `Class ${i}`);
+      
+      // Create structured confusion matrix (without accuracy stats since we don't have tp data)
+      const structuredMatrix = {
+        matrix,
+        classCount,
+        totalSamples: matrix.flat().reduce((sum: number, val: number) => sum + val, 0),
+        accuracyStats: {
+          overall: 0,
+          perClass: [],
+          worstClass: null,
+          worstAccuracy: 0,
+          truePositives: {}
+        },
+        timestamp: new Date(),
+        classes: classNames
+      };
+      
+      store.updateConfusionMatrix(structuredMatrix);
     }
     
     // Initialize mask changed state

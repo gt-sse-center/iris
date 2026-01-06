@@ -75,7 +75,7 @@ const ConfusionMatrixModal: React.FC<ConfusionMatrixModalProps> = ({ isOpen, onC
         <div className="dialogue-body">
           <div className="dialogue-info">
             <div className="confusion-matrix-stats" style={{ marginBottom: '15px' }}>
-              <p><strong>Overall Accuracy:</strong> {(confusionMatrix.accuracyStats.overall * 100).toFixed(1)}%</p>
+              <p><strong>AI Score:</strong> {(confusionMatrix.accuracyStats.overall * 100).toFixed(1)}%</p>
               <p><strong>Total Samples:</strong> {niceNumber(confusionMatrix.totalSamples)}</p>
               {confusionMatrix.accuracyStats.worstClass !== null && (
                 <p><strong>Worst Performing Class:</strong> {confusionMatrix.classes[confusionMatrix.accuracyStats.worstClass]} 

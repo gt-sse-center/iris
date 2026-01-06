@@ -9,7 +9,7 @@ import { useSegmentationStore } from '../stores/segmentationStore';
 
 // Mock window object
 const mockWindow = {
-  vars: {},
+  vars: {} as any,
   segmentationStore: null as any
 };
 
