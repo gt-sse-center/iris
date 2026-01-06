@@ -596,6 +596,71 @@ const canRedoFromStore = () => {
   return useSegmentationStore.getState().canRedo();
 };
 
+// CRITICAL: Helper functions for user legacy access during migration (vars.user)
+const getUserFromStore = (): UserInfo | null => {
+  return useSegmentationStore.getState().user;
+};
+
+const setUserInStore = (user: UserInfo) => {
+  const store = useSegmentationStore.getState();
+  
+  // Validate user structure
+  if (!user || typeof user !== 'object') {
+    console.error('[IRIS] setUserInStore: Invalid user object', user);
+    return;
+  }
+  
+  // Validate required fields
+  const requiredFields = ['id', 'name', 'admin', 'tested', 'created', 'image_seed', 'segmentation'];
+  for (const field of requiredFields) {
+    if (!(field in user)) {
+      console.error(`[IRIS] setUserInStore: Missing required field: ${field}`);
+      return;
+    }
+  }
+  
+  // Validate segmentation object
+  if (!user.segmentation || typeof user.segmentation !== 'object') {
+    console.error('[IRIS] setUserInStore: Invalid segmentation object');
+    return;
+  }
+  
+  const requiredSegmentationFields = ['score', 'score_unverified', 'n_masks'];
+  for (const field of requiredSegmentationFields) {
+    if (!(field in user.segmentation)) {
+      console.error(`[IRIS] setUserInStore: Missing required segmentation field: ${field}`);
+      return;
+    }
+  }
+  
+  store.setUser(user);
+};
+
+const getUserStatsFromStore = () => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.segmentation : null;
+};
+
+const isAdminFromStore = (): boolean => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.admin : false;
+};
+
+const getUserNameFromStore = (): string => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.name : '';
+};
+
+const getUserIdFromStore = (): number | null => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.id : null;
+};
+
+const isNewUserFromStore = (): boolean => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.segmentation.n_masks === 0 : false;
+};
+
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
   const w = window as any;
@@ -1866,6 +1931,17 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setUser: (user: UserInfo) => {
+    // Basic validation
+    if (!user || typeof user !== 'object') {
+      console.error('[IRIS] setUser: Invalid user object', user);
+      return;
+    }
+    
+    if (!user.segmentation || typeof user.segmentation !== 'object') {
+      console.error('[IRIS] setUser: Invalid segmentation object');
+      return;
+    }
+    
     set({ user });
     
     // Sync with legacy vars during migration
@@ -1873,6 +1949,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars) {
       w.vars.user = user;
     }
+    
+    console.log('[IRIS] User updated:', user.name, `(${user.segmentation.n_masks} masks)`);
   },
 
   setMaskChanged: (changed: boolean) => {
@@ -2396,6 +2474,15 @@ if (typeof window !== 'undefined') {
   (window as any).updateConfigSectionInStore = updateConfigSectionInStore;
   (window as any).validateConfigFromStore = validateConfigFromStore;
   (window as any).getConfigDebugInfoFromStore = getConfigDebugInfoFromStore;
+  
+  // Export user helper functions for legacy JavaScript
+  (window as any).getUserFromStore = getUserFromStore;
+  (window as any).setUserInStore = setUserInStore;
+  (window as any).getUserStatsFromStore = getUserStatsFromStore;
+  (window as any).isAdminFromStore = isAdminFromStore;
+  (window as any).getUserNameFromStore = getUserNameFromStore;
+  (window as any).getUserIdFromStore = getUserIdFromStore;
+  (window as any).isNewUserFromStore = isNewUserFromStore;
   
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;

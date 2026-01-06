@@ -180,6 +180,99 @@ if (typeof window !== 'undefined') {
     };
   };
 
+  // User Helper Functions (NEW - vars.user migration)
+  w.getUserFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().user;
+    }
+    console.warn('[IRIS Migration] getUserFromStore: React store not available');
+    return null;
+  };
+
+  w.setUserInStore = (user: any) => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      
+      // Validate user structure
+      if (!user || typeof user !== 'object') {
+        console.error('[IRIS] setUserInStore: Invalid user object', user);
+        return;
+      }
+      
+      // Validate required fields
+      const requiredFields = ['id', 'name', 'admin', 'tested', 'created', 'image_seed', 'segmentation'];
+      for (const field of requiredFields) {
+        if (!(field in user)) {
+          console.error(`[IRIS] setUserInStore: Missing required field: ${field}`);
+          return;
+        }
+      }
+      
+      // Validate segmentation object
+      if (!user.segmentation || typeof user.segmentation !== 'object') {
+        console.error('[IRIS] setUserInStore: Invalid segmentation object');
+        return;
+      }
+      
+      const requiredSegmentationFields = ['score', 'score_unverified', 'n_masks'];
+      for (const field of requiredSegmentationFields) {
+        if (!(field in user.segmentation)) {
+          console.error(`[IRIS] setUserInStore: Missing required segmentation field: ${field}`);
+          return;
+        }
+      }
+      
+      store.setUser(user);
+    } else {
+      console.warn('[IRIS Migration] setUserInStore: React store not available');
+    }
+  };
+
+  w.getUserStatsFromStore = () => {
+    if (w.segmentationStore) {
+      const user = w.segmentationStore.getState().user;
+      return user ? user.segmentation : null;
+    }
+    console.warn('[IRIS Migration] getUserStatsFromStore: React store not available');
+    return null;
+  };
+
+  w.isAdminFromStore = () => {
+    if (w.segmentationStore) {
+      const user = w.segmentationStore.getState().user;
+      return user ? user.admin : false;
+    }
+    console.warn('[IRIS Migration] isAdminFromStore: React store not available');
+    return false;
+  };
+
+  w.getUserNameFromStore = () => {
+    if (w.segmentationStore) {
+      const user = w.segmentationStore.getState().user;
+      return user ? user.name : '';
+    }
+    console.warn('[IRIS Migration] getUserNameFromStore: React store not available');
+    return '';
+  };
+
+  w.getUserIdFromStore = () => {
+    if (w.segmentationStore) {
+      const user = w.segmentationStore.getState().user;
+      return user ? user.id : null;
+    }
+    console.warn('[IRIS Migration] getUserIdFromStore: React store not available');
+    return null;
+  };
+
+  w.isNewUserFromStore = () => {
+    if (w.segmentationStore) {
+      const user = w.segmentationStore.getState().user;
+      return user ? user.segmentation.n_masks === 0 : false;
+    }
+    console.warn('[IRIS Migration] isNewUserFromStore: React store not available');
+    return false;
+  };
+
   // Image ID bridge functions for legacy JavaScript access
   w.getCurrentImageIdFromStore = () => {
     if (w.segmentationStore) {

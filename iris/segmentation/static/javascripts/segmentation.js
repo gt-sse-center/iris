@@ -135,7 +135,13 @@ function newuser_help_popup(){
         justLoggedIn = vars.just_logged_in;
     }
     
-    if (vars.user.segmentation.n_masks == 0 && justLoggedIn == true){
+    // Use React store as primary source, fallback to legacy vars
+    const isNewUser = window.isNewUserFromStore ? window.isNewUserFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user.segmentation.n_masks in init() - React store not available');
+        return vars.user && vars.user.segmentation && vars.user.segmentation.n_masks == 0;
+    })();
+    
+    if (isNewUser && justLoggedIn == true){
         dialogue_help();
         
         // Set just_logged_in to false using React store as primary
@@ -2325,7 +2331,21 @@ async function fetch_server_update(update_config=true){
     info_box += '</div>';
     info_box += '<div class="info-box-bottom">'+clip_string(user.name, 20)+'</div>';
     get_object('user-info').innerHTML = info_box;
-    vars.user = user;
+    
+    // Use React store as primary source, fallback to legacy vars
+    if (window.setUserInStore) {
+        try {
+            window.setUserInStore(user);
+            console.log('[IRIS Migration] ✅ User set in React store successfully');
+        } catch (error) {
+            console.error('[IRIS Migration] ❌ Failed to set user in React store:', error);
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user due to store error');
+            vars.user = user;
+        }
+    } else {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user - React store not available');
+        vars.user = user;
+    }
 
     if (update_config){
         console.log('[IRIS Migration] 🔧 Loading config from server:', user.config);
@@ -2441,7 +2461,13 @@ async function fetch_server_update(update_config=true){
         }
     }
 
-    if (user.admin){
+    // Use React store as primary source, fallback to legacy vars
+    const isAdmin = window.isAdminFromStore ? window.isAdminFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user.admin - React store not available');
+        return user.admin;
+    })();
+
+    if (isAdmin){
         get_object('admin-button').style.display = "block";
     } else {
         get_object('admin-button').style.display = "none";

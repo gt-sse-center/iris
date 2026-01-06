@@ -152,7 +152,9 @@ export interface UserInfo {
     score_unverified: number;
     n_masks: number;
     rank?: number;
+    last_masks?: Action[];
   };
+  config?: any; // Project configuration (only available for current user or admin)
 }
 
 export interface ConfusionMatrix {
@@ -280,6 +282,15 @@ declare global {
     updateConfigSectionInStore?: (section: string, data: any) => void;
     validateConfigFromStore?: () => boolean;
     getConfigDebugInfoFromStore?: () => { loaded: boolean; sections: string[]; valid: boolean; hasClasses: number; hasViews: number; hasViewGroups: number; hasSegmentation: boolean; hasAIModel: boolean };
+    
+    // User Helper Functions (NEW - vars.user migration)
+    getUserFromStore?: () => any | null;
+    setUserInStore?: (user: any) => void;
+    getUserStatsFromStore?: () => any | null;
+    isAdminFromStore?: () => boolean;
+    getUserNameFromStore?: () => string;
+    getUserIdFromStore?: () => number | null;
+    isNewUserFromStore?: () => boolean;
     
     // Initialization Functions
     initializeFiltersFromLegacy?: () => void;
