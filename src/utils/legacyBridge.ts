@@ -336,6 +336,65 @@ if (typeof window !== 'undefined') {
     return null;
   };
 
+  // CRITICAL: User Pixel Counts Helper Functions (NEW - vars.n_user_pixels migration)
+  w.getUserPixelCountsFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().userPixelCounts;
+    }
+    console.warn('[IRIS Migration] getUserPixelCountsFromStore: React store not available');
+    return { total: 0 };
+  };
+
+  w.updateUserPixelCountsInStore = () => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      const newCounts = store.calculatePixelCounts();
+      store.updateUserPixelCounts(newCounts);
+      return newCounts;
+    }
+    console.warn('[IRIS Migration] updateUserPixelCountsInStore: React store not available');
+    return { total: 0 };
+  };
+
+  w.getClassPixelCountFromStore = (classId: number) => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getClassPixelCount(classId);
+    }
+    console.warn('[IRIS Migration] getClassPixelCountFromStore: React store not available');
+    return 0;
+  };
+
+  w.getTotalUserPixelsFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getTotalUserPixels();
+    }
+    console.warn('[IRIS Migration] getTotalUserPixelsFromStore: React store not available');
+    return 0;
+  };
+
+  w.validateAITrainingDataFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().validateAITrainingData();
+    }
+    console.warn('[IRIS Migration] validateAITrainingDataFromStore: React store not available');
+    return {
+      isValid: false,
+      classesWithEnoughPixels: 0,
+      totalPixels: 0,
+      classPixelCounts: {},
+      minPixelsRequired: 10,
+      minClassesRequired: 2
+    };
+  };
+
+  w.recalculatePixelCountsFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().recalculatePixelCounts();
+    }
+    console.warn('[IRIS Migration] recalculatePixelCountsFromStore: React store not available');
+    return { total: 0 };
+  };
+
   // Image ID bridge functions for legacy JavaScript access
   w.getCurrentImageIdFromStore = () => {
     if (w.segmentationStore) {

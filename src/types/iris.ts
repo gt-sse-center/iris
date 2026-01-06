@@ -194,6 +194,22 @@ export interface SegmentationMask {
   time_spent: string;
 }
 
+// User Pixel Counts Interface (replaces vars.n_user_pixels)
+export interface UserPixelCounts {
+  total: number;
+  [classId: number]: number; // Per-class pixel counts
+}
+
+// AI Training Validation Result
+export interface AITrainingValidation {
+  isValid: boolean;
+  classesWithEnoughPixels: number;
+  totalPixels: number;
+  classPixelCounts: { [classId: number]: number };
+  minPixelsRequired: number;
+  minClassesRequired: number;
+}
+
 export interface UserProfile {
   id: number;
   name: string;
@@ -290,14 +306,21 @@ declare global {
     validateConfigFromStore?: () => boolean;
     getConfigDebugInfoFromStore?: () => { loaded: boolean; sections: string[]; valid: boolean; hasClasses: number; hasViews: number; hasViewGroups: number; hasSegmentation: boolean; hasAIModel: boolean };
     
-    // User Helper Functions (NEW - vars.user migration)
-    getUserFromStore?: () => any | null;
-    setUserInStore?: (user: any) => void;
-    getUserStatsFromStore?: () => any | null;
-    isAdminFromStore?: () => boolean;
-    getUserNameFromStore?: () => string;
-    getUserIdFromStore?: () => number | null;
-    isNewUserFromStore?: () => boolean;
+    // Confusion Matrix Helper Functions (NEW - vars.confusion_matrix migration)
+    getConfusionMatrixFromStore?: () => any | null;
+    setConfusionMatrixInStore?: (matrix: any) => void;
+    getAccuracyStatsFromStore?: () => any | null;
+    clearConfusionMatrixFromStore?: () => void;
+    getConfusionMatrixDataFromStore?: () => number[][] | null;
+    createConfusionMatrixFromStore?: (matrix: number[][], truePositives: any, userClasses: number[], classNames: string[]) => any;
+    
+    // User Pixel Counts Helper Functions (NEW - vars.n_user_pixels migration)
+    getUserPixelCountsFromStore?: () => UserPixelCounts;
+    updateUserPixelCountsInStore?: () => UserPixelCounts;
+    getClassPixelCountFromStore?: (classId: number) => number;
+    getTotalUserPixelsFromStore?: () => number;
+    validateAITrainingDataFromStore?: () => AITrainingValidation;
+    recalculatePixelCountsFromStore?: () => UserPixelCounts;
     
     // Initialization Functions
     initializeFiltersFromLegacy?: () => void;

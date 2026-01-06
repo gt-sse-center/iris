@@ -1009,6 +1009,28 @@ function update_cursor_coords(obj, event){
 }
 
 function update_drawn_pixels(){
+    // PHASE 1: Use React store as primary source for pixel counting
+    if (window.updateUserPixelCountsInStore) {
+        try {
+            // Let React store calculate and update pixel counts
+            const pixelCounts = window.updateUserPixelCountsInStore();
+            
+            // Sync to legacy vars for backward compatibility
+            vars.n_user_pixels = pixelCounts;
+            
+            console.log('[IRIS Migration] ✅ Using React store for pixel counting:', pixelCounts);
+            return; // React store handles everything including DOM updates
+        } catch (error) {
+            console.error('[IRIS Migration] ❌ React store pixel counting failed:', error);
+            console.warn('[IRIS Migration] Falling back to legacy pixel counting');
+        }
+    } else {
+        console.warn('[IRIS Migration] ⚠️ React store pixel counting not available, using legacy fallback');
+    }
+    
+    // FALLBACK: Legacy pixel counting (should rarely be used)
+    console.log('[IRIS Migration] Using legacy pixel counting fallback');
+    
     // Get mask data from React store (primary source) with fallback to legacy vars
     let maskData, userMaskData;
     
@@ -1046,12 +1068,15 @@ function update_drawn_pixels(){
 
     for (var i=0; i<userMaskData.length; i++){
         if (userMaskData[i]){
-            vars.n_user_pixels[maskData[i]] += 1;
-            vars.n_user_pixels.total += 1;
+            const classId = maskData[i];
+            if (classId >= 0 && classId < classCount) {
+                vars.n_user_pixels[classId] += 1;
+                vars.n_user_pixels.total += 1;
+            }
         }
     }
     
-    // Sync pixel counts to React store
+    // Sync pixel counts to React store (fallback path)
     if (window.segmentationStore) {
         const store = window.segmentationStore.getState();
         store.updateUserPixelCounts(vars.n_user_pixels);
@@ -2904,20 +2929,62 @@ async function predict_mask(){
 }
 
 async function legacyPredictMask(){
-    var user_classes = [];
+    // PHASE 1: Use React store for AI training validation (primary source)
+    let validationResult;
+    if (window.validateAITrainingDataFromStore) {
+        try {
+            validationResult = window.validateAITrainingDataFromStore();
+            console.log('[IRIS Migration] ✅ Using React store for AI validation:', validationResult);
+            
+            if (!validationResult.isValid) {
+                console.log('[IRIS Migration] AI validation failed - insufficient training data');
+                return; // React store handles error display
+            }
+        } catch (error) {
+            console.error('[IRIS Migration] ❌ React store AI validation failed:', error);
+            console.warn('[IRIS Migration] Falling back to legacy validation');
+        }
+    } else {
+        console.warn('[IRIS Migration] ⚠️ React store AI validation not available, using legacy fallback');
+    }
+    
+    // Get pixel counts from React store (primary) or legacy vars (fallback)
+    let pixelCounts;
+    if (window.getUserPixelCountsFromStore) {
+        pixelCounts = window.getUserPixelCountsFromStore();
+    } else {
+        console.warn('[IRIS Migration] ⚠️ Using legacy vars.n_user_pixels fallback');
+        pixelCounts = vars.n_user_pixels;
+    }
+    
+    // Get class count for later use
     const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
         console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in legacyPredictMask()');
         return vars.classes ? vars.classes.length : 0;
     })();
-    for (var i=0; i < classCount; i++){
-        if (vars.n_user_pixels[i] > 10){
-            user_classes.push(i);
+    
+    // Get user classes from validation result or calculate from pixel counts
+    let user_classes;
+    if (validationResult && validationResult.classPixelCounts) {
+        user_classes = Object.keys(validationResult.classPixelCounts)
+            .map(key => parseInt(key))
+            .filter(classId => validationResult.classPixelCounts[classId] > 10);
+    } else {
+        // FALLBACK: Legacy validation (should rarely be used)
+        console.log('[IRIS Migration] Using legacy AI validation fallback');
+        
+        user_classes = [];
+        
+        for (var i=0; i < classCount; i++){
+            if (pixelCounts[i] > 10){
+                user_classes.push(i);
+            }
         }
-    }
-    if (user_classes.length < 2){
-        // This validation is now handled by React store, just return
-        // The React store will show the modern error modal
-        return;
+        if (user_classes.length < 2){
+            // This validation is now handled by React store, just return
+            // The React store will show the modern error modal
+            return;
+        }
     }
 
     show_loader("Prepare training data...");
@@ -2952,7 +3019,7 @@ async function legacyPredictMask(){
     let all_user_labels = new Array();
     for (var i=0; i<=userMaskData.length; i++){
         // Only add the user pixel if there are enough pixels from that class:
-        if (userMaskData[i] && vars.n_user_pixels[maskData[i]] > 10){
+        if (userMaskData[i] && pixelCounts[maskData[i]] > 10){
             all_user_pixels.push(i);
             all_user_labels.push(maskData[i]);
         }
@@ -2983,10 +3050,13 @@ async function legacyPredictMask(){
 
     for (let user_class of user_classes){
         // Set the current number of samples (0) and the maximum
+        // Use pixel counts from React store (primary) or legacy vars (fallback)
+        const classPixelCount = pixelCounts[user_class] || 0;
+        
         n_samples[user_class] = {
             "current": 0,
             "max": Math.min(
-                round_number(vars.n_user_pixels[user_class] * aiModel.train_ratio),
+                round_number(classPixelCount * aiModel.train_ratio),
                 aiModel.max_train_pixels
             )
         };
@@ -3244,8 +3314,18 @@ function update_ai_box(score, cm, tp, user_classes){
     // Fallback to legacy calculation if React store not available
     if (!accuracyStats) {
         console.warn('[IRIS Migration] ⚠️ FALLBACK: getAccuracyStatsFromStore not available, using legacy calculation');
+        
+        // Get pixel counts from React store (primary) or legacy vars (fallback)
+        let pixelCounts;
+        if (window.getUserPixelCountsFromStore) {
+            pixelCounts = window.getUserPixelCountsFromStore();
+        } else {
+            console.warn('[IRIS Migration] ⚠️ Using legacy vars.n_user_pixels fallback in accuracy calculation');
+            pixelCounts = vars.n_user_pixels;
+        }
+        
         for (let label of user_classes){
-            let acc = tp[label] / (vars.n_user_pixels[label]);
+            let acc = tp[label] / (pixelCounts[label]);
             if (acc < min_acc){
                 min_acc = acc;
                 worst_label = label;

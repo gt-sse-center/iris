@@ -230,6 +230,19 @@ interface SegmentationState {
   updateUserPixelCounts: (counts: { [classId: number]: number; total: number }) => void;
   calculatePixelCounts: () => { [classId: number]: number; total: number };
   
+  // User Pixel Counts Helper Methods (NEW - vars.n_user_pixels migration)
+  validateAITrainingData: () => {
+    isValid: boolean;
+    classesWithEnoughPixels: number;
+    totalPixels: number;
+    classPixelCounts: { [classId: number]: number };
+    minPixelsRequired: number;
+    minClassesRequired: number;
+  };
+  getClassPixelCount: (classId: number) => number;
+  getTotalUserPixels: () => number;
+  recalculatePixelCounts: () => { [classId: number]: number; total: number };
+  
   // PHASE 2: Navigation & Actions State (replaces vars.config, vars.user, vars.confusion_matrix)
   config: ProjectConfig | null;
   user: UserInfo | null;
@@ -985,7 +998,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskDimensions: null,
       maskHistory: [],
       userMaskHistory: [],
-      historyCurrentEpoch: 0
+      historyCurrentEpoch: 0,
+      userPixelCounts: { total: 0 } // Reset pixel counts when clearing mask
     });
 
     // Sync with legacy vars
@@ -995,6 +1009,7 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       w.vars.user_mask = null;
       w.vars.errors_mask = null;
       w.vars.mask_shape = null;
+      w.vars.n_user_pixels = { total: 0 }; // Reset legacy pixel counts too
       w.vars.history = {
         mask: [],
         user_mask: [],
@@ -1775,7 +1790,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Helper function to calculate pixel counts from mask data
   calculatePixelCounts: () => {
     const { maskData, userMaskData, classes } = get();
-    if (!maskData || !userMaskData || !classes) return { total: 0 };
+    if (!maskData || !userMaskData || !classes || classes.length === 0) {
+      return { total: 0 };
+    }
 
     const counts: { [classId: number]: number; total: number } = { total: 0 };
     
@@ -1785,10 +1802,12 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     });
 
     // Count pixels where user has drawn (user_mask[i] == 1)
+    // This matches the legacy logic: vars.n_user_pixels[maskData[i]] += 1
     for (let i = 0; i < userMaskData.length; i++) {
       if (userMaskData[i]) {
         const classId = maskData[i];
-        if (counts[classId] !== undefined) {
+        // Ensure classId is valid before counting
+        if (classId >= 0 && classId < classes.length) {
           counts[classId]++;
           counts.total++;
         }
@@ -1796,6 +1815,54 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
 
     return counts;
+  },
+
+  // Validation method for AI training requirements
+  validateAITrainingData: () => {
+    const { userPixelCounts } = get();
+    
+    let classesWithEnoughPixels = 0;
+    const classPixelCounts: { [classId: number]: number } = {};
+    
+    Object.keys(userPixelCounts).forEach(key => {
+      if (key !== 'total') {
+        const classId = parseInt(key);
+        const pixelCount = userPixelCounts[classId];
+        classPixelCounts[classId] = pixelCount;
+        
+        if (pixelCount > 10) {
+          classesWithEnoughPixels++;
+        }
+      }
+    });
+    
+    return {
+      isValid: classesWithEnoughPixels >= 2,
+      classesWithEnoughPixels,
+      totalPixels: userPixelCounts.total,
+      classPixelCounts,
+      minPixelsRequired: 10,
+      minClassesRequired: 2
+    };
+  },
+
+  // Get pixel count for specific class
+  getClassPixelCount: (classId: number) => {
+    const { userPixelCounts } = get();
+    return userPixelCounts[classId] || 0;
+  },
+
+  // Get total user pixels
+  getTotalUserPixels: () => {
+    const { userPixelCounts } = get();
+    return userPixelCounts.total || 0;
+  },
+
+  // Recalculate pixel counts (useful for manual triggers)
+  recalculatePixelCounts: () => {
+    const newCounts = get().calculatePixelCounts();
+    get().updateUserPixelCounts(newCounts);
+    return newCounts;
   },
 
   // PHASE 2: Navigation & Actions Actions
