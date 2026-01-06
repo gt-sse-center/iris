@@ -3131,8 +3131,24 @@ async function legacyPredictMask(){
         acc_sum += acc;
     }
 
-    // Set the confusion matrix
-    vars.confusion_matrix = cm;
+    // CRITICAL: Set the confusion matrix through React store (primary source) with fallback to legacy vars
+    if (window.createConfusionMatrixFromStore && window.setConfusionMatrixInStore) {
+        // Get class names from React store or fallback to legacy vars
+        const classNames = window.getClassesFromStore ? 
+            window.getClassesFromStore().map(cls => cls.name) : 
+            (vars.classes ? vars.classes.map(cls => cls.name) : user_classes.map(id => `Class ${id}`));
+        
+        // Create structured confusion matrix object
+        const confusionMatrixObj = window.createConfusionMatrixFromStore(cm, tp, user_classes, classNames);
+        
+        // Set in React store (primary source)
+        window.setConfusionMatrixInStore(confusionMatrixObj);
+        
+        console.log('[IRIS Migration] ✅ Confusion matrix set through React store');
+    } else {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: setConfusionMatrixInStore not available, using legacy vars.confusion_matrix');
+        vars.confusion_matrix = cm;
+    }
 
     update_ai_box(acc_prod / acc_sum, cm, tp, user_classes);
 
@@ -3206,11 +3222,26 @@ function update_ai_box(score, cm, tp, user_classes){
     let min_acc = 1;
     let worst_label = null;
 
-    for (let label of user_classes){
-        let acc = tp[label] / (vars.n_user_pixels[label]);
-        if (acc < min_acc){
-            min_acc = acc;
-            worst_label = label;
+    // CRITICAL: Get accuracy stats from React store (primary source) with fallback to legacy calculation
+    let accuracyStats = null;
+    if (window.getAccuracyStatsFromStore) {
+        accuracyStats = window.getAccuracyStatsFromStore();
+        if (accuracyStats) {
+            min_acc = accuracyStats.worstAccuracy;
+            worst_label = accuracyStats.worstClass;
+            console.log('[IRIS Migration] ✅ Using accuracy stats from React store');
+        }
+    }
+    
+    // Fallback to legacy calculation if React store not available
+    if (!accuracyStats) {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getAccuracyStatsFromStore not available, using legacy calculation');
+        for (let label of user_classes){
+            let acc = tp[label] / (vars.n_user_pixels[label]);
+            if (acc < min_acc){
+                min_acc = acc;
+                worst_label = label;
+            }
         }
     }
     if (worst_label !== null){

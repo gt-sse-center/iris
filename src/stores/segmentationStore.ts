@@ -7,13 +7,17 @@
  * Migration Status:
  * - [x] showMask (vars.show_mask) - COMPLETE
  * - [x] showDialogueBeforeNextImage (vars.show_dialogue_before_next_image) - COMPLETE
- * - [x] Image Navigation (centralized image list and navigation) - IN PROGRESS
- * - [x] Image Filters (vars.vm.filters) - IN PROGRESS
- * - [ ] currentClass (vars.current_class)
- * - [ ] tool (vars.tool)
- * - [ ] config (vars.config)
- * - [ ] user (vars.user)
- * - [ ] mask data (vars.mask, vars.user_mask, etc.)
+ * - [x] Image Navigation (centralized image list and navigation) - COMPLETE
+ * - [x] Image Filters (vars.vm.filters) - COMPLETE
+ * - [x] API URLs (vars.url) - COMPLETE
+ * - [x] Next Action (vars.next_action) - COMPLETE
+ * - [x] Just Logged In (vars.just_logged_in) - COMPLETE
+ * - [x] Core Drawing State (vars.tool, vars.current_class, vars.mask_type, vars.classes) - COMPLETE
+ * - [x] Mask Data (vars.mask, vars.user_mask, vars.errors_mask) - COMPLETE
+ * - [x] Mask Shape (vars.mask_shape) - COMPLETE
+ * - [x] Config (vars.config) - COMPLETE
+ * - [x] User (vars.user) - COMPLETE
+ * - [x] Confusion Matrix (vars.confusion_matrix) - COMPLETE
  */
 
 import { create } from 'zustand';
@@ -239,6 +243,15 @@ interface SegmentationState {
   loadMaskForImage: (imageId: string) => Promise<void>;
   predictMask: () => Promise<void>;
   updateConfusionMatrix: (matrix: ConfusionMatrix) => void;
+  clearConfusionMatrix: () => void;
+  getAccuracyStats: () => ConfusionMatrix['accuracyStats'] | null;
+  getConfusionMatrixData: () => number[][] | null;
+  createConfusionMatrix: (
+    matrix: number[][], 
+    truePositives: { [classId: number]: number },
+    userClasses: number[],
+    classNames: string[]
+  ) => ConfusionMatrix;
   resetViews: () => void;
   setConfig: (config: ProjectConfig) => void;
   setUser: (user: UserInfo) => void;
@@ -659,6 +672,53 @@ const getUserIdFromStore = (): number | null => {
 const isNewUserFromStore = (): boolean => {
   const user = useSegmentationStore.getState().user;
   return user ? user.segmentation.n_masks === 0 : false;
+};
+
+// CRITICAL: Helper functions for confusion matrix legacy access during migration (vars.confusion_matrix)
+const getConfusionMatrixFromStore = (): ConfusionMatrix | null => {
+  return useSegmentationStore.getState().confusionMatrix;
+};
+
+const setConfusionMatrixInStore = (matrix: ConfusionMatrix) => {
+  const store = useSegmentationStore.getState();
+  
+  // Validate confusion matrix structure
+  if (!matrix || typeof matrix !== 'object') {
+    console.error('[IRIS] setConfusionMatrixInStore: Invalid matrix object', matrix);
+    return;
+  }
+  
+  if (!Array.isArray(matrix.matrix) || matrix.matrix.length === 0) {
+    console.error('[IRIS] setConfusionMatrixInStore: Invalid matrix array');
+    return;
+  }
+  
+  store.updateConfusionMatrix(matrix);
+};
+
+const getAccuracyStatsFromStore = () => {
+  const store = useSegmentationStore.getState();
+  return store.getAccuracyStats();
+};
+
+const clearConfusionMatrixFromStore = () => {
+  const store = useSegmentationStore.getState();
+  store.clearConfusionMatrix();
+};
+
+const getConfusionMatrixDataFromStore = (): number[][] | null => {
+  const store = useSegmentationStore.getState();
+  return store.getConfusionMatrixData();
+};
+
+const createConfusionMatrixFromStore = (
+  matrix: number[][], 
+  truePositives: { [classId: number]: number },
+  userClasses: number[],
+  classNames: string[]
+): ConfusionMatrix => {
+  const store = useSegmentationStore.getState();
+  return store.createConfusionMatrix(matrix, truePositives, userClasses, classNames);
 };
 
 // Helper function to trigger legacy rendering
@@ -1875,13 +1935,123 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   updateConfusionMatrix: (matrix: ConfusionMatrix) => {
+    // Validate confusion matrix structure
+    if (!matrix || typeof matrix !== 'object') {
+      console.error('[IRIS] updateConfusionMatrix: Invalid matrix object', matrix);
+      return;
+    }
+    
+    if (!Array.isArray(matrix.matrix) || matrix.matrix.length === 0) {
+      console.error('[IRIS] updateConfusionMatrix: Invalid matrix array');
+      return;
+    }
+    
+    // Validate matrix is square
+    const size = matrix.matrix.length;
+    for (let i = 0; i < size; i++) {
+      if (!Array.isArray(matrix.matrix[i]) || matrix.matrix[i].length !== size) {
+        console.error('[IRIS] updateConfusionMatrix: Matrix is not square');
+        return;
+      }
+    }
+    
     set({ confusionMatrix: matrix });
+    
+    // Sync with legacy vars during migration (sync the raw matrix for backward compatibility)
+    const w = window as any;
+    if (w.vars) {
+      w.vars.confusion_matrix = matrix.matrix; // Legacy code expects just the 2D array
+    }
+    
+    console.log('[IRIS] Confusion matrix updated:', {
+      classCount: matrix.classCount,
+      totalSamples: matrix.totalSamples,
+      overallAccuracy: matrix.accuracyStats.overall,
+      worstClass: matrix.accuracyStats.worstClass,
+      worstAccuracy: matrix.accuracyStats.worstAccuracy
+    });
+  },
+
+  clearConfusionMatrix: () => {
+    set({ confusionMatrix: null });
     
     // Sync with legacy vars during migration
     const w = window as any;
     if (w.vars) {
-      w.vars.confusion_matrix = matrix;
+      w.vars.confusion_matrix = null;
     }
+  },
+
+  getAccuracyStats: () => {
+    const { confusionMatrix } = get();
+    return confusionMatrix ? confusionMatrix.accuracyStats : null;
+  },
+
+  getConfusionMatrixData: () => {
+    const { confusionMatrix } = get();
+    return confusionMatrix ? confusionMatrix.matrix : null;
+  },
+
+  // Helper method to create confusion matrix from legacy data
+  createConfusionMatrix: (
+    matrix: number[][], 
+    truePositives: { [classId: number]: number },
+    userClasses: number[],
+    classNames: string[]
+  ): ConfusionMatrix => {
+    const classCount = matrix.length;
+    let totalSamples = 0;
+    
+    // Calculate total samples
+    for (let i = 0; i < classCount; i++) {
+      for (let j = 0; j < classCount; j++) {
+        totalSamples += matrix[i][j];
+      }
+    }
+    
+    // Calculate per-class accuracy
+    const perClassAccuracy: number[] = [];
+    let minAccuracy = 1.0;
+    let worstClass: number | null = null;
+    let accSum = 0;
+    let accProd = userClasses.length;
+    
+    // Get user pixel counts from store or legacy vars
+    const userPixelCounts = get().userPixelCounts;
+    const w = window as any;
+    const nUserPixels = userPixelCounts || w.vars?.n_user_pixels || {};
+    
+    for (const classId of userClasses) {
+      const tp = truePositives[classId] || 0;
+      const totalForClass = nUserPixels[classId] || 1; // Avoid division by zero
+      const accuracy = tp / totalForClass;
+      
+      perClassAccuracy[classId] = accuracy;
+      accSum += accuracy;
+      accProd *= accuracy;
+      
+      if (accuracy < minAccuracy) {
+        minAccuracy = accuracy;
+        worstClass = classId;
+      }
+    }
+    
+    const overallAccuracy = userClasses.length > 0 ? accProd / accSum : 0;
+    
+    return {
+      matrix,
+      classCount,
+      totalSamples,
+      accuracyStats: {
+        overall: overallAccuracy,
+        perClass: perClassAccuracy,
+        worstClass,
+        worstAccuracy: minAccuracy,
+        truePositives
+      },
+      timestamp: new Date(),
+      classes: classNames
+    };
   },
 
   resetViews: () => {
@@ -2484,6 +2654,14 @@ if (typeof window !== 'undefined') {
   (window as any).getUserIdFromStore = getUserIdFromStore;
   (window as any).isNewUserFromStore = isNewUserFromStore;
   
+  // CRITICAL: Export confusion matrix helper functions for legacy JavaScript (vars.confusion_matrix migration)
+  (window as any).getConfusionMatrixFromStore = getConfusionMatrixFromStore;
+  (window as any).setConfusionMatrixInStore = setConfusionMatrixInStore;
+  (window as any).getAccuracyStatsFromStore = getAccuracyStatsFromStore;
+  (window as any).clearConfusionMatrixFromStore = clearConfusionMatrixFromStore;
+  (window as any).getConfusionMatrixDataFromStore = getConfusionMatrixDataFromStore;
+  (window as any).createConfusionMatrixFromStore = createConfusionMatrixFromStore;
+  
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
   (window as any).initializeCoreDrawingStateFromLegacy = initializeCoreDrawingStateFromLegacy;
@@ -2554,5 +2732,11 @@ export {
   getClassCountFromStore,
   setClassesInStore,
   getCurrentClassFromStore,
-  setCurrentClassInStore
+  setCurrentClassInStore,
+  getConfusionMatrixFromStore,
+  setConfusionMatrixInStore,
+  getAccuracyStatsFromStore,
+  clearConfusionMatrixFromStore,
+  getConfusionMatrixDataFromStore,
+  createConfusionMatrixFromStore
 };

@@ -20,6 +20,7 @@
  * - [x] Mask Shape (vars.mask_shape) - COMPLETE
  * - [x] Classes (vars.classes) - COMPLETE
  * - [x] Config (vars.config) - COMPLETE
+ * - [x] Confusion Matrix (vars.confusion_matrix) - COMPLETE
  */
 
 import type { ProjectConfig, ClassConfig } from '../types/iris';
@@ -271,6 +272,68 @@ if (typeof window !== 'undefined') {
     }
     console.warn('[IRIS Migration] isNewUserFromStore: React store not available');
     return false;
+  };
+
+  // CRITICAL: Confusion Matrix Helper Functions (NEW - vars.confusion_matrix migration)
+  w.getConfusionMatrixFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().confusionMatrix;
+    }
+    console.warn('[IRIS Migration] getConfusionMatrixFromStore: React store not available');
+    return null;
+  };
+
+  w.setConfusionMatrixInStore = (matrix: any) => {
+    if (w.segmentationStore) {
+      const store = w.segmentationStore.getState();
+      
+      // Validate confusion matrix structure
+      if (!matrix || typeof matrix !== 'object') {
+        console.error('[IRIS] setConfusionMatrixInStore: Invalid matrix object', matrix);
+        return;
+      }
+      
+      if (!Array.isArray(matrix.matrix) || matrix.matrix.length === 0) {
+        console.error('[IRIS] setConfusionMatrixInStore: Invalid matrix array');
+        return;
+      }
+      
+      store.updateConfusionMatrix(matrix);
+    } else {
+      console.warn('[IRIS Migration] setConfusionMatrixInStore: React store not available');
+    }
+  };
+
+  w.getAccuracyStatsFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getAccuracyStats();
+    }
+    console.warn('[IRIS Migration] getAccuracyStatsFromStore: React store not available');
+    return null;
+  };
+
+  w.clearConfusionMatrixFromStore = () => {
+    if (w.segmentationStore) {
+      w.segmentationStore.getState().clearConfusionMatrix();
+    } else {
+      console.warn('[IRIS Migration] clearConfusionMatrixFromStore: React store not available');
+    }
+  };
+
+  w.getConfusionMatrixDataFromStore = () => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().getConfusionMatrixData();
+    }
+    console.warn('[IRIS Migration] getConfusionMatrixDataFromStore: React store not available');
+    return null;
+  };
+
+  w.createConfusionMatrixFromStore = (matrix: number[][], truePositives: any, userClasses: number[], classNames: string[]) => {
+    if (w.segmentationStore) {
+      return w.segmentationStore.getState().createConfusionMatrix(matrix, truePositives, userClasses, classNames);
+    }
+    console.warn('[IRIS Migration] createConfusionMatrixFromStore: React store not available');
+    return null;
   };
 
   // Image ID bridge functions for legacy JavaScript access

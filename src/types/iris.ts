@@ -158,11 +158,18 @@ export interface UserInfo {
 }
 
 export interface ConfusionMatrix {
-  matrix: number[][];
-  classes: string[];
-  accuracy: number;
-  f1_score: number;
-  jaccard_index: number;
+  matrix: number[][]; // 2D array [actual_class][predicted_class]
+  classCount: number;
+  totalSamples: number;
+  accuracyStats: {
+    overall: number; // Overall accuracy (acc_prod / acc_sum)
+    perClass: number[]; // Per-class accuracy (tp[class] / test_n_samples[class])
+    worstClass: number | null; // Class with lowest accuracy
+    worstAccuracy: number; // Lowest accuracy value
+    truePositives: { [classId: number]: number }; // tp values from legacy code
+  };
+  timestamp: Date;
+  classes: string[]; // Class names for display
 }
 
 export interface UserConfig {
