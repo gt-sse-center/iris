@@ -31,14 +31,19 @@ describe('Confusion Matrix Store', () => {
   it('should create and update confusion matrix with correct structure', () => {
     const store = useSegmentationStore.getState();
     
-    // Test data
+    // Test data with descriptive variables
     const matrix = [[10, 2], [3, 15]];
-    const truePositives = { 0: 10, 1: 15 };
-    const userClasses = [0, 1];
-    const classNames = ['Clear', 'Cloud'];
+    const truePositiveCounts = { 0: 10, 1: 15 };  // True positives per class
+    const userClassIds = [0, 1];                   // Class IDs used by user
+    const classNames = ['Clear', 'Cloud'];         // Human-readable class names
     
     // Create and update confusion matrix
-    const confusionMatrix = store.createConfusionMatrix(matrix, truePositives, userClasses, classNames);
+    const confusionMatrix = store.createConfusionMatrix(
+      matrix, 
+      truePositiveCounts, 
+      userClassIds, 
+      classNames
+    );
     store.updateConfusionMatrix(confusionMatrix);
     
     // Get fresh state after update
@@ -58,7 +63,7 @@ describe('Confusion Matrix Store', () => {
     expect(stats).toHaveProperty('perClass');
     expect(stats).toHaveProperty('worstClass');
     expect(stats).toHaveProperty('worstAccuracy');
-    expect(stats).toHaveProperty('truePositives', truePositives);
+    expect(stats).toHaveProperty('truePositives', truePositiveCounts);
     
     // Verify legacy sync (should sync the raw matrix for backward compatibility)
     expect(mockWindow.vars.confusion_matrix).toEqual(matrix);
@@ -67,9 +72,18 @@ describe('Confusion Matrix Store', () => {
   it('should clear confusion matrix from store and legacy vars', () => {
     const store = useSegmentationStore.getState();
     
-    // Set initial matrix
+    // Set initial matrix with descriptive variables
     const matrix = [[1, 0], [0, 1]];
-    const confusionMatrix = store.createConfusionMatrix(matrix, { 0: 1, 1: 1 }, [0, 1], ['A', 'B']);
+    const truePositiveCounts = { 0: 1, 1: 1 };  // True positives per class
+    const userClassIds = [0, 1];                 // Class IDs used by user
+    const classNames = ['A', 'B'];              // Human-readable class names
+    
+    const confusionMatrix = store.createConfusionMatrix(
+      matrix, 
+      truePositiveCounts, 
+      userClassIds, 
+      classNames
+    );
     store.updateConfusionMatrix(confusionMatrix);
     
     // Verify it's set
@@ -123,14 +137,34 @@ describe('Confusion Matrix Store', () => {
     const store = useSegmentationStore.getState();
     
     // Test with empty matrix
-    const emptyMatrix = store.createConfusionMatrix([], {}, [], []);
-    expect(emptyMatrix.accuracyStats.overall).toBe(0);
-    expect(emptyMatrix.accuracyStats.worstClass).toBeNull();
-    expect(emptyMatrix.totalSamples).toBe(0);
+    const emptyMatrix: number[][] = [];
+    const emptyTruePositives = {};
+    const emptyUserClassIds: number[] = [];
+    const emptyClassNames: string[] = [];
+    
+    const emptyConfusionMatrix = store.createConfusionMatrix(
+      emptyMatrix, 
+      emptyTruePositives, 
+      emptyUserClassIds, 
+      emptyClassNames
+    );
+    expect(emptyConfusionMatrix.accuracyStats.overall).toBe(0);
+    expect(emptyConfusionMatrix.accuracyStats.worstClass).toBeNull();
+    expect(emptyConfusionMatrix.totalSamples).toBe(0);
     
     // Test with single class
-    const singleClassMatrix = store.createConfusionMatrix([[5]], { 0: 5 }, [0], ['Single']);
-    expect(singleClassMatrix.classCount).toBe(1);
-    expect(singleClassMatrix.totalSamples).toBe(5);
+    const singleClassMatrix = [[5]];
+    const singleClassTruePositives = { 0: 5 };
+    const singleClassIds = [0];
+    const singleClassNames = ['Single'];
+    
+    const singleConfusionMatrix = store.createConfusionMatrix(
+      singleClassMatrix, 
+      singleClassTruePositives, 
+      singleClassIds, 
+      singleClassNames
+    );
+    expect(singleConfusionMatrix.classCount).toBe(1);
+    expect(singleConfusionMatrix.totalSamples).toBe(5);
   });
 });
