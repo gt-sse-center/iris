@@ -22,8 +22,8 @@ const mockConfig: UserConfig = {
     },
   },
   classes: [
-    { name: 'Class 1', css_colour: '#ff0000', colour: [255, 0, 0] },
-    { name: 'Class 2', css_colour: '#00ff00', colour: [0, 255, 0] },
+    { name: 'Class 1', css_colour: '#ff0000', colour: [255, 0, 0, 255] as [number, number, number, number] },
+    { name: 'Class 2', css_colour: '#00ff00', colour: [0, 255, 0, 255] as [number, number, number, number] },
   ],
 };
 

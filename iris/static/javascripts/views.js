@@ -122,8 +122,25 @@ class ViewManager{
         this.render();
         this.showControls(this.show_controls);
 
-        vars.config.view_groups = this.view_groups;
-        save_config(vars.config);
+        // Primary destination: React store, fallback: legacy vars
+        if (window.updateConfigSectionInStore) {
+            window.updateConfigSectionInStore('view_groups', this.view_groups);
+        } else {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
+            vars.config.view_groups = this.view_groups;
+        }
+
+        // Get current config for saving
+        const config = window.getConfigFromStore ? window.getConfigFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config for save_config - React store not available');
+            return vars.config;
+        })();
+
+        if (config) {
+            save_config(config);
+        } else {
+            console.error('[IRIS Migration] ❌ No config available for save_config in ViewManager');
+        }
     }
 
     calculateViewWidthHeight(){

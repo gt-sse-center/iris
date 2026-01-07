@@ -25,13 +25,25 @@ const DebugPanel: React.FC = () => {
   useEffect(() => {
     const updateLegacyVars = () => {
       const w = window as any;
+      
+      // Primary source: React store, fallback: legacy vars
+      const views = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('views') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for debug info - React store not available');
+        return w.vars?.config?.views;
+      })();
+      
+      const viewGroups = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('view_groups') : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups for debug info - React store not available');
+        return w.vars?.config?.view_groups;
+      })();
+      
       setLegacyVars({
         hasVars: !!w.vars,
         hasConfig: !!w.vars?.config,
-        hasViews: !!w.vars?.config?.views,
-        viewsType: typeof w.vars?.config?.views,
-        viewsKeys: w.vars?.config?.views ? Object.keys(w.vars.config.views) : [],
-        viewGroups: w.vars?.config?.view_groups,
+        hasViews: !!views,
+        viewsType: typeof views,
+        viewsKeys: views ? (Array.isArray(views) ? views.map((v: any) => v.name) : Object.keys(views)) : [],
+        viewGroups: viewGroups,
         imageId: w.vars?.image_id,
         imageLocation: w.vars?.image_location,
         hasVm: !!w.vars?.vm,

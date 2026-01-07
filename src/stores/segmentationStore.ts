@@ -7,97 +7,32 @@
  * Migration Status:
  * - [x] showMask (vars.show_mask) - COMPLETE
  * - [x] showDialogueBeforeNextImage (vars.show_dialogue_before_next_image) - COMPLETE
- * - [x] Image Navigation (centralized image list and navigation) - IN PROGRESS
- * - [x] Image Filters (vars.vm.filters) - IN PROGRESS
- * - [ ] currentClass (vars.current_class)
- * - [ ] tool (vars.tool)
- * - [ ] config (vars.config)
- * - [ ] user (vars.user)
- * - [ ] mask data (vars.mask, vars.user_mask, etc.)
+ * - [x] Image Navigation (centralized image list and navigation) - COMPLETE
+ * - [x] Image Filters (vars.vm.filters) - COMPLETE
+ * - [x] API URLs (vars.url) - COMPLETE
+ * - [x] Next Action (vars.next_action) - COMPLETE
+ * - [x] Just Logged In (vars.just_logged_in) - COMPLETE
+ * - [x] Core Drawing State (vars.tool, vars.current_class, vars.mask_type, vars.classes) - COMPLETE
+ * - [x] Mask Data (vars.mask, vars.user_mask, vars.errors_mask) - COMPLETE
+ * - [x] Mask Shape (vars.mask_shape) - COMPLETE
+ * - [x] Config (vars.config) - COMPLETE
+ * - [x] User (vars.user) - COMPLETE
+ * - [x] Confusion Matrix (vars.confusion_matrix) - COMPLETE
  */
 
 import { create } from 'zustand';
+import type { 
+  ProjectConfig, 
+  ClassConfig, 
+  UserInfo, 
+  ConfusionMatrix
+} from '../types/iris';
 
 interface ImageInfo {
   image_id: string;
   has_user_annotation: boolean;
   has_any_annotation: boolean;
   annotation_count: number;
-}
-
-interface ClassConfig {
-  name: string;
-  colour: [number, number, number, number]; // RGBA
-  user_colour?: [number, number, number, number]; // Optional user-specific color
-  description?: string; // Optional description
-}
-
-// PHASE 2: Import new types
-interface ProjectConfig {
-  name: string;
-  host: string;
-  port: number;
-  images: string | string[];
-  classes: ClassConfig[];
-  views: ViewConfig[];
-  view_groups: string[][];
-  segmentation: {
-    mask_path: string;
-    ai_model: AIModelConfig;
-    scoring: {
-      enabled: boolean;
-      metrics: string[];
-    };
-  };
-}
-
-interface ViewConfig {
-  name: string;
-  type: string;
-  bands?: string[];
-  expression?: string;
-  colormap?: string;
-  vmin?: number;
-  vmax?: number;
-}
-
-interface UserInfo {
-  id: number;
-  name: string;
-  admin: boolean;
-  tested: boolean;
-  created: string;
-  image_seed: number;
-  segmentation: {
-    score: number;
-    score_unverified: number;
-    n_masks: number;
-    rank?: number;
-  };
-}
-
-interface ConfusionMatrix {
-  matrix: number[][];
-  classes: string[];
-  accuracy: number;
-  f1_score: number;
-  jaccard_index: number;
-}
-
-interface AIModelConfig {
-  n_estimators: number;
-  max_depth: number;
-  n_leaves: number;
-  train_ratio: number;
-  max_train_pixels: number;
-  use_edge_filter: boolean;
-  use_meshgrid: boolean;
-  meshgrid_cells: string;
-  use_superpixels: boolean;
-  bands: string[];
-  suppression_filter_size: number;
-  suppression_threshold: number;
-  suppression_default_class: number;
 }
 
 interface ApiUrls {
@@ -295,6 +230,19 @@ interface SegmentationState {
   updateUserPixelCounts: (counts: { [classId: number]: number; total: number }) => void;
   calculatePixelCounts: () => { [classId: number]: number; total: number };
   
+  // User Pixel Counts Helper Methods (NEW - vars.n_user_pixels migration)
+  validateAITrainingData: () => {
+    isValid: boolean;
+    classesWithEnoughPixels: number;
+    totalPixels: number;
+    classPixelCounts: { [classId: number]: number };
+    minPixelsRequired: number;
+    minClassesRequired: number;
+  };
+  getClassPixelCount: (classId: number) => number;
+  getTotalUserPixels: () => number;
+  recalculatePixelCounts: () => { [classId: number]: number; total: number };
+  
   // PHASE 2: Navigation & Actions State (replaces vars.config, vars.user, vars.confusion_matrix)
   config: ProjectConfig | null;
   user: UserInfo | null;
@@ -308,15 +256,109 @@ interface SegmentationState {
   loadMaskForImage: (imageId: string) => Promise<void>;
   predictMask: () => Promise<void>;
   updateConfusionMatrix: (matrix: ConfusionMatrix) => void;
+  clearConfusionMatrix: () => void;
+  getAccuracyStats: () => ConfusionMatrix['accuracyStats'] | null;
+  getConfusionMatrixData: () => number[][] | null;
+  createConfusionMatrix: (
+    matrix: number[][], 
+    truePositives: { [classId: number]: number },
+    userClasses: number[],
+    classNames: string[]
+  ) => ConfusionMatrix;
   resetViews: () => void;
   setConfig: (config: ProjectConfig) => void;
   setUser: (user: UserInfo) => void;
   setMaskChanged: (changed: boolean) => void;
   
+  // Config Helper Methods
+  getConfigSection: <T extends keyof ProjectConfig>(section: T) => ProjectConfig[T] | null;
+  updateConfigSection: <T extends keyof ProjectConfig>(section: T, data: ProjectConfig[T]) => void;
+  validateConfig: (config: ProjectConfig) => boolean;
+  getConfigDebugInfo: () => { loaded: boolean; sections: string[]; valid: boolean; hasClasses: number; hasViews: number; hasViewGroups: number; hasSegmentation: boolean; hasAIModel: boolean };
+  
   // Debug actions
   setDebugMode: (enabled: boolean) => void;
   getDebugInfo: () => SegmentationDebugInfo;
 }
+
+// CRITICAL: Helper functions for config legacy access during migration (vars.config)
+const getConfigFromStore = (): ProjectConfig | null => {
+  return useSegmentationStore.getState().config;
+};
+
+const setConfigInStore = (config: ProjectConfig) => {
+  const store = useSegmentationStore.getState();
+  
+  // Validate config structure
+  if (!store.validateConfig(config)) {
+    console.error('[IRIS] setConfigInStore: Invalid config structure', config);
+    return;
+  }
+  
+  store.setConfig(config);
+  
+  // Sync related data to other stores
+  if (config.classes && (window as any).setClassesInStore) {
+    (window as any).setClassesInStore(config.classes);
+  }
+  if (config.segmentation?.mask_area && (window as any).setMaskAreaInStore) {
+    (window as any).setMaskAreaInStore(config.segmentation.mask_area);
+  }
+};
+
+const getConfigSectionFromStore = <T extends keyof ProjectConfig>(section: T): ProjectConfig[T] | null => {
+  const config = useSegmentationStore.getState().config;
+  return config ? config[section] : null;
+};
+
+const updateConfigSectionInStore = <T extends keyof ProjectConfig>(section: T, data: ProjectConfig[T]) => {
+  const store = useSegmentationStore.getState();
+  const currentConfig = store.config;
+  
+  if (!currentConfig) {
+    console.error('[IRIS] updateConfigSectionInStore: No config available to update');
+    return;
+  }
+  
+  const updatedConfig = { ...currentConfig, [section]: data };
+  
+  if (!store.validateConfig(updatedConfig)) {
+    console.error('[IRIS] updateConfigSectionInStore: Invalid config after update', { section, data });
+    return;
+  }
+  
+  store.setConfig(updatedConfig);
+  
+  // Sync specific sections to related stores
+  if (section === 'classes' && (window as any).setClassesInStore) {
+    (window as any).setClassesInStore(data as ClassConfig[]);
+  }
+  if (section === 'segmentation' && (data as any)?.mask_area && (window as any).setMaskAreaInStore) {
+    (window as any).setMaskAreaInStore((data as any).mask_area);
+  }
+};
+
+const validateConfigFromStore = (): boolean => {
+  const store = useSegmentationStore.getState();
+  const config = store.config;
+  return config ? store.validateConfig(config) : false;
+};
+
+const getConfigDebugInfoFromStore = () => {
+  const store = useSegmentationStore.getState();
+  const config = store.config;
+  
+  return {
+    loaded: config !== null,
+    sections: config ? Object.keys(config) : [],
+    valid: config ? store.validateConfig(config) : false,
+    hasClasses: config?.classes ? config.classes.length : 0,
+    hasViews: config?.views ? (Array.isArray(config.views) ? config.views.length : Object.keys(config.views).length) : 0,
+    hasViewGroups: config?.view_groups ? (Array.isArray(config.view_groups) ? config.view_groups.length : Object.keys(config.view_groups).length) : 0,
+    hasSegmentation: !!config?.segmentation,
+    hasAIModel: !!config?.segmentation?.ai_model
+  };
+};
 
 // Helper function to get API URLs from React store (for legacy compatibility)
 const getApiUrlsFromStore = (): ApiUrls | null => {
@@ -578,6 +620,118 @@ const canUndoFromStore = () => {
 
 const canRedoFromStore = () => {
   return useSegmentationStore.getState().canRedo();
+};
+
+// CRITICAL: Helper functions for user legacy access during migration (vars.user)
+const getUserFromStore = (): UserInfo | null => {
+  return useSegmentationStore.getState().user;
+};
+
+const setUserInStore = (user: UserInfo) => {
+  const store = useSegmentationStore.getState();
+  
+  // Validate user structure
+  if (!user || typeof user !== 'object') {
+    console.error('[IRIS] setUserInStore: Invalid user object', user);
+    return;
+  }
+  
+  // Validate required fields
+  const requiredFields = ['id', 'name', 'admin', 'tested', 'created', 'image_seed', 'segmentation'];
+  for (const field of requiredFields) {
+    if (!(field in user)) {
+      console.error(`[IRIS] setUserInStore: Missing required field: ${field}`);
+      return;
+    }
+  }
+  
+  // Validate segmentation object
+  if (!user.segmentation || typeof user.segmentation !== 'object') {
+    console.error('[IRIS] setUserInStore: Invalid segmentation object');
+    return;
+  }
+  
+  const requiredSegmentationFields = ['score', 'score_unverified', 'n_masks'];
+  for (const field of requiredSegmentationFields) {
+    if (!(field in user.segmentation)) {
+      console.error(`[IRIS] setUserInStore: Missing required segmentation field: ${field}`);
+      return;
+    }
+  }
+  
+  store.setUser(user);
+};
+
+const getUserStatsFromStore = () => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.segmentation : null;
+};
+
+const isAdminFromStore = (): boolean => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.admin : false;
+};
+
+const getUserNameFromStore = (): string => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.name : '';
+};
+
+const getUserIdFromStore = (): number | null => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.id : null;
+};
+
+const isNewUserFromStore = (): boolean => {
+  const user = useSegmentationStore.getState().user;
+  return user ? user.segmentation.n_masks === 0 : false;
+};
+
+// CRITICAL: Helper functions for confusion matrix legacy access during migration (vars.confusion_matrix)
+const getConfusionMatrixFromStore = (): ConfusionMatrix | null => {
+  return useSegmentationStore.getState().confusionMatrix;
+};
+
+const setConfusionMatrixInStore = (matrix: ConfusionMatrix) => {
+  const store = useSegmentationStore.getState();
+  
+  // Validate confusion matrix structure
+  if (!matrix || typeof matrix !== 'object') {
+    console.error('[IRIS] setConfusionMatrixInStore: Invalid matrix object', matrix);
+    return;
+  }
+  
+  if (!Array.isArray(matrix.matrix) || matrix.matrix.length === 0) {
+    console.error('[IRIS] setConfusionMatrixInStore: Invalid matrix array');
+    return;
+  }
+  
+  store.updateConfusionMatrix(matrix);
+};
+
+const getAccuracyStatsFromStore = () => {
+  const store = useSegmentationStore.getState();
+  return store.getAccuracyStats();
+};
+
+const clearConfusionMatrixFromStore = () => {
+  const store = useSegmentationStore.getState();
+  store.clearConfusionMatrix();
+};
+
+const getConfusionMatrixDataFromStore = (): number[][] | null => {
+  const store = useSegmentationStore.getState();
+  return store.getConfusionMatrixData();
+};
+
+const createConfusionMatrixFromStore = (
+  matrix: number[][], 
+  truePositives: { [classId: number]: number },
+  userClasses: number[],
+  classNames: string[]
+): ConfusionMatrix => {
+  const store = useSegmentationStore.getState();
+  return store.createConfusionMatrix(matrix, truePositives, userClasses, classNames);
 };
 
 // Helper function to trigger legacy rendering
@@ -844,7 +998,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskDimensions: null,
       maskHistory: [],
       userMaskHistory: [],
-      historyCurrentEpoch: 0
+      historyCurrentEpoch: 0,
+      userPixelCounts: { total: 0 } // Reset pixel counts when clearing mask
     });
 
     // Sync with legacy vars
@@ -854,6 +1009,7 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       w.vars.user_mask = null;
       w.vars.errors_mask = null;
       w.vars.mask_shape = null;
+      w.vars.n_user_pixels = { total: 0 }; // Reset legacy pixel counts too
       w.vars.history = {
         mask: [],
         user_mask: [],
@@ -1634,7 +1790,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Helper function to calculate pixel counts from mask data
   calculatePixelCounts: () => {
     const { maskData, userMaskData, classes } = get();
-    if (!maskData || !userMaskData || !classes) return { total: 0 };
+    if (!maskData || !userMaskData || !classes || classes.length === 0) {
+      return { total: 0 };
+    }
 
     const counts: { [classId: number]: number; total: number } = { total: 0 };
     
@@ -1644,10 +1802,12 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     });
 
     // Count pixels where user has drawn (user_mask[i] == 1)
+    // This matches the legacy logic: vars.n_user_pixels[maskData[i]] += 1
     for (let i = 0; i < userMaskData.length; i++) {
       if (userMaskData[i]) {
         const classId = maskData[i];
-        if (counts[classId] !== undefined) {
+        // Ensure classId is valid before counting
+        if (classId >= 0 && classId < classes.length) {
           counts[classId]++;
           counts.total++;
         }
@@ -1655,6 +1815,54 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
 
     return counts;
+  },
+
+  // Validation method for AI training requirements
+  validateAITrainingData: () => {
+    const { userPixelCounts } = get();
+    
+    let classesWithEnoughPixels = 0;
+    const classPixelCounts: { [classId: number]: number } = {};
+    
+    Object.keys(userPixelCounts).forEach(key => {
+      if (key !== 'total') {
+        const classId = parseInt(key);
+        const pixelCount = userPixelCounts[classId];
+        classPixelCounts[classId] = pixelCount;
+        
+        if (pixelCount > 10) {
+          classesWithEnoughPixels++;
+        }
+      }
+    });
+    
+    return {
+      isValid: classesWithEnoughPixels >= 2,
+      classesWithEnoughPixels,
+      totalPixels: userPixelCounts.total,
+      classPixelCounts,
+      minPixelsRequired: 10,
+      minClassesRequired: 2
+    };
+  },
+
+  // Get pixel count for specific class
+  getClassPixelCount: (classId: number) => {
+    const { userPixelCounts } = get();
+    return userPixelCounts[classId] || 0;
+  },
+
+  // Get total user pixels
+  getTotalUserPixels: () => {
+    const { userPixelCounts } = get();
+    return userPixelCounts.total || 0;
+  },
+
+  // Recalculate pixel counts (useful for manual triggers)
+  recalculatePixelCounts: () => {
+    const newCounts = get().calculatePixelCounts();
+    get().updateUserPixelCounts(newCounts);
+    return newCounts;
   },
 
   // PHASE 2: Navigation & Actions Actions
@@ -1794,13 +2002,139 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   updateConfusionMatrix: (matrix: ConfusionMatrix) => {
+    // Validate confusion matrix structure
+    if (!matrix || typeof matrix !== 'object') {
+      console.error('[IRIS] updateConfusionMatrix: Invalid matrix object', matrix);
+      return;
+    }
+    
+    if (!Array.isArray(matrix.matrix) || matrix.matrix.length === 0) {
+      console.error('[IRIS] updateConfusionMatrix: Invalid matrix array');
+      return;
+    }
+    
+    // Validate matrix is square
+    const size = matrix.matrix.length;
+    for (let i = 0; i < size; i++) {
+      if (!Array.isArray(matrix.matrix[i]) || matrix.matrix[i].length !== size) {
+        console.error('[IRIS] updateConfusionMatrix: Matrix is not square');
+        return;
+      }
+    }
+    
     set({ confusionMatrix: matrix });
+    
+    // Sync with legacy vars during migration (sync the raw matrix for backward compatibility)
+    const w = window as any;
+    if (w.vars) {
+      w.vars.confusion_matrix = matrix.matrix; // Legacy code expects just the 2D array
+    }
+    
+    console.log('[IRIS] Confusion matrix updated:', {
+      classCount: matrix.classCount,
+      totalSamples: matrix.totalSamples,
+      overallAccuracy: matrix.accuracyStats.overall,
+      worstClass: matrix.accuracyStats.worstClass,
+      worstAccuracy: matrix.accuracyStats.worstAccuracy
+    });
+  },
+
+  clearConfusionMatrix: () => {
+    set({ confusionMatrix: null });
     
     // Sync with legacy vars during migration
     const w = window as any;
     if (w.vars) {
-      w.vars.confusion_matrix = matrix;
+      w.vars.confusion_matrix = null;
     }
+  },
+
+  getAccuracyStats: () => {
+    const { confusionMatrix } = get();
+    return confusionMatrix ? confusionMatrix.accuracyStats : null;
+  },
+
+  getConfusionMatrixData: () => {
+    const { confusionMatrix } = get();
+    return confusionMatrix ? confusionMatrix.matrix : null;
+  },
+
+  // Helper method to create confusion matrix from legacy data
+  createConfusionMatrix: (
+    matrix: number[][], 
+    truePositives: { [classId: number]: number },
+    userClasses: number[],
+    classNames: string[]
+  ): ConfusionMatrix => {
+    const classCount = matrix.length;
+    let totalSamples = 0;
+    
+    // Calculate total samples
+    for (let i = 0; i < classCount; i++) {
+      for (let j = 0; j < classCount; j++) {
+        totalSamples += matrix[i][j];
+      }
+    }
+    
+    // Calculate per-class accuracy using the EXACT same logic as legacy code
+    const perClassAccuracy: number[] = [];
+    let minAccuracy = 1.0;
+    let worstClass: number | null = null;
+    let accSum = 0;
+    let accProd = userClasses.length; // Start with user_classes.length like legacy code
+    
+    // Get test_n_samples from legacy vars (this is what the original code uses)
+    const w = window as any;
+    const testNSamples = w.vars?.test_n_samples || {};
+    
+    for (const classId of userClasses) {
+      const tp = truePositives[classId] || 0;
+      
+      // Use test_n_samples.current like the original code, fallback to calculating from matrix
+      let totalForClass = testNSamples[classId]?.current;
+      
+      if (!totalForClass) {
+        // Fallback: calculate total samples for this class from the confusion matrix
+        // This is the sum of the row (actual class samples)
+        totalForClass = 0;
+        if (classId < matrix.length) {
+          for (let j = 0; j < matrix[classId].length; j++) {
+            totalForClass += matrix[classId][j];
+          }
+        }
+        // Ensure we don't divide by zero
+        totalForClass = Math.max(totalForClass, 1);
+      }
+      
+      const accuracy = tp / totalForClass;
+      
+      perClassAccuracy[classId] = accuracy;
+      accSum += accuracy;
+      accProd *= accuracy; // Multiply by accuracy like legacy code
+      
+      if (accuracy < minAccuracy) {
+        minAccuracy = accuracy;
+        worstClass = classId;
+      }
+    }
+    
+    // Calculate overall accuracy using EXACT same formula as legacy: acc_prod / acc_sum
+    const overallAccuracy = userClasses.length > 0 && accSum > 0 ? accProd / accSum : 0;
+    
+    return {
+      matrix,
+      classCount,
+      totalSamples,
+      accuracyStats: {
+        overall: overallAccuracy,
+        perClass: perClassAccuracy,
+        worstClass,
+        worstAccuracy: minAccuracy,
+        truePositives
+      },
+      timestamp: new Date(),
+      classes: classNames
+    };
   },
 
   resetViews: () => {
@@ -1814,16 +2148,53 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   setConfig: (config: ProjectConfig) => {
+    // Validate config structure before setting
+    if (!get().validateConfig(config)) {
+      console.error('[IRIS] setConfig: Invalid config structure', config);
+      return;
+    }
+    
+    // Use set to update the store state
     set({ config });
+    
+    // Verify the config was actually set
+    const currentState = get();
+    if (currentState.config !== config) {
+      console.error('[IRIS] setConfig: Failed to set config in store!', {
+        expected: config.name,
+        actual: currentState.config?.name || 'null'
+      });
+    }
     
     // Sync with legacy vars during migration
     const w = window as any;
     if (w.vars) {
       w.vars.config = config;
     }
+    
+    // Sync related data with legacy functions
+    if ((w as any).setClassesInStore && config.classes) {
+      (w as any).setClassesInStore(config.classes);
+    }
+    if ((w as any).setMaskAreaInStore && config.segmentation?.mask_area) {
+      (w as any).setMaskAreaInStore(config.segmentation.mask_area);
+    }
+    
+    console.log('[IRIS] Project config updated:', config.name);
   },
 
   setUser: (user: UserInfo) => {
+    // Basic validation
+    if (!user || typeof user !== 'object') {
+      console.error('[IRIS] setUser: Invalid user object', user);
+      return;
+    }
+    
+    if (!user.segmentation || typeof user.segmentation !== 'object') {
+      console.error('[IRIS] setUser: Invalid segmentation object');
+      return;
+    }
+    
     set({ user });
     
     // Sync with legacy vars during migration
@@ -1831,6 +2202,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.vars) {
       w.vars.user = user;
     }
+    
+    console.log('[IRIS] User updated:', user.name, `(${user.segmentation.n_masks} masks)`);
   },
 
   setMaskChanged: (changed: boolean) => {
@@ -1843,6 +2216,238 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       // When mask is saved (changed = false), reset the dialogue flag
       get().setShowDialogueBeforeNextImage(false);
     }
+  },
+
+  // Config Helper Methods
+  getConfigSection: <T extends keyof ProjectConfig>(section: T) => {
+    const { config } = get();
+    return config ? config[section] : null;
+  },
+
+  updateConfigSection: <T extends keyof ProjectConfig>(section: T, data: ProjectConfig[T]) => {
+    const { config } = get();
+    if (!config) {
+      console.error('[IRIS] updateConfigSection: No config available to update');
+      return;
+    }
+    
+    const updatedConfig = { ...config, [section]: data };
+    
+    if (!get().validateConfig(updatedConfig)) {
+      console.error('[IRIS] updateConfigSection: Invalid config after update', { section, data });
+      return;
+    }
+    
+    get().setConfig(updatedConfig);
+    
+    // Sync specific sections with legacy functions
+    const w = window as any;
+    if (section === 'classes' && w.setClassesInStore) {
+      w.setClassesInStore(data);
+    }
+    if (section === 'segmentation' && w.setMaskAreaInStore) {
+      const segmentationData = data as ProjectConfig['segmentation'];
+      if (segmentationData.mask_area) {
+        w.setMaskAreaInStore(segmentationData.mask_area);
+      }
+    }
+  },
+
+  validateConfig: (config: ProjectConfig) => {
+    try {
+      // Basic structure validation
+      if (!config || typeof config !== 'object') {
+        console.error('[IRIS] validateConfig: Config is not an object');
+        return false;
+      }
+      
+      // Required fields validation
+      const requiredFields = ['name', 'host', 'port', 'images', 'classes', 'views', 'view_groups', 'segmentation'];
+      for (const field of requiredFields) {
+        if (!(field in config)) {
+          console.error(`[IRIS] validateConfig: Missing required field: ${field}`);
+          return false;
+        }
+      }
+      
+      // Validate name
+      if (typeof config.name !== 'string' || config.name.trim() === '') {
+        console.error('[IRIS] validateConfig: Invalid name');
+        return false;
+      }
+      
+      // Validate host
+      if (typeof config.host !== 'string' || config.host.trim() === '') {
+        console.error('[IRIS] validateConfig: Invalid host');
+        return false;
+      }
+      
+      // Validate port
+      if (typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
+        console.error('[IRIS] validateConfig: Invalid port');
+        return false;
+      }
+      
+      // Validate classes
+      if (!Array.isArray(config.classes)) {
+        console.error('[IRIS] validateConfig: Classes must be an array');
+        return false;
+      }
+      
+      for (let i = 0; i < config.classes.length; i++) {
+        const cls = config.classes[i];
+        if (!cls || typeof cls !== 'object') {
+          console.error(`[IRIS] validateConfig: Invalid class at index ${i}`);
+          return false;
+        }
+        if (typeof cls.name !== 'string' || cls.name.trim() === '') {
+          console.error(`[IRIS] validateConfig: Invalid class name at index ${i}`);
+          return false;
+        }
+        if (!Array.isArray(cls.colour) || cls.colour.length !== 4) {
+          console.error(`[IRIS] validateConfig: Invalid colour array length at index ${i}, expected 4 elements`);
+          return false;
+        }
+        for (const colorValue of cls.colour) {
+          if (typeof colorValue !== 'number' || colorValue < 0 || colorValue > 255) {
+            console.error(`[IRIS] validateConfig: Invalid colour value at index ${i}, values must be 0-255`);
+            return false;
+          }
+        }
+      }
+      
+      // Validate views (can be array or object format)
+      if (!config.views || (typeof config.views !== 'object')) {
+        console.error('[IRIS] validateConfig: Views must be an array or object');
+        return false;
+      }
+      
+      if (Array.isArray(config.views)) {
+        // Array format validation
+        for (let i = 0; i < config.views.length; i++) {
+          const view = config.views[i];
+          if (!view || typeof view !== 'object') {
+            console.error(`[IRIS] validateConfig: Invalid view at index ${i}`);
+            return false;
+          }
+          if (typeof view.name !== 'string' || view.name.trim() === '') {
+            console.error(`[IRIS] validateConfig: Invalid view name at index ${i}`);
+            return false;
+          }
+          if (typeof view.type !== 'string' || view.type.trim() === '') {
+            console.error(`[IRIS] validateConfig: Invalid view type at index ${i}`);
+            return false;
+          }
+        }
+      } else {
+        // Object format validation (current IRIS format)
+        const viewNames = Object.keys(config.views);
+        if (viewNames.length === 0) {
+          console.error('[IRIS] validateConfig: Views object is empty');
+          return false;
+        }
+        
+        for (const viewName of viewNames) {
+          const view = config.views[viewName];
+          if (!view || typeof view !== 'object') {
+            console.error(`[IRIS] validateConfig: Invalid view '${viewName}'`);
+            return false;
+          }
+          // View type is optional in object format, defaults to 'image'
+          if (view.type && (typeof view.type !== 'string' || view.type.trim() === '')) {
+            console.error(`[IRIS] validateConfig: Invalid view type for '${viewName}'`);
+            return false;
+          }
+        }
+      }
+      
+      // Validate view_groups (can be array or object format)
+      if (!config.view_groups || (typeof config.view_groups !== 'object')) {
+        console.error('[IRIS] validateConfig: View groups must be an array or object');
+        return false;
+      }
+      
+      if (Array.isArray(config.view_groups)) {
+        // Array format validation (legacy)
+        for (let i = 0; i < config.view_groups.length; i++) {
+          const group = config.view_groups[i];
+          if (!Array.isArray(group)) {
+            console.error(`[IRIS] validateConfig: Invalid view group at index ${i} - must be array`);
+            return false;
+          }
+          for (let j = 0; j < group.length; j++) {
+            if (typeof group[j] !== 'string' || group[j].trim() === '') {
+              console.error(`[IRIS] validateConfig: Invalid view name in group ${i} at index ${j}`);
+              return false;
+            }
+          }
+        }
+      } else {
+        // Object format validation (current IRIS format)
+        const groupNames = Object.keys(config.view_groups);
+        if (groupNames.length === 0) {
+          console.error('[IRIS] validateConfig: View groups object is empty');
+          return false;
+        }
+        
+        for (const groupName of groupNames) {
+          const group = config.view_groups[groupName];
+          if (!Array.isArray(group)) {
+            console.error(`[IRIS] validateConfig: Invalid view group '${groupName}' - must be array`);
+            return false;
+          }
+          for (let j = 0; j < group.length; j++) {
+            if (typeof group[j] !== 'string' || group[j].trim() === '') {
+              console.error(`[IRIS] validateConfig: Invalid view name in group '${groupName}' at index ${j}`);
+              return false;
+            }
+          }
+        }
+      }
+      
+      // Validate segmentation
+      if (!config.segmentation || typeof config.segmentation !== 'object') {
+        console.error('[IRIS] validateConfig: Invalid segmentation section');
+        return false;
+      }
+      
+      // Validate AI model if present
+      if (config.segmentation.ai_model) {
+        const aiModel = config.segmentation.ai_model;
+        if (typeof aiModel.n_estimators !== 'number' || aiModel.n_estimators <= 0) {
+          console.error('[IRIS] validateConfig: Invalid AI model field: n_estimators');
+          return false;
+        }
+        if (typeof aiModel.max_depth !== 'number' || aiModel.max_depth <= 0) {
+          console.error('[IRIS] validateConfig: Invalid AI model field: max_depth');
+          return false;
+        }
+        if (typeof aiModel.n_leaves !== 'number' || aiModel.n_leaves <= 0) {
+          console.error('[IRIS] validateConfig: Invalid AI model field: n_leaves');
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('[IRIS] validateConfig: Validation error:', error);
+      return false;
+    }
+  },
+
+  getConfigDebugInfo: () => {
+    const { config } = get();
+    
+    return {
+      loaded: config !== null,
+      sections: config ? Object.keys(config) : [],
+      valid: config ? get().validateConfig(config) : false,
+      hasClasses: config?.classes ? config.classes.length : 0,
+      hasViews: config?.views ? (Array.isArray(config.views) ? config.views.length : Object.keys(config.views).length) : 0,
+      hasViewGroups: config?.view_groups ? (Array.isArray(config.view_groups) ? config.view_groups.length : Object.keys(config.view_groups).length) : 0,
+      hasSegmentation: !!config?.segmentation,
+      hasAIModel: !!config?.segmentation?.ai_model
+    };
   },
 
   // Image Navigation State
@@ -2037,9 +2642,33 @@ const initializeNavigationActionsStateFromLegacy = () => {
       store.setUser(w.vars.user);
     }
     
-    // Initialize confusion matrix
-    if (w.vars.confusion_matrix) {
-      store.updateConfusionMatrix(w.vars.confusion_matrix);
+    // Initialize confusion matrix - NOTE: confusion_matrix is now managed by React store
+    // Legacy vars.confusion_matrix is only used as fallback during migration
+    if (w.vars.confusion_matrix && Array.isArray(w.vars.confusion_matrix)) {
+      // Handle legacy 2D array format - convert to structured format
+      console.warn('[IRIS Migration] Found legacy confusion_matrix format, converting to React store format');
+      const matrix = w.vars.confusion_matrix;
+      const classCount = matrix.length;
+      const classNames = w.vars.classes ? w.vars.classes.map((cls: any) => cls.name) : 
+                        Array.from({length: classCount}, (_, i) => `Class ${i}`);
+      
+      // Create structured confusion matrix (without accuracy stats since we don't have tp data)
+      const structuredMatrix = {
+        matrix,
+        classCount,
+        totalSamples: matrix.flat().reduce((sum: number, val: number) => sum + val, 0),
+        accuracyStats: {
+          overall: 0,
+          perClass: [],
+          worstClass: null,
+          worstAccuracy: 0,
+          truePositives: {}
+        },
+        timestamp: new Date(),
+        classes: classNames
+      };
+      
+      store.updateConfusionMatrix(structuredMatrix);
     }
     
     // Initialize mask changed state
@@ -2115,6 +2744,31 @@ if (typeof window !== 'undefined') {
   (window as any).canUndoFromStore = canUndoFromStore;
   (window as any).canRedoFromStore = canRedoFromStore;
   
+  // Export config helper functions for legacy JavaScript
+  (window as any).getConfigFromStore = getConfigFromStore;
+  (window as any).setConfigInStore = setConfigInStore;
+  (window as any).getConfigSectionFromStore = getConfigSectionFromStore;
+  (window as any).updateConfigSectionInStore = updateConfigSectionInStore;
+  (window as any).validateConfigFromStore = validateConfigFromStore;
+  (window as any).getConfigDebugInfoFromStore = getConfigDebugInfoFromStore;
+  
+  // Export user helper functions for legacy JavaScript
+  (window as any).getUserFromStore = getUserFromStore;
+  (window as any).setUserInStore = setUserInStore;
+  (window as any).getUserStatsFromStore = getUserStatsFromStore;
+  (window as any).isAdminFromStore = isAdminFromStore;
+  (window as any).getUserNameFromStore = getUserNameFromStore;
+  (window as any).getUserIdFromStore = getUserIdFromStore;
+  (window as any).isNewUserFromStore = isNewUserFromStore;
+  
+  // CRITICAL: Export confusion matrix helper functions for legacy JavaScript (vars.confusion_matrix migration)
+  (window as any).getConfusionMatrixFromStore = getConfusionMatrixFromStore;
+  (window as any).setConfusionMatrixInStore = setConfusionMatrixInStore;
+  (window as any).getAccuracyStatsFromStore = getAccuracyStatsFromStore;
+  (window as any).clearConfusionMatrixFromStore = clearConfusionMatrixFromStore;
+  (window as any).getConfusionMatrixDataFromStore = getConfusionMatrixDataFromStore;
+  (window as any).createConfusionMatrixFromStore = createConfusionMatrixFromStore;
+  
   // Initialize from legacy vars when available
   (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
   (window as any).initializeCoreDrawingStateFromLegacy = initializeCoreDrawingStateFromLegacy;
@@ -2185,5 +2839,11 @@ export {
   getClassCountFromStore,
   setClassesInStore,
   getCurrentClassFromStore,
-  setCurrentClassInStore
+  setCurrentClassInStore,
+  getConfusionMatrixFromStore,
+  setConfusionMatrixInStore,
+  getAccuracyStatsFromStore,
+  clearConfusionMatrixFromStore,
+  getConfusionMatrixDataFromStore,
+  createConfusionMatrixFromStore
 };

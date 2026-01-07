@@ -116,7 +116,15 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.beginPath();
       
       // Line width depends on number of views
-      if (w.vars.config?.views && Object.keys(w.vars.config.views).length < 2) {
+      // Primary source: React store, fallback: legacy vars
+      const views = (window as any).getConfigSectionFromStore ? 
+        (window as any).getConfigSectionFromStore('views') : (() => {
+          console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for line width - React store not available');
+          return w.vars?.config?.views;
+        })();
+      
+      const viewCount = views ? (Array.isArray(views) ? views.length : Object.keys(views).length) : 0;
+      if (viewCount < 2) {
         ctx.lineWidth = 3;
       } else {
         ctx.lineWidth = 2;

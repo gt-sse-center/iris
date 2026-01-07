@@ -144,39 +144,105 @@ const SegmentationApp: React.FC = () => {
     tryInit();
   }, []);
 
-  // Initialize ViewManager store from legacy vars
+  // Initialize ViewManager store from React store config (not legacy vars)
   useEffect(() => {
     const initializeViewManager = () => {
-      const w = window as any;
-      if (w.vars && w.vars.config) {
-        console.log('🔧 Initializing ViewManager from legacy vars...');
-        useViewManagerStore.getState().initializeFromLegacy()
-          .then(() => {
-            console.log('✅ ViewManager initialized successfully');
-          })
-          .catch((error) => {
-            console.error('❌ Failed to initialize ViewManager:', error);
+      const config = useSegmentationStore.getState().config;
+      console.log('🔧 initializeViewManager called, config:', config ? 'available' : 'null', 'views:', config?.views ? 'available' : 'missing');
+      
+      if (config && config.views) {
+        console.log('🔧 Initializing ViewManager from React store config...');
+        
+        const viewManagerStore = useViewManagerStore.getState();
+        
+        // Set views from config
+        const views: { [name: string]: any } = {};
+        if (Array.isArray(config.views)) {
+          config.views.forEach((view: any) => {
+            views[view.name] = {
+              name: view.name,
+              type: view.type || 'image',
+              description: view.description || '',
+            };
           });
+        } else if (typeof config.views === 'object') {
+          Object.entries(config.views).forEach(([name, view]: [string, any]) => {
+            views[name] = {
+              name: name,
+              type: view.type || 'image',
+              description: view.description || '',
+            };
+          });
+        }
+        
+        console.log('🔧 ViewManager: Setting views:', Object.keys(views));
+        viewManagerStore.setViews(views);
+        
+        // Set view groups - handle both array and object formats
+        if (config.view_groups) {
+          console.log('🔧 ViewManager: Setting view groups:', config.view_groups);
+          if (Array.isArray(config.view_groups)) {
+            // Convert array format to object format
+            const viewGroupsObj: { [key: string]: string[] } = {};
+            config.view_groups.forEach((group: string[], index: number) => {
+              viewGroupsObj[`group_${index}`] = group;
+            });
+            viewManagerStore.setViewGroups(viewGroupsObj);
+          } else {
+            viewManagerStore.setViewGroups(config.view_groups);
+          }
+        } else {
+          const viewNames = Object.keys(views);
+          if (viewNames.length > 0) {
+            viewManagerStore.setViewGroups({ default: viewNames.slice(0, 3) });
+          }
+        }
+        
+        // Set image info
+        const currentImageId = window.vars?.image_id;
+        if (currentImageId) {
+          viewManagerStore.setImage(currentImageId, window.vars?.image_location || [0, 0]);
+        }
+        
+        // Set image dimensions
+        if (window.vars?.image_shape && window.vars.image_shape.length >= 2) {
+          const [width, height] = window.vars.image_shape;
+          viewManagerStore.setImageDimensions(width, height);
+        }
+        
+        // Mark as initialized
+        viewManagerStore.setInitialized(true);
+        
+        console.log('✅ ViewManager initialized from React store successfully');
+      } else {
+        console.log('⚠️ ViewManager: Config or views not available yet');
       }
     };
 
-    // Try to initialize immediately if vars are already available
-    if (window.vars) {
-      initializeViewManager();
-    }
-
-    // Also listen for when legacy vars are loaded
-    const checkForVars = setInterval(() => {
-      if (window.vars && window.vars.config && window.vars.config.views) {
-        clearInterval(checkForVars);
-        initializeViewManager();
+    // Subscribe to config changes in the segmentation store
+    console.log('🔧 Setting up ViewManager subscription...');
+    const unsubscribe = useSegmentationStore.subscribe(
+      (state) => {
+        console.log('🔧 Store subscription triggered, config available:', !!state.config, 'views available:', !!state.config?.views);
+        const viewManagerState = useViewManagerStore.getState();
+        const hasViews = Object.keys(viewManagerState.views).length > 0;
+        
+        // Initialize if we have config with views but ViewManager doesn't have views yet
+        if (state.config && state.config.views && !hasViews) {
+          console.log('🔧 Config detected in store and ViewManager has no views, initializing ViewManager...');
+          // Add a small delay to ensure the config is fully processed
+          setTimeout(() => {
+            initializeViewManager();
+          }, 100);
+        }
       }
-    }, 100);
+    );
 
-    // Clean up after 10 seconds
-    setTimeout(() => clearInterval(checkForVars), 10000);
+    // Try to initialize immediately if config is already available
+    console.log('🔧 Trying immediate ViewManager initialization...');
+    initializeViewManager();
 
-    return () => clearInterval(checkForVars);
+    return unsubscribe;
   }, []);
 
   // Initialize navigation store with image list

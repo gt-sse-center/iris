@@ -104,10 +104,10 @@ export interface AIModelConfig {
 
 export interface ClassConfig {
   name: string;
-  colour: number[];
-  css_colour: string;
+  colour: [number, number, number, number]; // RGBA tuple
+  css_colour?: string; // Optional CSS color string (computed)
   description?: string;
-  user_colour?: number[];
+  user_colour?: [number, number, number, number]; // Optional user-specific color
 }
 
 // PHASE 2: Navigation & Actions Types
@@ -117,10 +117,11 @@ export interface ProjectConfig {
   port: number;
   images: string | string[];
   classes: ClassConfig[];
-  views: ViewConfig[];
-  view_groups: string[][];
+  views: ViewConfig[] | { [key: string]: ViewConfig }; // Support both array and object formats
+  view_groups: string[][] | { [key: string]: string[] }; // Support both array and object formats
   segmentation: {
     mask_path: string;
+    mask_area?: [number, number, number, number]; // Optional mask area coordinates
     ai_model: AIModelConfig;
     scoring: {
       enabled: boolean;
@@ -151,15 +152,24 @@ export interface UserInfo {
     score_unverified: number;
     n_masks: number;
     rank?: number;
+    last_masks?: Action[];
   };
+  config?: any; // Project configuration (only available for current user or admin)
 }
 
 export interface ConfusionMatrix {
-  matrix: number[][];
-  classes: string[];
-  accuracy: number;
-  f1_score: number;
-  jaccard_index: number;
+  matrix: number[][]; // 2D array [actual_class][predicted_class]
+  classCount: number;
+  totalSamples: number;
+  accuracyStats: {
+    overall: number; // Overall accuracy (acc_prod / acc_sum)
+    perClass: number[]; // Per-class accuracy (tp[class] / test_n_samples[class])
+    worstClass: number | null; // Class with lowest accuracy
+    worstAccuracy: number; // Lowest accuracy value
+    truePositives: { [classId: number]: number }; // tp values from legacy code
+  };
+  timestamp: Date;
+  classes: string[]; // Class names for display
 }
 
 export interface UserConfig {
@@ -182,6 +192,22 @@ export interface SegmentationMask {
   score_unverified: boolean;
   last_modification: string;
   time_spent: string;
+}
+
+// User Pixel Counts Interface (replaces vars.n_user_pixels)
+export interface UserPixelCounts {
+  total: number;
+  [classId: number]: number; // Per-class pixel counts
+}
+
+// AI Training Validation Result
+export interface AITrainingValidation {
+  isValid: boolean;
+  classesWithEnoughPixels: number;
+  totalPixels: number;
+  classPixelCounts: { [classId: number]: number };
+  minPixelsRequired: number;
+  minClassesRequired: number;
 }
 
 export interface UserProfile {
@@ -271,6 +297,30 @@ declare global {
     discardFutureInStore?: () => void;
     canUndoFromStore?: () => boolean;
     canRedoFromStore?: () => boolean;
+    
+    // Config Helper Functions (NEW)
+    getConfigFromStore?: () => any | null;
+    setConfigInStore?: (config: any) => void;
+    getConfigSectionFromStore?: (section: string) => any | null;
+    updateConfigSectionInStore?: (section: string, data: any) => void;
+    validateConfigFromStore?: () => boolean;
+    getConfigDebugInfoFromStore?: () => { loaded: boolean; sections: string[]; valid: boolean; hasClasses: number; hasViews: number; hasViewGroups: number; hasSegmentation: boolean; hasAIModel: boolean };
+    
+    // Confusion Matrix Helper Functions (NEW - vars.confusion_matrix migration)
+    getConfusionMatrixFromStore?: () => any | null;
+    setConfusionMatrixInStore?: (matrix: any) => void;
+    getAccuracyStatsFromStore?: () => any | null;
+    clearConfusionMatrixFromStore?: () => void;
+    getConfusionMatrixDataFromStore?: () => number[][] | null;
+    createConfusionMatrixFromStore?: (matrix: number[][], truePositives: any, userClasses: number[], classNames: string[]) => any;
+    
+    // User Pixel Counts Helper Functions (NEW - vars.n_user_pixels migration)
+    getUserPixelCountsFromStore?: () => UserPixelCounts;
+    updateUserPixelCountsInStore?: () => UserPixelCounts;
+    getClassPixelCountFromStore?: (classId: number) => number;
+    getTotalUserPixelsFromStore?: () => number;
+    validateAITrainingDataFromStore?: () => AITrainingValidation;
+    recalculatePixelCountsFromStore?: () => UserPixelCounts;
     
     // Initialization Functions
     initializeFiltersFromLegacy?: () => void;

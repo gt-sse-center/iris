@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useSegmentationStore } from '../stores/segmentationStore';
 
 interface ConfusionMatrixModalProps {
   isOpen: boolean;
@@ -12,6 +13,9 @@ interface ConfusionMatrixModalProps {
  * across different classes. Shows real vs predicted class performance.
  */
 const ConfusionMatrixModal: React.FC<ConfusionMatrixModalProps> = ({ isOpen, onClose }) => {
+  // Get confusion matrix from React store (primary source)
+  const confusionMatrix = useSegmentationStore(state => state.confusionMatrix);
+  
   // Handle Escape key
   useEffect(() => {
     if (isOpen) {
@@ -29,11 +33,6 @@ const ConfusionMatrixModal: React.FC<ConfusionMatrixModalProps> = ({ isOpen, onC
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  // Get confusion matrix and classes from window.vars
-  const w = window as any;
-  const confusionMatrix = w.vars?.confusion_matrix;
-  const classes = w.vars?.classes || [];
 
   // Format numbers nicely (from legacy nice_number function)
   const niceNumber = (num: number): string => {
@@ -75,21 +74,30 @@ const ConfusionMatrixModal: React.FC<ConfusionMatrixModalProps> = ({ isOpen, onC
         </div>
         <div className="dialogue-body">
           <div className="dialogue-info">
+            <div className="confusion-matrix-stats" style={{ marginBottom: '15px' }}>
+              <p><strong>AI Score:</strong> {(confusionMatrix.accuracyStats.overall * 100).toFixed(1)}%</p>
+              <p><strong>Total Samples:</strong> {niceNumber(confusionMatrix.totalSamples)}</p>
+              {confusionMatrix.accuracyStats.worstClass !== null && (
+                <p><strong>Worst Performing Class:</strong> {confusionMatrix.classes[confusionMatrix.accuracyStats.worstClass]} 
+                   ({(confusionMatrix.accuracyStats.worstAccuracy * 100).toFixed(1)}%)</p>
+              )}
+              <p><strong>Generated:</strong> {confusionMatrix.timestamp.toLocaleString()}</p>
+            </div>
             <table className="confusion-matrix" style={{ float: 'left' }}>
               <thead>
                 <tr className="first">
                   <td className="upper-left">Real / Prediction</td>
-                  {classes.map((classItem: any, index: number) => (
+                  {confusionMatrix.classes.map((className: string, index: number) => (
                     <td key={index} className="first">
-                      {classItem.name}
+                      {className}
                     </td>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {confusionMatrix.map((row: number[], rowIndex: number) => (
+                {confusionMatrix.matrix.map((row: number[], rowIndex: number) => (
                   <tr key={rowIndex}>
-                    <td className="first">{classes[rowIndex]?.name || ''}</td>
+                    <td className="first">{confusionMatrix.classes[rowIndex] || ''}</td>
                     {row.map((value: number, colIndex: number) => (
                       <td key={colIndex}>{niceNumber(value)}</td>
                     ))}
