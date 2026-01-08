@@ -960,6 +960,9 @@ function update_views(){
 
     // Redraw everything:
     vars.vm.render();
+    
+    // Notify React components that views have been updated
+    window.dispatchEvent(new CustomEvent('iris-update-views'));
 }
 
 function reset_views(){

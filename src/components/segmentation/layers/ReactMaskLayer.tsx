@@ -52,13 +52,19 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
       const imageShape = (window as any).getImageShapeFromStore ? 
         (window as any).getImageShapeFromStore() : w.vars?.image_shape;
       
+      // CRITICAL FIX: Save current transformation before clearing
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for clearing
+      
       if (imageShape) {
-        // Clear using image dimensions (like legacy)
-        ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
+        // Clear using canvas dimensions to respect zoom/pan
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       } else {
         console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available from React store or legacy vars');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+      
+      ctx.restore(); // Restore the zoom/pan transformation
       
       // Get mask area from React store or fallback to legacy
       const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : w.vars?.mask_area;
@@ -137,9 +143,21 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
           (window as any).getImageShapeFromStore() : w.vars?.image_shape;
         
         if (imageShape) {
-          const scaleX = canvas.width / imageShape[1];  // canvas width / image width
-          const scaleY = canvas.height / imageShape[0]; // canvas height / image height
-          ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          // CRITICAL: Only set base transformation on canvas initialization, not on every render
+          // Check if this canvas already has a transformation applied by legacy zoom
+          const currentTransform = ctx.getTransform();
+          const isIdentityTransform = (
+            currentTransform.a === 1 && currentTransform.b === 0 &&
+            currentTransform.c === 0 && currentTransform.d === 1 &&
+            currentTransform.e === 0 && currentTransform.f === 0
+          );
+          
+          // Only set base transformation if no zoom/pan has been applied yet
+          if (isIdentityTransform) {
+            const scaleX = canvas.width / imageShape[1];  // canvas width / image width
+            const scaleY = canvas.height / imageShape[0]; // canvas height / image height
+            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          }
         } else {
           console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available for canvas transformation - using identity transform');
         }
