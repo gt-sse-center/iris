@@ -373,7 +373,7 @@ const SegmentationApp: React.FC = () => {
         onOpenPreferences={handleOpenPreferences}
       />
 
-      <ViewerComparison showComparison={true} />
+      <ViewerComparison />
 
       <SegmentationStatusBar
         onOpenProfile={handleOpenProfile}

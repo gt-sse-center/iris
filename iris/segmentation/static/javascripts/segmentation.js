@@ -181,38 +181,59 @@ function save_config(config){
 }
 async function init_views(){
     show_loader("Loading views...");
+    
+    // Check if views-container exists (React ViewManager migration)
+    const viewsContainer = get_object('views-container');
+    const useLegacyViewManager = !!viewsContainer;
+    
+    if (!useLegacyViewManager) {
+        console.log('[IRIS Migration] 🔧 Legacy ViewManager disabled - using React ViewManager only');
+    }
+    
     // Use React store as primary source, fallback to legacy vars
     const mainUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
         console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main - React store not available');
         return vars.url.main;
     })();
 
-    vars.vm = new ViewManager(
-        get_object('views-container'),
-        // Primary source: React store, fallback: legacy vars
-        window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views - React store not available');
-            return vars.config.views;
-        })(),
-        window.getConfigSectionFromStore ? window.getConfigSectionFromStore('view_groups') : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups - React store not available');
-            return vars.config.view_groups;
-        })(),
-        mainUrl+"image/",
-        image_aspect_ratio = window.getImageAspectRatioFromStore ? 
-            window.getImageAspectRatioFromStore() : 
-            (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
-    );
+    // Only create legacy ViewManager if container exists
+    if (useLegacyViewManager) {
+        vars.vm = new ViewManager(
+            viewsContainer,
+            // Primary source: React store, fallback: legacy vars
+            window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views - React store not available');
+                return vars.config.views;
+            })(),
+            window.getConfigSectionFromStore ? window.getConfigSectionFromStore('view_groups') : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups - React store not available');
+                return vars.config.view_groups;
+            })(),
+            mainUrl+"image/",
+            image_aspect_ratio = window.getImageAspectRatioFromStore ? 
+                window.getImageAspectRatioFromStore() : 
+                (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
+        );
 
-    // Add standard layers to all view ports if the view type is not "bingmap":
-    vars.vm.addStandardLayer(
-        MaskLayer,
-        (view) => view.type != "bingmap"
-    );
-    vars.vm.addStandardLayer(
-        PreviewLayer,
-        (view) => view.type != "bingmap"
-    );
+        // Add standard layers to all view ports if the view type is not "bingmap":
+        vars.vm.addStandardLayer(
+            MaskLayer,
+            (view) => view.type != "bingmap"
+        );
+        vars.vm.addStandardLayer(
+            PreviewLayer,
+            (view) => view.type != "bingmap"
+        );
+    } else {
+        // Create a minimal mock ViewManager for compatibility
+        vars.vm = {
+            setImage: () => {},
+            showGroup: () => {},
+            getLayers: () => [],
+            updateViewDimensions: () => {},
+            updateSize: () => {}
+        };
+    }
 
     // It much faster to change some pixel values on a sprite and draw it then
     // to the canvas once than redrawing each pixel to the canvas directly.

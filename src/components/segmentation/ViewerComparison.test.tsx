@@ -1,94 +1,74 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ViewerComparison from './ViewerComparison';
 
 // Mock the stores
+const mockUseViewManagerStore = vi.fn();
 vi.mock('../../stores/viewManagerStore', () => ({
-  initializeViewManagerFromLegacy: vi.fn(),
-  useViewManagerStore: () => ({
-    currentGroup: 0,
-    views: [],
-    getCurrentViews: () => [],
-    updateViewDimensions: vi.fn(),
-    setImageLocation: vi.fn(),
-    viewWidth: 800,
-    viewHeight: 600,
-    showControls: true,
-    imageId: 'test-image',
-    imageLocation: [0, 0] as [number, number],
-    debugMode: true,
-    isInitialized: false,
-    initializeFromLegacy: vi.fn().mockResolvedValue(undefined),
-    getDebugInfo: () => ({
-      hasViews: false,
-      viewsCount: 0,
-      currentGroup: 'default',
-      imageId: 'test-image',
-      imageLocation: [0, 0],
-      filters: { contrast: false, invert: false, brightness: 100, saturation: 100 },
-      isInitialized: false,
-      initializationError: null,
-    }),
-    retryInitialization: vi.fn(),
-  }),
+  useViewManagerStore: () => mockUseViewManagerStore(),
 }));
 
-vi.mock('../../stores/segmentationStore', () => ({
-  useSegmentationStore: () => ({
-    getDebugInfo: () => ({
-      showMask: true,
-      currentImageId: 'test-image',
-      imagesCount: 0,
-      filtersActive: false,
-      brightness: 100,
-      saturation: 100,
-      contrast: false,
-      invert: false,
-    }),
-  }),
+// Mock ReactViewManager component
+vi.mock('./ReactViewManager', () => ({
+  default: () => <div data-testid="react-view-manager">React ViewManager</div>,
+}));
+
+// Mock ErrorBoundary component
+vi.mock('./ErrorBoundary', () => ({
+  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 // Mock legacy functions that might be called
 beforeEach(() => {
   // Mock window.vars and legacy functions
   (window as any).vars = {
-    debug_mode: true,
     config: { views: {} },
-    vm: { updateViewDimensions: vi.fn() },
   };
-  (window as any).init_views = vi.fn();
-  (window as any).updateViewDimensions = vi.fn();
 });
 
 describe('ViewerComparison', () => {
   beforeEach(() => {
     // Reset mocks
     vi.clearAllMocks();
+    
+    // Default mock return value
+    mockUseViewManagerStore.mockReturnValue({
+      isInitialized: false,
+      initializeFromLegacy: vi.fn().mockResolvedValue(undefined),
+    });
   });
 
-  it('renders debug mode notice', async () => {
+  it('renders initialization message when not initialized', async () => {
     await act(async () => {
       render(<ViewerComparison />);
     });
-    expect(screen.getByText(/Debug Mode: Comparing Legacy vs React ViewManagers/)).toBeInTheDocument();
+    expect(screen.getByText('Initializing React ViewManager...')).toBeInTheDocument();
   });
 
-  it('shows legacy and react viewer sections', async () => {
+  it('renders React ViewManager when initialized', async () => {
+    // Mock initialized state
+    mockUseViewManagerStore.mockReturnValue({
+      isInitialized: true,
+      initializeFromLegacy: vi.fn().mockResolvedValue(undefined),
+    });
+
     await act(async () => {
       render(<ViewerComparison />);
     });
-    expect(screen.getByText('🔧 Legacy ViewManager (JavaScript)')).toBeInTheDocument();
-    expect(screen.getByText('⚛️ React ViewManager (New)')).toBeInTheDocument();
+    
+    expect(screen.getByTestId('react-view-manager')).toBeInTheDocument();
+    expect(screen.getByText('React ViewManager')).toBeInTheDocument();
   });
 
-  it('toggles legacy viewer visibility', async () => {
+  it('has proper container styling', async () => {
     await act(async () => {
       render(<ViewerComparison />);
     });
-    const hideButton = screen.getAllByText('Hide')[0];
-    await act(async () => {
-      fireEvent.click(hideButton);
+    
+    const container = screen.getByText('Initializing React ViewManager...').parentElement;
+    expect(container).toHaveStyle({
+      width: '100%',
+      height: '800px',
     });
-    expect(screen.getAllByText('Show')[0]).toBeInTheDocument();
   });
 });
