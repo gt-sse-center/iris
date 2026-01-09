@@ -525,3 +525,11 @@ class BingLayer extends ViewLayer{
         this.update();
     }
 }
+
+// Make ViewManager globally available for React services
+window.ViewManager = ViewManager;
+window.ViewPort = ViewPort;
+window.ViewLayer = ViewLayer;
+window.CanvasLayer = CanvasLayer;
+window.RGBLayer = RGBLayer;
+window.BingLayer = BingLayer;

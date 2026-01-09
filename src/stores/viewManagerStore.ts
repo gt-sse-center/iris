@@ -621,15 +621,27 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
+    console.log('[ViewManager] render: Debug info', {
+      hasLegacyInstance: !!legacyViewManagerInstance,
+      hasRenderMethod: !!(legacyViewManagerInstance && legacyViewManagerInstance.render),
+      instanceType: typeof legacyViewManagerInstance
+    });
+    
     if (legacyViewManagerInstance && legacyViewManagerInstance.render) {
+      console.log('[ViewManager] render: Using legacy ViewManager instance');
       legacyViewManagerInstance.render();
     } else {
       // FALLBACK: Direct legacy call
       console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_views - React store ViewManager not available');
-      const w = window as any;
-      if (w.render_views) {
-        w.render_views();
-      }
+      // const w = window as any;
+      // if (w.render_views) {
+      //   w.render_views();
+      // } else if (w.vars && w.vars.vm && w.vars.vm.render) {
+      //   console.warn('[IRIS Migration] ⚠️ FALLBACK: Using vars.vm.render');
+      //   w.vars.vm.render();
+      // } else {
+      //   console.error('[ViewManager] render: No rendering method available');
+      // }
     }
     
     // Notify React components
@@ -658,7 +670,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   renderPreview: () => {
-    console.log('[ViewManager] renderPreview: Triggering preview render (ONE-WAY SYNC)');
+    // console.log('[ViewManager] renderPreview: Triggering preview render (ONE-WAY SYNC)');
     
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
@@ -782,7 +794,12 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // ViewManager instance management (ONE-WAY SYNC: React store -> Legacy)
   setLegacyViewManagerInstance: (instance) => {
-    console.log('[ViewManager] setLegacyViewManagerInstance: Setting legacy instance (ONE-WAY SYNC)');
+    console.log('[ViewManager] setLegacyViewManagerInstance: Setting legacy instance (ONE-WAY SYNC)', {
+      hasInstance: !!instance,
+      hasRender: !!(instance && instance.render),
+      hasGetLayers: !!(instance && instance.getLayers),
+      instanceType: typeof instance
+    });
     set({ legacyViewManagerInstance: instance });
     
     // ONE-WAY: React store manages the legacy instance
@@ -1098,6 +1115,36 @@ export const initializeViewManagerFromLegacy = () => {
 if (typeof window !== 'undefined') {
   (window as any).viewManagerStore = useViewManagerStore;
   (window as any).initializeViewManagerFromLegacy = initializeViewManagerFromLegacy;
+  
+  // CRITICAL: Check for pending ViewManager instance from early bridge
+  const checkForPendingInstance = () => {
+    const w = window as any;
+    if (w._pendingViewManagerInstance) {
+      console.log('[IRIS Migration] ✅ Found pending ViewManager instance, setting in React store');
+      useViewManagerStore.getState().setLegacyViewManagerInstance(w._pendingViewManagerInstance);
+      w._pendingViewManagerInstance = null;
+    }
+    
+    if (w._pendingImageLocation) {
+      console.log('[IRIS Migration] ✅ Found pending image location, setting in React store');
+      useViewManagerStore.getState().setImageLocation(w._pendingImageLocation);
+      w._pendingImageLocation = null;
+    }
+  };
+  
+  // Check immediately and set up the real bridge function
+  checkForPendingInstance();
+  
+  // Replace early bridge with real bridge function
+  (window as any).setViewManagerInStore = (instance: any) => {
+    console.log('[IRIS Migration] ✅ Real bridge: Setting ViewManager instance in React store');
+    useViewManagerStore.getState().setLegacyViewManagerInstance(instance);
+  };
+  
+  (window as any).setImageLocationInStore = (location: [number, number]) => {
+    console.log('[IRIS Migration] ✅ Real bridge: Setting image location in React store');
+    useViewManagerStore.getState().setImageLocation(location);
+  };
   
   // PHASE 3A: Legacy bridge functions for zoom/pan/view operations
   (window as any).reactViewManager = {

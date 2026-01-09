@@ -237,8 +237,6 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     width: '100%',
     height: '100%',
     display: 'block',
-    // Add distinctive styling to identify React canvas
-    border: '2px solid blue', // Bright blue border to identify React RGB canvas
     backgroundColor: 'transparent',
     cursor: 'crosshair',
     WebkitTouchCallout: 'none',

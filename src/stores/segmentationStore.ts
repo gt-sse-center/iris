@@ -2682,6 +2682,26 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  
+  // CRITICAL: Check for pending image ID from early bridge
+  const checkForPendingImageId = () => {
+    const w = window as any;
+    if (w._pendingImageId) {
+      console.log('[IRIS Migration] ✅ Found pending image ID, setting in React store');
+      useSegmentationStore.getState().setCurrentImage(w._pendingImageId);
+      w._pendingImageId = null;
+    }
+  };
+  
+  // Check immediately
+  checkForPendingImageId();
+  
+  // Replace early bridge with real bridge function
+  (window as any).setCurrentImageIdInStore = (imageId: string) => {
+    console.log('[IRIS Migration] ✅ Real bridge: Setting current image ID in React store');
+    useSegmentationStore.getState().setCurrentImage(imageId);
+  };
+  
   (window as any).getApiUrlsFromStore = getApiUrlsFromStore;
   (window as any).getApiUrlFromStore = getApiUrlFromStore;
   (window as any).setApiUrlsInStore = setApiUrlsInStore;

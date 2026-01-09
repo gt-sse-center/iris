@@ -21,7 +21,7 @@ const SegmentationStatusBar: React.FC<SegmentationStatusBarProps> = ({
     <div
       id="statusbar"
       className="statusbar"
-      style={{ visibility: 'hidden', position: 'fixed', bottom: '10px', zIndex: 10 }}
+      style={{ visibility: 'visible', position: 'fixed', bottom: '10px', zIndex: 10 }}
     >
       <UserInfo onOpenProfile={onOpenProfile} />
       <AdminButton />

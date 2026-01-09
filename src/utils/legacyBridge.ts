@@ -406,9 +406,11 @@ if (typeof window !== 'undefined') {
   
   w.setCurrentImageIdInStore = (imageId: string) => {
     if (w.segmentationStore) {
+      console.log('[IRIS Migration] ✅ Real bridge: Setting current image ID in React store');
       w.segmentationStore.getState().setCurrentImage(imageId);
     } else {
-      console.warn('[IRIS Migration] setCurrentImageIdInStore: React store not available');
+      console.log('[IRIS Migration] ⏳ React store not available, storing image ID as pending');
+      w._pendingImageId = imageId;
     }
   };
   

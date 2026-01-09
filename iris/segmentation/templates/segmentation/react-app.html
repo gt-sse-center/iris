@@ -18,6 +18,26 @@
     <script type="text/javascript" src="{{ url_for('segmentation.static', filename='javascripts/segmentation/views.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('segmentation.static', filename='javascripts/segmentation.js') }}"></script>
     
+    <!-- CRITICAL: Verify legacy functions are available immediately after segmentation.js loads -->
+    <script type="text/javascript">
+        console.log('🔧 Verifying legacy function exports after segmentation.js load:');
+        console.log('- window.mouse_wheel:', typeof window.mouse_wheel);
+        console.log('- window.mouse_move:', typeof window.mouse_move);
+        console.log('- window.mouse_down:', typeof window.mouse_down);
+        console.log('- window.zoom:', typeof window.zoom);
+        console.log('- window.trackTransforms:', typeof window.trackTransforms);
+        console.log('- window.update_cursor_coords:', typeof window.update_cursor_coords);
+        console.log('- window.user_draws_on_mask:', typeof window.user_draws_on_mask);
+        console.log('- window.render_preview:', typeof window.render_preview);
+        console.log('- window.get_tool_offset:', typeof window.get_tool_offset);
+        
+        if (typeof window.mouse_wheel === 'undefined') {
+            console.error('❌ CRITICAL: Legacy mouse functions not exported! Check segmentation.js');
+        } else {
+            console.log('✅ Legacy functions successfully exported');
+        }
+    </script>
+    
     <!-- Pass data to JavaScript exactly as before -->
     <script type="text/javascript">
         // GLOBAL VARIABLES - preserved exactly as in original template
@@ -93,92 +113,63 @@
             }
         }
 
-        // React will call init_segmentation when ready
+        // React will handle initialization directly - no more polling or legacy init calls
         
         // Add debugging for script loading
         console.log('🔧 Legacy scripts loading status:');
         console.log('- vars exists:', typeof vars !== 'undefined');
-        console.log('- init_segmentation exists:', typeof init_segmentation !== 'undefined');
-        console.log('- window.init_segmentation exists:', typeof window.init_segmentation !== 'undefined');
+        console.log('- ViewManager class exists:', typeof ViewManager !== 'undefined');
         
-        // The init_segmentation function should already be globally available
-        // from the segmentation.js file, but let's double-check
-        if (typeof init_segmentation !== 'undefined' && !window.init_segmentation) {
-            window.init_segmentation = init_segmentation;
-            console.log('✅ init_segmentation made globally available via template');
-        } else if (window.init_segmentation) {
-            console.log('✅ init_segmentation already globally available');
-        } else {
-            console.warn('⚠️ init_segmentation not found during script loading');
-        }
-        
-        // Initialize React store with image ID when available
-        function initializeImageIdInStore() {
-            if (window.segmentationStore && window.setCurrentImageIdInStore) {
-                const imageId = {{image_id|tojson}};
-                if (imageId) {
-                    window.setCurrentImageIdInStore(imageId);
-                    console.log('[IRIS] Image ID initialized in React store:', imageId);
-                } else {
-                    console.warn('[IRIS] No image ID available for React store initialization');
-                }
-            } else {
-                // Retry after a short delay if store not ready
-                setTimeout(initializeImageIdInStore, 100);
-            }
-        }
+        // REMOVED: Legacy initialization functions - React now handles this directly
+        // initializeImageIdInStore, initializeImageLocationInStore, initializeViewManagerStore
+        // are no longer needed as React loads config directly from APIs
+    </script>
 
-        // Initialize React store with image location when available
-        function initializeImageLocationInStore() {
-            if (window.viewManagerStore && window.setImageLocationInStore) {
-                const location = {{image_location|tojson}};
-                if (location && Array.isArray(location) && location.length === 2) {
-                    window.setImageLocationInStore(location);
-                    console.log('[IRIS] Image location initialized in React store:', location);
-                } else {
-                    console.warn('[IRIS] No valid image location available for React store initialization');
-                }
-            } else {
-                // Retry after a short delay if store not ready
-                setTimeout(initializeImageLocationInStore, 100);
-            }
-        }
-
-        // Initialize ViewManager store from legacy ViewManager (ONE-WAY SYNC)
-        function initializeViewManagerStore() {
-            if (window.viewManagerStore && vars.vm) {
-                const store = window.viewManagerStore.getState();
-                
-                // ONE-WAY: Set legacy instance in store (store manages it)
-                store.setLegacyViewManagerInstance(vars.vm);
-                
-                // Initialize store state from legacy ViewManager
-                store.initializeFromLegacy().then(() => {
-                    console.log('[IRIS Migration] ✅ ViewManager store initialized from legacy (ONE-WAY SYNC)');
-                }).catch((error) => {
-                    console.error('[IRIS Migration] ❌ ViewManager store initialization failed:', error);
-                });
-            } else if (window.viewManagerStore) {
-                // Store available but no legacy ViewManager yet - retry
-                setTimeout(initializeViewManagerStore, 100);
-            } else {
-                // Store not available yet - retry
-                setTimeout(initializeViewManagerStore, 100);
-            }
-        }
+    <!-- CRITICAL: Set up bridge functions BEFORE React loads to prevent timing issues -->
+    <script type="text/javascript">
+        // Bridge functions must be available immediately when legacy scripts run
+        // This prevents the timing issue where init_segmentation runs before React finishes loading
         
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                initializeImageIdInStore();
-                initializeImageLocationInStore();
-                initializeViewManagerStore();
-            });
-        } else {
-            initializeImageIdInStore();
-            initializeImageLocationInStore();
-            initializeViewManagerStore();
-        }
+        console.log('🔧 Setting up early bridge functions...');
+        
+        // Early bridge function - will be replaced when React store loads
+        window.setViewManagerInStore = function(instance) {
+            console.log('[IRIS Migration] 🔧 Early bridge: ViewManager instance received, storing temporarily');
+            window._pendingViewManagerInstance = instance;
+            
+            // Try to set in React store if available
+            if (window.viewManagerStore) {
+                console.log('[IRIS Migration] ✅ React store available, setting instance immediately');
+                window.viewManagerStore.getState().setLegacyViewManagerInstance(instance);
+                window._pendingViewManagerInstance = null;
+            } else {
+                console.log('[IRIS Migration] ⏳ React store not ready, instance stored as pending');
+                // React will pick this up when it loads
+            }
+        };
+        
+        // Early bridge function for other store operations
+        window.setCurrentImageIdInStore = function(imageId) {
+            console.log('[IRIS Migration] 🔧 Early bridge: Image ID received, storing temporarily');
+            window._pendingImageId = imageId;
+            
+            if (window.segmentationStore) {
+                window.segmentationStore.getState().setCurrentImage(imageId);
+                window._pendingImageId = null;
+            }
+        };
+        
+        window.setImageLocationInStore = function(location) {
+            console.log('[IRIS Migration] 🔧 Early bridge: Image location received, storing temporarily');
+            window._pendingImageLocation = location;
+            
+            if (window.viewManagerStore) {
+                window.viewManagerStore.getState().setImageLocation(location);
+                window._pendingImageLocation = null;
+            }
+        };
+        
+        console.log('✅ Early bridge functions ready');
     </script>
 
     <!-- Load React Segmentation SPA -->

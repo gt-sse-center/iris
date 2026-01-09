@@ -68,8 +68,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     }
     
     // CRITICAL FIX: Save current transformation before clearing
-    const currentTransform = ctx.getTransform();
-    console.log('[ReactPreviewLayer] Preserving transform:', currentTransform);
+    // const currentTransform = ctx.getTransform();
+    ctx.getTransform();
+    // console.log('[ReactPreviewLayer] Preserving transform:', currentTransform);
     
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
     ctx.save();
@@ -218,79 +219,128 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     const canvas = canvasRef.current;
     if (!canvas || !transform) return;
     
-    // Create wrapped mouse event handlers that update coordinates properly
-    const handleMouseMove = (event: MouseEvent) => {
-      try {
-        updateCursorCoords(canvas, event);
-        
-        // Call legacy mouse_move handler
-        const w = window as any;
-        if (w.mouse_move) {
-          w.mouse_move.call(canvas, event);
-        }
-      } catch (error) {
-        console.error('Error in mouse move handler:', error);
-      }
+    // Wait for legacy functions to be available
+    const waitForLegacyFunctions = () => {
+      const w = window as any;
+      return w.mouse_wheel && w.mouse_move && w.mouse_down && w.mouse_up && w.mouse_enter;
     };
     
-    const handleMouseDown = (event: MouseEvent) => {
-      try {
-        updateCursorCoords(canvas, event);
-        
-        // Call legacy mouse_down handler
-        const w = window as any;
-        if (w.mouse_down) {
-          w.mouse_down.call(canvas, event);
+    if (!waitForLegacyFunctions()) {
+      console.log('[ReactPreviewLayer] Waiting for legacy functions to load...');
+      const checkInterval = setInterval(() => {
+        if (waitForLegacyFunctions()) {
+          console.log('[ReactPreviewLayer] Legacy functions now available, setting up event handlers');
+          clearInterval(checkInterval);
+          setupEventHandlers();
         }
-      } catch (error) {
-        console.error('Error in mouse down handler:', error);
-      }
-    };
-    
-    const handleMouseUp = (event: MouseEvent) => {
-      try {
-        // Call legacy mouse_up handler
-        const w = window as any;
-        if (w.mouse_up) {
-          w.mouse_up.call(canvas, event);
-        }
-      } catch (error) {
-        console.error('Error in mouse up handler:', error);
-      }
-    };
-    
-    const handleMouseEnter = (event: MouseEvent) => {
-      updateCursorCoords(canvas, event);
+      }, 100); // Check every 100ms
       
-      // Call legacy mouse_enter handler
-      const w = window as any;
-      if (w.mouse_enter) {
-        w.mouse_enter.call(canvas, event);
-      }
-    };
+      // Cleanup interval if component unmounts
+      return () => clearInterval(checkInterval);
+    } else {
+      console.log('[ReactPreviewLayer] Legacy functions already available, setting up event handlers');
+      setupEventHandlers();
+    }
     
-    const handleMouseWheel = (event: WheelEvent) => {
-      // Call legacy mouse_wheel handler
-      const w = window as any;
-      if (w.mouse_wheel) {
-        w.mouse_wheel.call(canvas, event);
-      }
-    };
-    
-    // Add event listeners
-    canvas.addEventListener("mousemove", handleMouseMove, { passive: false });
-    canvas.addEventListener("mousedown", handleMouseDown, false);
-    canvas.addEventListener("mouseup", handleMouseUp, false);
-    canvas.addEventListener("mouseenter", handleMouseEnter, { passive: false });
-    canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+    function setupEventHandlers() {
+      // Create wrapped mouse event handlers that update coordinates properly
+      const handleMouseMove = (event: MouseEvent) => {
+        try {
+          updateCursorCoords(canvas, event);
+          
+          // Call legacy mouse_move handler
+          const w = window as any;
+          if (w.mouse_move) {
+            w.mouse_move.call(canvas, event);
+          } else {
+            console.warn('[ReactPreviewLayer] Legacy mouse_move function not available');
+          }
+        } catch (error) {
+          console.error('Error in mouse move handler:', error);
+        }
+      };
+      
+      const handleMouseDown = (event: MouseEvent) => {
+        try {
+          updateCursorCoords(canvas, event);
+          
+          console.log('[ReactPreviewLayer] Mouse down event:', {
+            buttons: event.buttons,
+            hasLegacyMouseDown: !!(window as any).mouse_down
+          });
+          
+          // Call legacy mouse_down handler
+          const w = window as any;
+          if (w.mouse_down) {
+            w.mouse_down.call(canvas, event);
+          } else {
+            console.warn('[ReactPreviewLayer] Legacy mouse_down function not available');
+          }
+        } catch (error) {
+          console.error('Error in mouse down handler:', error);
+        }
+      };
+      
+      const handleMouseUp = (event: MouseEvent) => {
+        try {
+          // Call legacy mouse_up handler
+          const w = window as any;
+          if (w.mouse_up) {
+            w.mouse_up.call(canvas, event);
+          }
+        } catch (error) {
+          console.error('Error in mouse up handler:', error);
+        }
+      };
+      
+      const handleMouseEnter = (event: MouseEvent) => {
+        updateCursorCoords(canvas, event);
+        
+        // Call legacy mouse_enter handler
+        const w = window as any;
+        if (w.mouse_enter) {
+          w.mouse_enter.call(canvas, event);
+        }
+      };
+      
+      const handleMouseWheel = (event: WheelEvent) => {
+        console.log('[ReactPreviewLayer] Mouse wheel event:', {
+          deltaY: event.deltaY,
+          wheelDelta: (event as any).wheelDelta,
+          hasLegacyMouseWheel: !!(window as any).mouse_wheel
+        });
+        
+        // Call legacy mouse_wheel handler
+        const w = window as any;
+        if (w.mouse_wheel) {
+          w.mouse_wheel.call(canvas, event);
+        } else {
+          console.warn('[ReactPreviewLayer] Legacy mouse_wheel function not available');
+        }
+      };
+      
+      // Add event listeners
+      canvas.addEventListener("mousemove", handleMouseMove, { passive: false });
+      canvas.addEventListener("mousedown", handleMouseDown, false);
+      canvas.addEventListener("mouseup", handleMouseUp, false);
+      canvas.addEventListener("mouseenter", handleMouseEnter, { passive: false });
+      canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+      
+      // Store cleanup function
+      (canvas as any)._cleanupEventHandlers = () => {
+        canvas.removeEventListener("mousemove", handleMouseMove);
+        canvas.removeEventListener("mousedown", handleMouseDown);
+        canvas.removeEventListener("mouseup", handleMouseUp);
+        canvas.removeEventListener("mouseenter", handleMouseEnter);
+        canvas.removeEventListener("wheel", handleMouseWheel);
+      };
+    }
     
     return () => {
       // Cleanup event listeners
-      canvas.removeEventListener("mousemove", handleMouseMove);
-      canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mouseup", handleMouseUp);
-      canvas.removeEventListener("mouseenter", handleMouseEnter);
-      canvas.removeEventListener("wheel", handleMouseWheel);
+      if ((canvas as any)._cleanupEventHandlers) {
+        (canvas as any)._cleanupEventHandlers();
+      }
     };
   }, [transform]);
   

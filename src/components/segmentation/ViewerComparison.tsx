@@ -9,6 +9,7 @@ import React, { useEffect } from 'react';
 import ReactViewManager from './ReactViewManager';
 import ErrorBoundary from './ErrorBoundary';
 import { useViewManagerStore } from '../../stores/viewManagerStore';
+import { useSegmentationStore } from '../../stores/segmentationStore';
 
 interface ViewerComparisonProps {
   // Props interface kept for future extensibility
@@ -16,37 +17,81 @@ interface ViewerComparisonProps {
 
 const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
   // Use store hooks instead of direct window access
-  const { isInitialized, initializeFromLegacy } = useViewManagerStore();
+  const { isInitialized } = useViewManagerStore();
+  const { config } = useSegmentationStore();
 
-  // Initialize React ViewManager from legacy vars using store action
+  // Initialize React ViewManager from React config (not legacy vars)
   useEffect(() => {
-    if (!isInitialized) {
-      const handleRetryInit = () => {
-        console.log('🔧 ViewerComparison: Attempting to initialize ViewManager...');
-        initializeFromLegacy().then(() => {
-          console.log('✅ ViewerComparison: ViewManager initialized successfully');
-        }).catch((error) => {
-          console.error('❌ ViewerComparison: Failed to initialize React ViewManager:', error);
-        });
-      };
+    if (!isInitialized && config) {
+      console.log('🔧 ViewerComparison: Attempting to initialize ViewManager from React config...');
       
-      // Try initialization immediately
-      handleRetryInit();
+      const viewManagerStore = useViewManagerStore.getState();
       
-      // Also retry periodically if not initialized
-      const retryInterval = setInterval(() => {
-        if (!useViewManagerStore.getState().isInitialized && window.vars?.config?.views) {
-          console.log('🔄 ViewerComparison: Retrying initialization...');
-          handleRetryInit();
+      try {
+        // Initialize views from React config
+        if (config.views) {
+          const views: { [name: string]: any } = {};
+          
+          // Handle both array and object formats
+          if (Array.isArray(config.views)) {
+            config.views.forEach((view: any) => {
+              views[view.name] = {
+                name: view.name,
+                type: view.type || 'image',
+                description: view.description || '',
+              };
+            });
+          } else if (typeof config.views === 'object') {
+            Object.entries(config.views).forEach(([name, view]: [string, any]) => {
+              views[name] = {
+                name: name,
+                type: view.type || 'image',
+                description: view.description || '',
+              };
+            });
+          }
+          
+          console.log('🔧 ViewerComparison: Setting views from React config:', Object.keys(views));
+          viewManagerStore.setViews(views);
         }
-      }, 1000);
-      
-      // Clean up after 10 seconds
-      setTimeout(() => clearInterval(retryInterval), 10000);
-      
-      return () => clearInterval(retryInterval);
+
+        // Initialize view groups from React config
+        if (config.view_groups) {
+          console.log('🔧 ViewerComparison: Setting view groups from React config:', config.view_groups);
+          viewManagerStore.setViewGroups(config.view_groups);
+        } else {
+          // Default group with available views
+          const viewNames = Object.keys(views || {});
+          if (viewNames.length > 0) {
+            viewManagerStore.setViewGroups({ default: viewNames.slice(0, 3) });
+          }
+        }
+
+        // Set image dimensions from React config
+        if (config.images?.shape && Array.isArray(config.images.shape) && config.images.shape.length >= 2) {
+          const [width, height] = config.images.shape;
+          viewManagerStore.setImageDimensions(width, height);
+          console.log('🔧 ViewerComparison: Setting image dimensions:', width, 'x', height);
+        }
+
+        // Set current image from legacy vars (still needed for image ID)
+        const currentImageId = (window as any).vars?.image_id;
+        if (currentImageId) {
+          const imageLocation = (window as any).vars?.image_location || [0, 0];
+          viewManagerStore.setImage(currentImageId, imageLocation);
+          console.log('🔧 ViewerComparison: Setting image:', currentImageId, 'at', imageLocation);
+        }
+
+        // Mark as initialized
+        viewManagerStore.setInitialized(true);
+        console.log('✅ ViewerComparison: ViewManager initialized successfully from React config');
+        
+      } catch (error) {
+        console.error('❌ ViewerComparison: Failed to initialize ViewManager from React config:', error);
+        viewManagerStore.setInitialized(false);
+      }
     }
-  }, [isInitialized, initializeFromLegacy]);
+  }, [isInitialized, config]);
   
   const containerStyle: React.CSSProperties = {
     margin: '10px 0px',
@@ -79,7 +124,7 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
             fontSize: '14px',
           }}
         >
-          Initializing React ViewManager...
+          {config ? 'Initializing React ViewManager...' : 'Loading configuration...'}
         </div>
       )}
     </div>
