@@ -175,12 +175,12 @@ async function init_views(){
                 (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
         );
 
-        // Store ViewManager instance in React store (primary source)
+        // Store ViewManager instance in React store (only source)
         if (window.setViewManagerInStore) {
             window.setViewManagerInStore(viewManager);
         } else {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: setViewManagerInStore not available, using legacy vars.vm');
-            vars.vm = viewManager;
+            console.error('[IRIS Migration] ❌ CRITICAL: setViewManagerInStore not available - React store required');
+            throw new Error('React store not available for ViewManager - initialization failed');
         }
 
         // Add standard layers to all view ports if the view type is not "bingmap":
@@ -202,12 +202,12 @@ async function init_views(){
             updateSize: () => {}
         };
         
-        // Store mock ViewManager in React store (primary source)
+        // Store mock ViewManager in React store (only source)
         if (window.setViewManagerInStore) {
             window.setViewManagerInStore(mockViewManager);
         } else {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: setViewManagerInStore not available, using legacy vars.vm');
-            vars.vm = mockViewManager;
+            console.error('[IRIS Migration] ❌ CRITICAL: setViewManagerInStore not available - React store required');
+            throw new Error('React store not available for ViewManager - initialization failed');
         }
     }
 
@@ -266,10 +266,10 @@ async function init_views(){
     // Load mask (now properly awaited):
     await load_mask();
 
-    // Get ViewManager from React store (primary source)
+    // Get ViewManager from React store (only source)
     const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm');
-        return vars.vm;
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available - React store required');
+        throw new Error('React store not available for ViewManager');
     })();
 
     viewManager.setImage(
@@ -310,11 +310,9 @@ function init_events(){
         if (window.viewManagerStore) {
             window.viewManagerStore.getState().updateSize();
         } else {
-            // FALLBACK: Legacy (should rarely happen)
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm - React store not available');
-            if (vars.vm && vars.vm.updateSize) {
-                vars.vm.updateSize();
-            }
+            // React store is required - no fallback
+            console.error('[IRIS Migration] ❌ CRITICAL: React store not available for updateSize');
+            throw new Error('React store not available for ViewManager');
         }
     };
 
@@ -432,20 +430,20 @@ function key_down(event){
     } else if (key == "KeyN"){
         dialogue_reset_mask();
     } else if (key == "KeyV"){
-        // Use React store ViewManager (primary source)
+        // Use React store ViewManager (only source)
         const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for toggleControls');
-            return vars.vm;
+            console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for toggleControls');
+            throw new Error('React store not available for ViewManager');
         })();
         
         if (viewManager && viewManager.toggleControls) {
             viewManager.toggleControls();
         }
     } else if (key == "KeyB"){
-        // Use React store ViewManager (primary source)
+        // Use React store ViewManager (only source)
         const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for showNextGroup');
-            return vars.vm;
+            console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for showNextGroup');
+            throw new Error('React store not available for ViewManager');
         })();
         
         if (viewManager && viewManager.showNextGroup) {
@@ -484,10 +482,10 @@ function change_brightness(up){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy brightness fallback, store not available');
     
-    // Get ViewManager from React store (primary source)
+    // Get ViewManager from React store (only source)
     const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for brightness');
-        return vars.vm;
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for brightness');
+        throw new Error('React store not available for ViewManager');
     })();
     
     // Safety check: only proceed if ViewManager is initialized
@@ -515,10 +513,10 @@ function change_saturation(up){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy saturation fallback, store not available');
     
-    // Get ViewManager from React store (primary source)
+    // Get ViewManager from React store (only source)
     const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for saturation');
-        return vars.vm;
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for saturation');
+        throw new Error('React store not available for ViewManager');
     })();
     
     // Safety check: only proceed if ViewManager is initialized
@@ -573,10 +571,10 @@ function set_contrast(visible){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy contrast fallback, store not available');
     
-    // Get ViewManager from React store (primary source)
+    // Get ViewManager from React store (only source)
     const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for contrast');
-        return vars.vm;
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for contrast');
+        throw new Error('React store not available for ViewManager');
     })();
     
     // Safety check: only proceed if ViewManager is initialized
@@ -606,10 +604,10 @@ function set_invert(visible){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy invert fallback, store not available');
     
-    // Get ViewManager from React store (primary source)
+    // Get ViewManager from React store (only source)
     const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for invert');
-        return vars.vm;
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for invert');
+        throw new Error('React store not available for ViewManager');
     })();
     
     // Safety check: only proceed if ViewManager is initialized
@@ -967,11 +965,9 @@ function update_views(){
         return;
     }
 
-    // FALLBACK: Legacy (should rarely happen)
-    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm - React store not available');
-    if (vars.vm && vars.vm.render) {
-        vars.vm.render();
-    }
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for render');
+    throw new Error('React store not available for ViewManager');
 }
 
 function reset_views(){
@@ -2152,13 +2148,9 @@ function render_mask(bbox=null){
         return;
     }
 
-    // FALLBACK: Legacy (should rarely happen)
-    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm - React store not available');
-    if (vars.vm && vars.vm.getLayers) {
-        for (let layer of vars.vm.getLayers("mask")) {
-            layer.render(bbox);
-        }
-    }
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for render_mask');
+    throw new Error('React store not available for ViewManager');
 }
 
 function render_preview(){
@@ -2168,13 +2160,9 @@ function render_preview(){
         return;
     }
 
-    // FALLBACK: Legacy (should rarely happen)
-    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm - React store not available');
-    if (vars.vm && vars.vm.getLayers) {
-        for (let layer of vars.vm.getLayers("preview")) {
-            layer.render();
-        }
-    }
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for render_preview');
+    throw new Error('React store not available for ViewManager');
 }
 
 function reset_mask(){

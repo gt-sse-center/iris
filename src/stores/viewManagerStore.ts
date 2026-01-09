@@ -340,12 +340,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   // PHASE 3A: View Management Actions
   setCurrentView: (currentView) => {
     set({ currentView });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.vm) {
-      w.vars.vm.current_view = currentView;
-    }
   },
   
   switchToView: (viewName) => {
@@ -368,14 +362,8 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     const clampedZoom = Math.max(0.1, Math.min(10.0, zoomLevel));
     set({ zoomLevel: clampedZoom, zoomFactor: clampedZoom });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.vm) {
-      w.vars.vm.zoom_level = clampedZoom;
-      w.vars.vm.zoom_factor = clampedZoom;
-    }
-    
     // Trigger legacy zoom update if available
+    const w = window as any;
     if (w.update_zoom) {
       w.update_zoom(clampedZoom);
     }
@@ -396,13 +384,8 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   setPanOffset: (panOffset) => {
     set({ panOffset });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.vm) {
-      w.vars.vm.pan_offset = panOffset;
-    }
-    
     // Trigger legacy pan update if available
+    const w = window as any;
     if (w.update_pan) {
       w.update_pan(panOffset.x, panOffset.y);
     }
@@ -419,15 +402,8 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       panOffset: { x: 0, y: 0 } 
     });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.vm) {
-      w.vars.vm.zoom_level = 1.0;
-      w.vars.vm.zoom_factor = 1.0;
-      w.vars.vm.pan_offset = { x: 0, y: 0 };
-    }
-    
     // Trigger legacy reset if available
+    const w = window as any;
     if (w.reset_view) {
       w.reset_view();
     }
@@ -440,24 +416,10 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       viewWidth: canvasDimensions.width,
       viewHeight: canvasDimensions.height
     });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.canvas_width = canvasDimensions.width;
-      w.vars.canvas_height = canvasDimensions.height;
-    }
   },
   
   updateMousePosition: (mousePosition) => {
     set({ mousePosition });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.mouse_x = mousePosition.x;
-      w.vars.mouse_y = mousePosition.y;
-    }
   },
 
   setCanvasMousePosition: (coords) => {
@@ -481,22 +443,10 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   setMouseDown: (isMouseDown) => {
     set({ isMouseDown });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.mouse_down = isMouseDown;
-    }
   },
   
   setDragging: (isDragging) => {
     set({ isDragging });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.dragging = isDragging;
-    }
   },
   
   // PHASE 3A: Coordinate Transformation
@@ -836,11 +786,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
         legacyViewManagerInstance.filters = { ...filters };
       }
       
-      // Also sync to legacy vars for compatibility
-      const w = window as any;
-      if (w.vars) {
-        w.vars.vm = legacyViewManagerInstance;
-      }
+      // React store is the only source of truth - no vars.vm sync needed
       
       console.log('[ViewManager] syncToLegacyViewManager: Sync complete');
     } catch (error) {
@@ -1039,27 +985,27 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
         console.warn('⚠️ ViewManager: No image shape found in legacy vars');
       }
       
-      // Sync filters with segmentation store
-      if (w.vars.vm?.filters) {
-        console.log('🔧 ViewManager: Syncing filters:', w.vars.vm.filters);
-        store.setFilters(w.vars.vm.filters);
-      }
-      
-      // PHASE 3A: Initialize zoom/pan/canvas state from legacy vars
-      if (w.vars.vm) {
-        if (typeof w.vars.vm.zoom_level === 'number') {
-          console.log('🔧 ViewManager: Setting zoom level:', w.vars.vm.zoom_level);
-          store.setZoomLevel(w.vars.vm.zoom_level);
+      // PHASE 3A: Initialize zoom/pan/canvas state from legacy ViewManager instance
+      const { legacyViewManagerInstance } = get();
+      if (legacyViewManagerInstance) {
+        if (typeof legacyViewManagerInstance.zoom_level === 'number') {
+          console.log('🔧 ViewManager: Setting zoom level:', legacyViewManagerInstance.zoom_level);
+          store.setZoomLevel(legacyViewManagerInstance.zoom_level);
         }
         
-        if (w.vars.vm.pan_offset) {
-          console.log('🔧 ViewManager: Setting pan offset:', w.vars.vm.pan_offset);
-          store.setPanOffset(w.vars.vm.pan_offset);
+        if (legacyViewManagerInstance.pan_offset) {
+          console.log('🔧 ViewManager: Setting pan offset:', legacyViewManagerInstance.pan_offset);
+          store.setPanOffset(legacyViewManagerInstance.pan_offset);
         }
         
-        if (w.vars.vm.current_view) {
-          console.log('🔧 ViewManager: Setting current view:', w.vars.vm.current_view);
-          store.setCurrentView(w.vars.vm.current_view);
+        if (legacyViewManagerInstance.current_view) {
+          console.log('🔧 ViewManager: Setting current view:', legacyViewManagerInstance.current_view);
+          store.setCurrentView(legacyViewManagerInstance.current_view);
+        }
+        
+        if (legacyViewManagerInstance.filters) {
+          console.log('🔧 ViewManager: Syncing filters:', legacyViewManagerInstance.filters);
+          store.setFilters(legacyViewManagerInstance.filters);
         }
       }
       

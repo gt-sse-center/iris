@@ -261,11 +261,9 @@ class ViewManager{
             return;
         }
 
-        // FALLBACK: Legacy (should rarely happen)
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm - React store not available');
-        if (vars.vm) {
-            this.showControls(!vars.vm.show_controls);
-        }
+        // React store is required - no fallback
+        console.error('[IRIS Migration] ❌ CRITICAL: React store not available for toggleControls');
+        throw new Error('React store not available for ViewManager');
     }
 }
 
