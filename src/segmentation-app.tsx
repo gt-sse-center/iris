@@ -229,10 +229,11 @@ const SegmentationApp: React.FC = () => {
         
         // Update DOM directly (mask layer visibility)
         // This replicates the behavior of legacy show_mask() function
-        if (w.vars?.vm) {
+        const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+        if (viewManager) {
           const displayState = showMask ? "block" : "none";
           try {
-            const maskLayers = w.vars.vm.getLayers("mask");
+            const maskLayers = viewManager.getLayers("mask");
             for (let layer of maskLayers) {
               if (layer.container) {
                 layer.container.style.display = displayState;
@@ -241,6 +242,8 @@ const SegmentationApp: React.FC = () => {
           } catch (error) {
             console.warn('Could not update mask layer visibility:', error);
           }
+        } else {
+          console.warn('[IRIS Migration] ⚠️ ViewManager not available for mask layer visibility');
         }
       }
     );

@@ -376,9 +376,9 @@ function key_down(event){
             const currentFilters = window.viewManagerStore.getState().filters;
             window.viewManagerStore.getState().setFilters({ contrast: !currentFilters.contrast });
         } else {
-            // FALLBACK: Legacy (should rarely happen)
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm.filters - React store not available');
-            set_contrast(!vars.vm.filters.contrast);
+            // React store is required - no fallback
+            console.error('[IRIS Migration] ❌ CRITICAL: React store not available for contrast filter');
+            throw new Error('React store not available for filter operations');
         }
     } else if (key == "KeyI"){
         // PRIMARY: Use React store for filter operations (ONE-WAY SYNC)
@@ -386,9 +386,9 @@ function key_down(event){
             const currentFilters = window.viewManagerStore.getState().filters;
             window.viewManagerStore.getState().setFilters({ invert: !currentFilters.invert });
         } else {
-            // FALLBACK: Legacy (should rarely happen)
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm.filters - React store not available');
-            set_invert(!vars.vm.filters.invert);
+            // React store is required - no fallback
+            console.error('[IRIS Migration] ❌ CRITICAL: React store not available for invert filter');
+            throw new Error('React store not available for filter operations');
         }
     } else if (key == "ArrowUp"){
         change_brightness(up=true);
@@ -2240,16 +2240,9 @@ function reset_filters(){
         return;
     }
     
-    // FALLBACK: Legacy (should rarely happen)
-    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm.filters - React store not available');
-    
-    if (vars.vm && vars.vm.filters) {
-        vars.vm.filters.brightness = 100;
-        vars.vm.filters.saturation = 100;
-        set_contrast(false);
-        set_invert(false);
-        vars.vm.render();
-    }
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for reset filters');
+    throw new Error('React store not available for filter operations');
 }
 
 // TODO: how to get the action_id without sending an additional request?

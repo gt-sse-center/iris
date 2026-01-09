@@ -525,18 +525,21 @@ if (typeof window !== 'undefined') {
     }, 0);
   };
   
-  // Add React layer management to legacy vm object
-  if (w.vars?.vm) {
-    const originalGetLayers = w.vars.vm.getLayers;
-    w.vars.vm.getReactLayers = getReactLayers;
-    w.vars.vm.renderReactLayers = renderAllReactLayers;
+  // Add React layer management to ViewManager via store
+  const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+  if (viewManager) {
+    const originalGetLayers = viewManager.getLayers;
+    viewManager.getReactLayers = getReactLayers;
+    viewManager.renderReactLayers = renderAllReactLayers;
     
     // Override getLayers to include React layers
-    w.vars.vm.getLayers = (type?: string, exclude = false) => {
+    viewManager.getLayers = (type?: string, exclude = false) => {
       const legacyLayers = originalGetLayers ? originalGetLayers(type, exclude) : [];
       const reactLayers = getReactLayers(type);
       return [...legacyLayers, ...reactLayers];
     };
+  } else {
+    console.warn('[IRIS Migration] ⚠️ ViewManager not available for React layer integration');
   }
   
   // Expose bridge functions globally for debugging

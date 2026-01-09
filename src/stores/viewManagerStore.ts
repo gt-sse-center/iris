@@ -583,15 +583,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     } else {
       // FALLBACK: Direct legacy call
       console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_views - React store ViewManager not available');
-      // const w = window as any;
-      // if (w.render_views) {
-      //   w.render_views();
-      // } else if (w.vars && w.vars.vm && w.vars.vm.render) {
-      //   console.warn('[IRIS Migration] ⚠️ FALLBACK: Using vars.vm.render');
-      //   w.vars.vm.render();
-      // } else {
-      //   console.error('[ViewManager] render: No rendering method available');
-      // }
     }
     
     // Notify React components
