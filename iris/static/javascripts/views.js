@@ -255,7 +255,18 @@ class ViewManager{
         this.show_controls = show;
     }
     toggleControls(){
-        this.showControls(!vars.vm.show_controls);
+        // Use React store ViewManager (primary source)
+        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for toggleControls');
+            return vars.vm;
+        })();
+        
+        if (viewManager && typeof viewManager.show_controls !== 'undefined') {
+            this.showControls(!viewManager.show_controls);
+        } else {
+            // Fallback to legacy behavior
+            this.showControls(!vars.vm.show_controls);
+        }
     }
 }
 

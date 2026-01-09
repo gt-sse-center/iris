@@ -125,24 +125,43 @@ const SegmentationApp: React.FC = () => {
       if (typeof w.init_segmentation === 'function') {
         console.log('🔧 Calling legacy init_segmentation...');
         w.init_segmentation();
+        return true;
       } else {
-        console.warn('❌ Legacy scripts failed to load - init_segmentation not found');
+        console.warn('⚠️ Legacy init_segmentation not found, retrying...');
+        return false;
       }
     };
 
     // Try multiple times with increasing delays to ensure scripts are loaded
     const tryInit = (attempt: number = 1) => {
-      if (typeof window.init_segmentation === 'function') {
-        initializeLegacySystem();
-      } else if (attempt < 10) {
-        setTimeout(() => tryInit(attempt + 1), attempt * 100);
+      if (initializeLegacySystem()) {
+        console.log('✅ Legacy segmentation initialized successfully');
+        return;
+      }
+      
+      if (attempt < 20) { // Increased attempts
+        const delay = Math.min(attempt * 200, 2000); // Increased delay, max 2 seconds
+        console.log(`🔧 Attempt ${attempt} failed, retrying in ${delay}ms...`);
+        setTimeout(() => tryInit(attempt + 1), delay);
       } else {
-        console.error('❌ Failed to find init_segmentation after 10 attempts');
+        console.error('❌ Failed to find init_segmentation after 20 attempts');
+        console.error('❌ Legacy scripts failed to load - init_segmentation not found');
+        
+        // Try to diagnose the issue
+        const w = window as any;
+        console.log('🔍 Debugging info:');
+        console.log('- window.vars exists:', !!w.vars);
+        console.log('- window.init_segmentation exists:', !!w.init_segmentation);
+        console.log('- Available functions:', Object.keys(w).filter(key => typeof w[key] === 'function' && key.includes('init')));
       }
     };
 
-    tryInit();
-  }, []);
+    // Start initialization attempts
+    if (authChecked && isAuthenticated) {
+      console.log('🔧 Starting legacy segmentation initialization...');
+      tryInit();
+    }
+  }, [authChecked, isAuthenticated]);
 
   // Initialize ViewManager store from React store config (not legacy vars)
   useEffect(() => {
@@ -238,9 +257,8 @@ const SegmentationApp: React.FC = () => {
       }
     );
 
-    // Try to initialize immediately if config is already available
-    console.log('🔧 Trying immediate ViewManager initialization...');
-    initializeViewManager();
+    // Don't try to initialize immediately - wait for config to be loaded by legacy init_segmentation
+    console.log('🔧 ViewManager initialization will wait for config from legacy init_segmentation...');
 
     return unsubscribe;
   }, []);

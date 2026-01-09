@@ -95,6 +95,23 @@
 
         // React will call init_segmentation when ready
         
+        // Add debugging for script loading
+        console.log('🔧 Legacy scripts loading status:');
+        console.log('- vars exists:', typeof vars !== 'undefined');
+        console.log('- init_segmentation exists:', typeof init_segmentation !== 'undefined');
+        console.log('- window.init_segmentation exists:', typeof window.init_segmentation !== 'undefined');
+        
+        // The init_segmentation function should already be globally available
+        // from the segmentation.js file, but let's double-check
+        if (typeof init_segmentation !== 'undefined' && !window.init_segmentation) {
+            window.init_segmentation = init_segmentation;
+            console.log('✅ init_segmentation made globally available via template');
+        } else if (window.init_segmentation) {
+            console.log('✅ init_segmentation already globally available');
+        } else {
+            console.warn('⚠️ init_segmentation not found during script loading');
+        }
+        
         // Initialize React store with image ID when available
         function initializeImageIdInStore() {
             if (window.segmentationStore && window.setCurrentImageIdInStore) {

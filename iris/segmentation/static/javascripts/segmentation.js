@@ -109,6 +109,7 @@ let commands = {
 };
 
 function init_segmentation(){
+    console.log('🔧 init_segmentation called - starting legacy initialization...');
     show_loader("Fetching user information...");
 
     // Before we start, we check for the login, etc.
@@ -198,7 +199,7 @@ async function init_views(){
 
     // Only create legacy ViewManager if container exists
     if (useLegacyViewManager) {
-        vars.vm = new ViewManager(
+        const viewManager = new ViewManager(
             viewsContainer,
             // Primary source: React store, fallback: legacy vars
             window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
@@ -215,24 +216,40 @@ async function init_views(){
                 (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
         );
 
+        // Store ViewManager instance in React store (primary source)
+        if (window.setViewManagerInStore) {
+            window.setViewManagerInStore(viewManager);
+        } else {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: setViewManagerInStore not available, using legacy vars.vm');
+            vars.vm = viewManager;
+        }
+
         // Add standard layers to all view ports if the view type is not "bingmap":
-        vars.vm.addStandardLayer(
+        viewManager.addStandardLayer(
             MaskLayer,
             (view) => view.type != "bingmap"
         );
-        vars.vm.addStandardLayer(
+        viewManager.addStandardLayer(
             PreviewLayer,
             (view) => view.type != "bingmap"
         );
     } else {
         // Create a minimal mock ViewManager for compatibility
-        vars.vm = {
+        const mockViewManager = {
             setImage: () => {},
             showGroup: () => {},
             getLayers: () => [],
             updateViewDimensions: () => {},
             updateSize: () => {}
         };
+        
+        // Store mock ViewManager in React store (primary source)
+        if (window.setViewManagerInStore) {
+            window.setViewManagerInStore(mockViewManager);
+        } else {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: setViewManagerInStore not available, using legacy vars.vm');
+            vars.vm = mockViewManager;
+        }
     }
 
     // It much faster to change some pixel values on a sprite and draw it then
@@ -290,7 +307,13 @@ async function init_views(){
     // Load mask (now properly awaited):
     await load_mask();
 
-    vars.vm.setImage(
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm');
+        return vars.vm;
+    })();
+
+    viewManager.setImage(
         window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
             console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in init_views() - React store not available');
             return vars.image_id;
@@ -300,7 +323,7 @@ async function init_views(){
             return vars.image_location;
         })()
     );
-    vars.vm.showGroup();
+    viewManager.showGroup();
 
     set_tool(vars.tool.type);
     const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
@@ -323,7 +346,17 @@ async function init_views(){
 function init_events(){
     document.body.onkeydown = key_down;
     document.body.onkeyup = key_up;
-    document.body.onresize = () => vars.vm.updateSize();
+    document.body.onresize = () => {
+        // Use React store ViewManager (primary source)
+        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for resize');
+            return vars.vm;
+        })();
+        
+        if (viewManager && viewManager.updateSize) {
+            viewManager.updateSize();
+        }
+    };
 
     window.addEventListener('unload', (event) => {
       // Cancel the event as stated by the standard.
@@ -423,9 +456,25 @@ function key_down(event){
     } else if (key == "KeyN"){
         dialogue_reset_mask();
     } else if (key == "KeyV"){
-        vars.vm.toggleControls();
+        // Use React store ViewManager (primary source)
+        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for toggleControls');
+            return vars.vm;
+        })();
+        
+        if (viewManager && viewManager.toggleControls) {
+            viewManager.toggleControls();
+        }
     } else if (key == "KeyB"){
-        vars.vm.showNextGroup();
+        // Use React store ViewManager (primary source)
+        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for showNextGroup');
+            return vars.vm;
+        })();
+        
+        if (viewManager && viewManager.showNextGroup) {
+            viewManager.showNextGroup();
+        }
     } else if (event.shiftKey){
         // Update tool resizing mode through React store (primary source)
         if (window.segmentationStore) {
@@ -459,20 +508,26 @@ function change_brightness(up){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy brightness fallback, store not available');
     
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for brightness');
+        return vars.vm;
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping brightness change');
         return;
     }
     
     if (up){
-        vars.vm.filters.brightness += 10;
-        vars.vm.filters.brightness = Math.min(800, vars.vm.filters.brightness);
+        viewManager.filters.brightness += 10;
+        viewManager.filters.brightness = Math.min(800, viewManager.filters.brightness);
     } else {
-        vars.vm.filters.brightness -= 10;
-        vars.vm.filters.brightness = Math.max(0, vars.vm.filters.brightness);
+        viewManager.filters.brightness -= 10;
+        viewManager.filters.brightness = Math.max(0, viewManager.filters.brightness);
     }
-    vars.vm.render();
+    viewManager.render();
 }
 function change_saturation(up){
     // Use React store if available (new source of truth)
@@ -484,20 +539,26 @@ function change_saturation(up){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy saturation fallback, store not available');
     
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for saturation');
+        return vars.vm;
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping saturation change');
         return;
     }
     
     if (up){
-        vars.vm.filters.saturation += 20;
-        vars.vm.filters.saturation = Math.min(800, vars.vm.filters.saturation);
+        viewManager.filters.saturation += 20;
+        viewManager.filters.saturation = Math.min(800, viewManager.filters.saturation);
     } else {
-        vars.vm.filters.saturation -= 20;
-        vars.vm.filters.saturation = Math.max(0, vars.vm.filters.saturation);
+        viewManager.filters.saturation -= 20;
+        viewManager.filters.saturation = Math.max(0, viewManager.filters.saturation);
     }
-    vars.vm.render();
+    viewManager.render();
 }
 
 function set_current_class(class_id){
@@ -536,21 +597,27 @@ function set_contrast(visible){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy contrast fallback, store not available');
     
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for contrast');
+        return vars.vm;
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping contrast change');
         return;
     }
     
-    vars.vm.filters.contrast = visible;
+    viewManager.filters.contrast = visible;
 
-    if (vars.vm.filters.contrast){
+    if (viewManager.filters.contrast){
         get_object("tb_toggle_contrast").classList.add("checked");
     } else {
         get_object("tb_toggle_contrast").classList.remove("checked");
     }
 
-    vars.vm.render();
+    viewManager.render();
 }
 
 function set_invert(visible){
@@ -563,21 +630,27 @@ function set_invert(visible){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy invert fallback, store not available');
     
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for invert');
+        return vars.vm;
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping invert change');
         return;
     }
     
-    vars.vm.filters.invert = visible;
+    viewManager.filters.invert = visible;
 
-    if (vars.vm.filters.invert){
+    if (viewManager.filters.invert){
         get_object("tb_toggle_invert").classList.add("checked");
     } else {
         get_object("tb_toggle_invert").classList.remove("checked");
     }
 
-    vars.vm.render();
+    viewManager.render();
 }
 
 function set_tool(tool){
@@ -959,7 +1032,15 @@ function update_views(){
     }
 
     // Redraw everything:
-    vars.vm.render();
+    // Use React store ViewManager (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for render');
+        return vars.vm;
+    })();
+    
+    if (viewManager && viewManager.render) {
+        viewManager.render();
+    }
     
     // Notify React components that views have been updated
     window.dispatchEvent(new CustomEvent('iris-update-views'));
@@ -2119,26 +2200,56 @@ function render_mask(bbox=null){
         area again.
     */
 
+    // Use React store ViewManager (primary source)
+    if (window.renderMaskFromStore) {
+        window.renderMaskFromStore();
+        return;
+    }
+    
+    // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy render_mask fallback, store not available');
+    
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for render_mask');
+        return vars.vm;
+    })();
+
     // Safety check: only render if ViewManager is initialized
-    if (!vars.vm || !vars.vm.getLayers) {
+    if (!viewManager || !viewManager.getLayers) {
         console.log('[IRIS] render_mask called but ViewManager not initialized yet');
         return;
     }
 
     // Render the new mask sprite to all canvases:
-    for (let layer of vars.vm.getLayers("mask")) {
+    for (let layer of viewManager.getLayers("mask")) {
         layer.render(bbox);
     }
 }
 
 function render_preview(){
+    // Use React store ViewManager (primary source)
+    if (window.renderPreviewFromStore) {
+        window.renderPreviewFromStore();
+        return;
+    }
+    
+    // Fallback to legacy behavior
+    console.log('[IRIS] Using legacy render_preview fallback, store not available');
+    
+    // Get ViewManager from React store (primary source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for render_preview');
+        return vars.vm;
+    })();
+    
     // Safety check: only render if ViewManager is initialized
-    if (!vars.vm || !vars.vm.getLayers) {
+    if (!viewManager || !viewManager.getLayers) {
         console.log('[IRIS] render_preview called but ViewManager not initialized yet');
         return;
     }
     
-    for (let layer of vars.vm.getLayers("preview")) {
+    for (let layer of viewManager.getLayers("preview")) {
         layer.render();
     }
 }
@@ -3366,3 +3477,6 @@ function update_ai_box(score, cm, tp, user_classes){
 
     get_object("ai-recommendation").innerHTML = recommendation;
 }
+
+// Make init_segmentation globally available for React
+window.init_segmentation = init_segmentation;

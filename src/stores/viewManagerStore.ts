@@ -142,6 +142,11 @@ export interface ViewManagerState {
   renderMask: () => void;
   renderPreview: () => void;
   
+  // ViewManager instance management (replaces vars.vm)
+  viewManagerInstance: any | null;
+  setViewManagerInstance: (instance: any) => void;
+  getViewManagerInstance: () => any | null;
+  
   // Size management
   updateSize: () => void;
   
@@ -203,6 +208,9 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   debugMode: false,
   isInitialized: false,
   initializationError: null,
+  
+  // ViewManager instance (replaces vars.vm)
+  viewManagerInstance: null,
   
   // Actions
   setViews: (views) => set({ views }),
@@ -601,10 +609,16 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     // In the legacy system, this would trigger canvas rendering
     console.log('[ViewManager] render: Triggering render');
     
-    // Trigger legacy render if available
-    const w = window as any;
-    if (w.render_views) {
-      w.render_views();
+    // Use store instance if available, otherwise fallback to legacy
+    const { viewManagerInstance } = get();
+    if (viewManagerInstance && viewManagerInstance.render) {
+      viewManagerInstance.render();
+    } else {
+      // Trigger legacy render if available
+      const w = window as any;
+      if (w.render_views) {
+        w.render_views();
+      }
     }
   },
   
@@ -612,10 +626,17 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     // This is a placeholder implementation for compatibility
     console.log('[ViewManager] renderMask: Triggering mask render');
     
-    // Trigger legacy mask render if available
-    const w = window as any;
-    if (w.render_mask) {
-      w.render_mask();
+    // Use store instance if available, otherwise fallback to legacy
+    const { viewManagerInstance } = get();
+    if (viewManagerInstance && viewManagerInstance.getLayers) {
+      const layers = viewManagerInstance.getLayers("mask");
+      layers.forEach((layer: any) => layer.render());
+    } else {
+      // Trigger legacy mask render if available
+      const w = window as any;
+      if (w.render_mask) {
+        w.render_mask();
+      }
     }
   },
   
@@ -623,11 +644,33 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     // This is a placeholder implementation for compatibility
     console.log('[ViewManager] renderPreview: Triggering preview render');
     
-    // Trigger legacy preview render if available
-    const w = window as any;
-    if (w.render_preview) {
-      w.render_preview();
+    // Use store instance if available, otherwise fallback to legacy
+    const { viewManagerInstance } = get();
+    if (viewManagerInstance && viewManagerInstance.getLayers) {
+      const layers = viewManagerInstance.getLayers("preview");
+      layers.forEach((layer: any) => layer.render());
+    } else {
+      // Trigger legacy preview render if available
+      const w = window as any;
+      if (w.render_preview) {
+        w.render_preview();
+      }
     }
+  },
+  
+  // ViewManager instance management (replaces vars.vm)
+  setViewManagerInstance: (instance) => {
+    set({ viewManagerInstance: instance });
+    
+    // Sync with legacy vars during migration
+    const w = window as any;
+    if (w.vars) {
+      w.vars.vm = instance;
+    }
+  },
+  
+  getViewManagerInstance: () => {
+    return get().viewManagerInstance;
   },
   
   // Size management
@@ -1033,5 +1076,26 @@ if (typeof window !== 'undefined') {
       }
     }
     return ratio;
+  };
+  
+  // CRITICAL: ViewManager instance bridge functions (vars.vm migration)
+  (window as any).getViewManagerFromStore = () => {
+    return useViewManagerStore.getState().getViewManagerInstance();
+  };
+  
+  (window as any).setViewManagerInStore = (instance: any) => {
+    useViewManagerStore.getState().setViewManagerInstance(instance);
+  };
+  
+  (window as any).renderFromStore = () => {
+    useViewManagerStore.getState().render();
+  };
+  
+  (window as any).renderMaskFromStore = () => {
+    useViewManagerStore.getState().renderMask();
+  };
+  
+  (window as any).renderPreviewFromStore = () => {
+    useViewManagerStore.getState().renderPreview();
   };
 }
