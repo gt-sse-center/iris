@@ -69,6 +69,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     
     // CRITICAL FIX: Save current transformation before clearing
     const currentTransform = ctx.getTransform();
+    console.log('[ReactPreviewLayer] Preserving transform:', currentTransform);
     
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
     ctx.save();

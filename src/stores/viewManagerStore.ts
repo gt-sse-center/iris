@@ -137,12 +137,23 @@ export interface ViewManagerState {
   addStandardLayer: (layerType: string, filter?: (view: ViewConfig) => boolean) => void;
   getLayers: (layerType?: string) => any[];
   
-  // Rendering methods
+  // Rendering methods (ONE-WAY SYNC: React store -> Legacy)
   render: () => void;
-  renderMask: () => void;
+  renderMask: (bbox?: number[]) => void;
   renderPreview: () => void;
+  updateViews: () => void;
   
-  // ViewManager instance management (replaces vars.vm)
+  // Canvas operations (ONE-WAY SYNC: React store -> Legacy)
+  zoomCanvas: (delta: number) => void;
+  moveCanvas: (dx: number, dy: number) => void;
+  resetCanvas: () => void;
+  
+  // ViewManager instance management (ONE-WAY SYNC)
+  legacyViewManagerInstance: any | null;
+  setLegacyViewManagerInstance: (instance: any) => void;
+  syncToLegacyViewManager: () => void;
+  
+  // Legacy compatibility (deprecated - use store methods)
   viewManagerInstance: any | null;
   setViewManagerInstance: (instance: any) => void;
   getViewManagerInstance: () => any | null;
@@ -209,8 +220,9 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   isInitialized: false,
   initializationError: null,
   
-  // ViewManager instance (replaces vars.vm)
-  viewManagerInstance: null,
+  // ViewManager instance (ONE-WAY SYNC: React store -> Legacy)
+  legacyViewManagerInstance: null,
+  viewManagerInstance: null, // Deprecated - use legacyViewManagerInstance
   
   // Actions
   setViews: (views) => set({ views }),
@@ -603,74 +615,231 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     return [];
   },
   
-  // Rendering methods
+  // Rendering methods (ONE-WAY SYNC: React store -> Legacy)
   render: () => {
-    // This is a placeholder implementation for compatibility
-    // In the legacy system, this would trigger canvas rendering
-    console.log('[ViewManager] render: Triggering render');
+    console.log('[ViewManager] render: Triggering render (ONE-WAY SYNC)');
     
-    // Use store instance if available, otherwise fallback to legacy
-    const { viewManagerInstance } = get();
-    if (viewManagerInstance && viewManagerInstance.render) {
-      viewManagerInstance.render();
+    // PRIMARY: Use React store as source of truth
+    const { legacyViewManagerInstance } = get();
+    if (legacyViewManagerInstance && legacyViewManagerInstance.render) {
+      legacyViewManagerInstance.render();
     } else {
-      // Trigger legacy render if available
+      // FALLBACK: Direct legacy call
+      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_views - React store ViewManager not available');
       const w = window as any;
       if (w.render_views) {
         w.render_views();
       }
     }
+    
+    // Notify React components
+    window.dispatchEvent(new CustomEvent('iris-render-complete'));
   },
   
-  renderMask: () => {
-    // This is a placeholder implementation for compatibility
-    console.log('[ViewManager] renderMask: Triggering mask render');
+  renderMask: (bbox) => {
+    console.log('[ViewManager] renderMask: Triggering mask render (ONE-WAY SYNC)', { bbox });
     
-    // Use store instance if available, otherwise fallback to legacy
-    const { viewManagerInstance } = get();
-    if (viewManagerInstance && viewManagerInstance.getLayers) {
-      const layers = viewManagerInstance.getLayers("mask");
-      layers.forEach((layer: any) => layer.render());
+    // PRIMARY: Use React store as source of truth
+    const { legacyViewManagerInstance } = get();
+    if (legacyViewManagerInstance && legacyViewManagerInstance.getLayers) {
+      const layers = legacyViewManagerInstance.getLayers("mask");
+      layers.forEach((layer: any) => layer.render(bbox));
     } else {
-      // Trigger legacy mask render if available
+      // FALLBACK: Direct legacy call
+      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_mask - React store ViewManager not available');
       const w = window as any;
       if (w.render_mask) {
-        w.render_mask();
+        w.render_mask(bbox);
       }
     }
+    
+    // Notify React components
+    window.dispatchEvent(new CustomEvent('iris-mask-render-complete'));
   },
   
   renderPreview: () => {
-    // This is a placeholder implementation for compatibility
-    console.log('[ViewManager] renderPreview: Triggering preview render');
+    console.log('[ViewManager] renderPreview: Triggering preview render (ONE-WAY SYNC)');
     
-    // Use store instance if available, otherwise fallback to legacy
-    const { viewManagerInstance } = get();
-    if (viewManagerInstance && viewManagerInstance.getLayers) {
-      const layers = viewManagerInstance.getLayers("preview");
+    // PRIMARY: Use React store as source of truth
+    const { legacyViewManagerInstance } = get();
+    if (legacyViewManagerInstance && legacyViewManagerInstance.getLayers) {
+      const layers = legacyViewManagerInstance.getLayers("preview");
       layers.forEach((layer: any) => layer.render());
     } else {
-      // Trigger legacy preview render if available
+      // FALLBACK: Direct legacy call
+      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_preview - React store ViewManager not available');
       const w = window as any;
       if (w.render_preview) {
         w.render_preview();
       }
     }
+    
+    // Notify React components
+    window.dispatchEvent(new CustomEvent('iris-preview-render-complete'));
   },
   
-  // ViewManager instance management (replaces vars.vm)
-  setViewManagerInstance: (instance) => {
-    set({ viewManagerInstance: instance });
+  updateViews: () => {
+    console.log('[ViewManager] updateViews: Triggering view update (ONE-WAY SYNC)');
     
-    // Sync with legacy vars during migration
+    // Update canvas coordinates and trigger render
     const w = window as any;
-    if (w.vars) {
-      w.vars.vm = instance;
+    const oneCanvas = document.getElementsByClassName("view-canvas")[0] as HTMLCanvasElement;
+    if (oneCanvas) {
+      const ctx = oneCanvas.getContext("2d") as any;
+      if (ctx && ctx.getWorldCoords) {
+        const { canvasMousePosition } = get();
+        const imageCoords = ctx.getWorldCoords(...canvasMousePosition);
+        const newCursorImage = [imageCoords.x, imageCoords.y];
+        
+        // Update cursor image in segmentation store
+        if (w.setCursorImageInStore) {
+          w.setCursorImageInStore(newCursorImage[0], newCursorImage[1]);
+        }
+      }
+    }
+    
+    // Trigger render
+    get().render();
+    
+    // Notify React components
+    window.dispatchEvent(new CustomEvent('iris-update-views'));
+  },
+  
+  // Canvas operations (ONE-WAY SYNC: React store -> Legacy)
+  zoomCanvas: (delta) => {
+    console.log('[ViewManager] zoomCanvas: Triggering zoom (ONE-WAY SYNC)', { delta });
+    
+    const factor = Math.pow(1.1, delta);
+    const { zoomLevel } = get();
+    const newZoom = Math.max(0.1, Math.min(10.0, zoomLevel * factor));
+    
+    // Update React store first (source of truth)
+    get().setZoomLevel(newZoom);
+    
+    // Apply to legacy canvas
+    const w = window as any;
+    if (w.getCursorImageFromStore) {
+      const cursorImage = w.getCursorImageFromStore();
+      
+      for (let canvas of document.getElementsByClassName('view-canvas')) {
+        const ctx = (canvas as HTMLCanvasElement).getContext('2d') as any;
+        if (ctx) {
+          ctx.translate(...cursorImage);
+          ctx.scale(factor, factor);
+          ctx.translate(-cursorImage[0], -cursorImage[1]);
+          
+          if (w.constrain_view) {
+            w.constrain_view(ctx, factor, 0, 0);
+          }
+        }
+      }
+    }
+    
+    // Update views
+    get().updateViews();
+  },
+  
+  moveCanvas: (dx, dy) => {
+    if (dx === 0 && dy === 0) return;
+    
+    console.log('[ViewManager] moveCanvas: Triggering move (ONE-WAY SYNC)', { dx, dy });
+    
+    // Update React store first (source of truth)
+    const { panOffset } = get();
+    get().setPanOffset({ x: panOffset.x + dx, y: panOffset.y + dy });
+    
+    // Apply to legacy canvas
+    const w = window as any;
+    for (let canvas of document.getElementsByClassName('view-canvas')) {
+      const ctx = (canvas as HTMLCanvasElement).getContext('2d') as any;
+      if (ctx) {
+        ctx.translate(dx, dy);
+        if (w.constrain_view) {
+          w.constrain_view(ctx, 1, dx, dy);
+        }
+      }
+    }
+    
+    // Update views
+    get().updateViews();
+  },
+  
+  resetCanvas: () => {
+    console.log('[ViewManager] resetCanvas: Triggering reset (ONE-WAY SYNC)');
+    
+    // Update React store first (source of truth)
+    get().resetView();
+    
+    // Apply to legacy canvas
+    const w = window as any;
+    if (w.reset_view) {
+      w.reset_view();
+    }
+    
+    // Update views
+    get().updateViews();
+  },
+  
+  // ViewManager instance management (ONE-WAY SYNC: React store -> Legacy)
+  setLegacyViewManagerInstance: (instance) => {
+    console.log('[ViewManager] setLegacyViewManagerInstance: Setting legacy instance (ONE-WAY SYNC)');
+    set({ legacyViewManagerInstance: instance });
+    
+    // ONE-WAY: React store manages the legacy instance
+    // No bidirectional sync - React store is source of truth
+    get().syncToLegacyViewManager();
+  },
+  
+  syncToLegacyViewManager: () => {
+    const { legacyViewManagerInstance, zoomLevel, panOffset, currentView, filters } = get();
+    
+    if (!legacyViewManagerInstance) {
+      console.warn('[ViewManager] syncToLegacyViewManager: No legacy instance to sync to');
+      return;
+    }
+    
+    console.log('[ViewManager] syncToLegacyViewManager: Syncing React store -> Legacy (ONE-WAY)');
+    
+    // ONE-WAY SYNC: React store -> Legacy ViewManager
+    try {
+      if (typeof legacyViewManagerInstance.zoom_level !== 'undefined') {
+        legacyViewManagerInstance.zoom_level = zoomLevel;
+        legacyViewManagerInstance.zoom_factor = zoomLevel;
+      }
+      
+      if (typeof legacyViewManagerInstance.pan_offset !== 'undefined') {
+        legacyViewManagerInstance.pan_offset = panOffset;
+      }
+      
+      if (typeof legacyViewManagerInstance.current_view !== 'undefined') {
+        legacyViewManagerInstance.current_view = currentView;
+      }
+      
+      if (typeof legacyViewManagerInstance.filters !== 'undefined') {
+        legacyViewManagerInstance.filters = { ...filters };
+      }
+      
+      // Also sync to legacy vars for compatibility
+      const w = window as any;
+      if (w.vars) {
+        w.vars.vm = legacyViewManagerInstance;
+      }
+      
+      console.log('[ViewManager] syncToLegacyViewManager: Sync complete');
+    } catch (error) {
+      console.error('[ViewManager] syncToLegacyViewManager: Sync failed:', error);
     }
   },
   
+  // Legacy compatibility methods (deprecated - use setLegacyViewManagerInstance)
+  setViewManagerInstance: (instance) => {
+    console.warn('[ViewManager] setViewManagerInstance: DEPRECATED - Use setLegacyViewManagerInstance instead');
+    get().setLegacyViewManagerInstance(instance);
+  },
+  
   getViewManagerInstance: () => {
-    return get().viewManagerInstance;
+    console.warn('[ViewManager] getViewManagerInstance: DEPRECATED - Use legacyViewManagerInstance state instead');
+    return get().legacyViewManagerInstance;
   },
   
   // Size management
@@ -1078,24 +1247,50 @@ if (typeof window !== 'undefined') {
     return ratio;
   };
   
-  // CRITICAL: ViewManager instance bridge functions (vars.vm migration)
+  // CRITICAL: ViewManager instance bridge functions (ONE-WAY SYNC: React store -> Legacy)
   (window as any).getViewManagerFromStore = () => {
-    return useViewManagerStore.getState().getViewManagerInstance();
+    return useViewManagerStore.getState().legacyViewManagerInstance;
   };
   
   (window as any).setViewManagerInStore = (instance: any) => {
-    useViewManagerStore.getState().setViewManagerInstance(instance);
+    useViewManagerStore.getState().setLegacyViewManagerInstance(instance);
+  };
+  
+  // ONE-WAY SYNC: React store methods that legacy functions should use
+  (window as any).updateViewsFromStore = () => {
+    useViewManagerStore.getState().updateViews();
   };
   
   (window as any).renderFromStore = () => {
     useViewManagerStore.getState().render();
   };
   
-  (window as any).renderMaskFromStore = () => {
-    useViewManagerStore.getState().renderMask();
+  (window as any).renderMaskFromStore = (bbox?: number[]) => {
+    useViewManagerStore.getState().renderMask(bbox);
   };
   
   (window as any).renderPreviewFromStore = () => {
     useViewManagerStore.getState().renderPreview();
+  };
+  
+  (window as any).zoomCanvasFromStore = (delta: number) => {
+    useViewManagerStore.getState().zoomCanvas(delta);
+  };
+  
+  (window as any).moveCanvasFromStore = (dx: number, dy: number) => {
+    useViewManagerStore.getState().moveCanvas(dx, dy);
+  };
+  
+  (window as any).resetCanvasFromStore = () => {
+    useViewManagerStore.getState().resetCanvas();
+  };
+  
+  // Filter operations (ONE-WAY SYNC)
+  (window as any).setFiltersFromStore = (filters: Partial<ViewFilters>) => {
+    useViewManagerStore.getState().setFilters(filters);
+  };
+  
+  (window as any).resetFiltersFromStore = () => {
+    useViewManagerStore.getState().resetFilters();
   };
 }

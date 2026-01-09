@@ -143,16 +143,41 @@
                 setTimeout(initializeImageLocationInStore, 100);
             }
         }
+
+        // Initialize ViewManager store from legacy ViewManager (ONE-WAY SYNC)
+        function initializeViewManagerStore() {
+            if (window.viewManagerStore && vars.vm) {
+                const store = window.viewManagerStore.getState();
+                
+                // ONE-WAY: Set legacy instance in store (store manages it)
+                store.setLegacyViewManagerInstance(vars.vm);
+                
+                // Initialize store state from legacy ViewManager
+                store.initializeFromLegacy().then(() => {
+                    console.log('[IRIS Migration] ✅ ViewManager store initialized from legacy (ONE-WAY SYNC)');
+                }).catch((error) => {
+                    console.error('[IRIS Migration] ❌ ViewManager store initialization failed:', error);
+                });
+            } else if (window.viewManagerStore) {
+                // Store available but no legacy ViewManager yet - retry
+                setTimeout(initializeViewManagerStore, 100);
+            } else {
+                // Store not available yet - retry
+                setTimeout(initializeViewManagerStore, 100);
+            }
+        }
         
         // Initialize when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
                 initializeImageIdInStore();
                 initializeImageLocationInStore();
+                initializeViewManagerStore();
             });
         } else {
             initializeImageIdInStore();
             initializeImageLocationInStore();
+            initializeViewManagerStore();
         }
     </script>
 

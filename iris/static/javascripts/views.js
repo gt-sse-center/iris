@@ -14,7 +14,7 @@ class ViewManager{
             'invert': false,
             'brightness': 100,
             'saturation': 100,
-        },
+        };
         this.standard_layers = [
             [RGBLayer, (view) => view.type == "image"],
             [BingLayer, (view) => view.type == "bingmap"]
@@ -255,16 +255,15 @@ class ViewManager{
         this.show_controls = show;
     }
     toggleControls(){
-        // Use React store ViewManager (primary source)
-        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: getViewManagerFromStore not available, using legacy vars.vm for toggleControls');
-            return vars.vm;
-        })();
-        
-        if (viewManager && typeof viewManager.show_controls !== 'undefined') {
-            this.showControls(!viewManager.show_controls);
-        } else {
-            // Fallback to legacy behavior
+        // PRIMARY: Use React store (ONE-WAY SYNC)
+        if (window.viewManagerStore) {
+            window.viewManagerStore.getState().toggleControls();
+            return;
+        }
+
+        // FALLBACK: Legacy (should rarely happen)
+        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.vm - React store not available');
+        if (vars.vm) {
             this.showControls(!vars.vm.show_controls);
         }
     }
