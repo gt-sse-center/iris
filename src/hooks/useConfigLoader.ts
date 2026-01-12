@@ -46,9 +46,8 @@ export const useConfigLoader = (): ConfigLoaderResult => {
       }
 
       // Initialize ViewManager store
+      let views: { [name: string]: any } = {};
       if (config.views) {
-        const views: { [name: string]: any } = {};
-        
         // Handle both array and object formats
         if (Array.isArray(config.views)) {
           config.views.forEach((view: any) => {
@@ -74,17 +73,23 @@ export const useConfigLoader = (): ConfigLoaderResult => {
       // Set view groups
       if (config.view_groups) {
         if (Array.isArray(config.view_groups)) {
-          // Convert array format to object format
-          const viewGroupsObj: { [key: string]: string[] } = {};
-          config.view_groups.forEach((group: string[], index: number) => {
-            viewGroupsObj[`group_${index}`] = group;
-          });
-          viewManagerStore.setViewGroups(viewGroupsObj);
+          // Handle array of arrays vs simple array
+          if (config.view_groups.length > 0 && Array.isArray(config.view_groups[0])) {
+            // Convert array of arrays format to object format
+            const viewGroupsObj: { [key: string]: string[] } = {};
+            config.view_groups.forEach((group: string[], index: number) => {
+              viewGroupsObj[`group_${index}`] = group;
+            });
+            viewManagerStore.setViewGroups(viewGroupsObj);
+          } else {
+            // Simple array - use as default group
+            viewManagerStore.setViewGroups({ default: config.view_groups as string[] });
+          }
         } else {
           viewManagerStore.setViewGroups(config.view_groups);
         }
       } else {
-        // Default group with available views
+        // Default group with available views - use the views object we just created
         const viewNames = Object.keys(views || {});
         if (viewNames.length > 0) {
           viewManagerStore.setViewGroups({ default: viewNames.slice(0, 3) });

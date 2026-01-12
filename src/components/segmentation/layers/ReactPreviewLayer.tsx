@@ -246,11 +246,13 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       // Create wrapped mouse event handlers that update coordinates properly
       const handleMouseMove = (event: MouseEvent) => {
         try {
-          updateCursorCoords(canvas, event);
+          if (canvas) {
+            updateCursorCoords(canvas, event);
+          }
           
           // Call legacy mouse_move handler
           const w = window as any;
-          if (w.mouse_move) {
+          if (w.mouse_move && canvas) {
             w.mouse_move.call(canvas, event);
           } else {
             console.warn('[ReactPreviewLayer] Legacy mouse_move function not available');
@@ -262,7 +264,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       
       const handleMouseDown = (event: MouseEvent) => {
         try {
-          updateCursorCoords(canvas, event);
+          if (canvas) {
+            updateCursorCoords(canvas, event);
+          }
           
           console.log('[ReactPreviewLayer] Mouse down event:', {
             buttons: event.buttons,
@@ -271,7 +275,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
           
           // Call legacy mouse_down handler
           const w = window as any;
-          if (w.mouse_down) {
+          if (w.mouse_down && canvas) {
             w.mouse_down.call(canvas, event);
           } else {
             console.warn('[ReactPreviewLayer] Legacy mouse_down function not available');
@@ -285,7 +289,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
         try {
           // Call legacy mouse_up handler
           const w = window as any;
-          if (w.mouse_up) {
+          if (w.mouse_up && canvas) {
             w.mouse_up.call(canvas, event);
           }
         } catch (error) {
@@ -294,11 +298,13 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       };
       
       const handleMouseEnter = (event: MouseEvent) => {
-        updateCursorCoords(canvas, event);
+        if (canvas) {
+          updateCursorCoords(canvas, event);
+        }
         
         // Call legacy mouse_enter handler
         const w = window as any;
-        if (w.mouse_enter) {
+        if (w.mouse_enter && canvas) {
           w.mouse_enter.call(canvas, event);
         }
       };
@@ -312,28 +318,32 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
         
         // Call legacy mouse_wheel handler
         const w = window as any;
-        if (w.mouse_wheel) {
+        if (w.mouse_wheel && canvas) {
           w.mouse_wheel.call(canvas, event);
         } else {
           console.warn('[ReactPreviewLayer] Legacy mouse_wheel function not available');
         }
       };
       
-      // Add event listeners
-      canvas.addEventListener("mousemove", handleMouseMove, { passive: false });
-      canvas.addEventListener("mousedown", handleMouseDown, false);
-      canvas.addEventListener("mouseup", handleMouseUp, false);
-      canvas.addEventListener("mouseenter", handleMouseEnter, { passive: false });
-      canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
-      
-      // Store cleanup function
-      (canvas as any)._cleanupEventHandlers = () => {
-        canvas.removeEventListener("mousemove", handleMouseMove);
-        canvas.removeEventListener("mousedown", handleMouseDown);
-        canvas.removeEventListener("mouseup", handleMouseUp);
-        canvas.removeEventListener("mouseenter", handleMouseEnter);
-        canvas.removeEventListener("wheel", handleMouseWheel);
-      };
+      // Add event listeners only if canvas exists
+      if (canvas) {
+        canvas.addEventListener("mousemove", handleMouseMove, { passive: false });
+        canvas.addEventListener("mousedown", handleMouseDown, false);
+        canvas.addEventListener("mouseup", handleMouseUp, false);
+        canvas.addEventListener("mouseenter", handleMouseEnter, { passive: false });
+        canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+        
+        // Store cleanup function
+        (canvas as any)._cleanupEventHandlers = () => {
+          if (canvas) {
+            canvas.removeEventListener("mousemove", handleMouseMove);
+            canvas.removeEventListener("mousedown", handleMouseDown);
+            canvas.removeEventListener("mouseup", handleMouseUp);
+            canvas.removeEventListener("mouseenter", handleMouseEnter);
+            canvas.removeEventListener("wheel", handleMouseWheel);
+          }
+        };
+      }
     }
     
     return () => {
