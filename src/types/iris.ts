@@ -292,6 +292,8 @@ declare global {
     
     // History System Helper Functions
     updateHistoryInStore?: () => void;
+    scheduleHistoryUpdateInStore?: () => void;
+    flushPendingHistoryInStore?: () => void;
     undoInStore?: () => void;
     redoInStore?: () => void;
     discardFutureInStore?: () => void;
