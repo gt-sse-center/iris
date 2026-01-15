@@ -16,6 +16,16 @@ api_bp = flask.Blueprint(
 )
 
 
+@api_bp.route('/config', methods=['GET'])
+@requires_auth
+def get_config():
+    """Get project configuration as JSON."""
+    # Get the full project config
+    config = project.config
+    
+    return flask.jsonify(config)
+
+
 @api_bp.route('/user-config', methods=['GET'])
 @requires_auth
 def get_user_config():

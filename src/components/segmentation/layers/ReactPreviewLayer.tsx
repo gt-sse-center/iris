@@ -67,8 +67,16 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       return;
     }
     
-    // Clear canvas using image dimensions (like legacy)
-    ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
+    // CRITICAL FIX: Save current transformation before clearing
+    // const currentTransform = ctx.getTransform();
+    ctx.getTransform();
+    // console.log('[ReactPreviewLayer] Preserving transform:', currentTransform);
+    
+    // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for clearing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore(); // Restore the zoom/pan transformation
     
     // Get tool offset (from legacy get_tool_offset function)
     let offset = { x: 0, y: 0 };
@@ -81,22 +89,15 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     const cursorX = cursorImage[0] + offset.x;
     const cursorY = cursorImage[1] + offset.y;
     
-    // CRITICAL FIX: The tool size needs to be in image coordinates, not screen coordinates
-    // Since we apply a canvas transformation, we need to account for the scaling
-    // Legacy uses: canvas.width / vars.image_shape[0] for both X and Y scaling
-    const scale = canvas.width / imageShape[0];
-    
-    // The tool size should be consistent in screen pixels, so we need to inverse-scale it
-    // to account for the canvas transformation
-    const toolWidth = toolSize / scale;
-    const toolHeight = toolSize / scale;
+    // CRITICAL FIX: Use toolSize directly - canvas transformation handles scaling automatically
+    // This matches the legacy behavior exactly: no manual scaling needed
     
     // Draw tool cursor preview based on shape
     ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
     
     if (toolShape === 'round') {
       // Draw circular cursor
-      const radius = toolWidth / 2;
+      const radius = toolSize / 2;
       const centerX = cursorX + radius;
       const centerY = cursorY + radius;
       
@@ -105,7 +106,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.fill();
     } else {
       // Draw square cursor (default)
-      ctx.fillRect(cursorX, cursorY, toolWidth, toolHeight);
+      ctx.fillRect(cursorX, cursorY, toolSize, toolSize);
     }
     
     // Draw mask area boundaries
@@ -189,105 +190,167 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
           // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
           addTrackTransforms(ctx);
           
-          // CRITICAL: Set the initial transformation matrix to match legacy system exactly
-          // Get image shape from React store with fallback to legacy vars
-          const imageShape = (window as any).getImageShapeFromStore ? 
-            (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+          // CRITICAL: Only set base transformation on canvas initialization, not on every render
+          // Check if this canvas already has a transformation applied by legacy zoom
+          const currentTransform = ctx.getTransform();
+          const isIdentityTransform = (
+            currentTransform.a === 1 && currentTransform.b === 0 &&
+            currentTransform.c === 0 && currentTransform.d === 1 &&
+            currentTransform.e === 0 && currentTransform.f === 0
+          );
           
-          if (imageShape) {
-            // Legacy uses: ctx.canvas.width / vars.image_shape[0] for BOTH X and Y scaling
-            // This maintains square pixels and matches the legacy coordinate system
+          // Only set base transformation if no zoom/pan has been applied yet
+          if (isIdentityTransform) {
             const scale = canvas.width / imageShape[0]; // Use image height for both dimensions
             ctx.setTransform(scale, 0, 0, scale, 0, 0);
-          } else {
-            console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: No image shape available for canvas transformation - using identity transform');
           }
         }
       }
-      
-      // Re-render after size change
-      renderPreview();
     }
-  }, [width, height, renderPreview]);
+  }, [width, height]); // REMOVED renderPreview dependency to prevent transformation reset
+  
+  // Separate effect for rendering that doesn't reset transformations
+  useEffect(() => {
+    renderPreview();
+  }, [renderPreview]);
   
   // Add mouse event listeners with proper coordinate transformation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !transform) return;
     
-    // Create wrapped mouse event handlers that update coordinates properly
-    const handleMouseMove = (event: MouseEvent) => {
-      try {
-        updateCursorCoords(canvas, event);
-        
-        // Call legacy mouse_move handler
-        const w = window as any;
-        if (w.mouse_move) {
-          w.mouse_move.call(canvas, event);
-        }
-      } catch (error) {
-        console.error('Error in mouse move handler:', error);
-      }
+    // Wait for legacy functions to be available
+    const waitForLegacyFunctions = () => {
+      const w = window as any;
+      return w.mouse_wheel && w.mouse_move && w.mouse_down && w.mouse_up && w.mouse_enter;
     };
     
-    const handleMouseDown = (event: MouseEvent) => {
-      try {
-        updateCursorCoords(canvas, event);
-        
-        // Call legacy mouse_down handler
-        const w = window as any;
-        if (w.mouse_down) {
-          w.mouse_down.call(canvas, event);
+    if (!waitForLegacyFunctions()) {
+      console.log('[ReactPreviewLayer] Waiting for legacy functions to load...');
+      const checkInterval = setInterval(() => {
+        if (waitForLegacyFunctions()) {
+          console.log('[ReactPreviewLayer] Legacy functions now available, setting up event handlers');
+          clearInterval(checkInterval);
+          setupEventHandlers();
         }
-      } catch (error) {
-        console.error('Error in mouse down handler:', error);
-      }
-    };
-    
-    const handleMouseUp = (event: MouseEvent) => {
-      try {
-        // Call legacy mouse_up handler
-        const w = window as any;
-        if (w.mouse_up) {
-          w.mouse_up.call(canvas, event);
-        }
-      } catch (error) {
-        console.error('Error in mouse up handler:', error);
-      }
-    };
-    
-    const handleMouseEnter = (event: MouseEvent) => {
-      updateCursorCoords(canvas, event);
+      }, 100); // Check every 100ms
       
-      // Call legacy mouse_enter handler
-      const w = window as any;
-      if (w.mouse_enter) {
-        w.mouse_enter.call(canvas, event);
-      }
-    };
+      // Cleanup interval if component unmounts
+      return () => clearInterval(checkInterval);
+    } else {
+      console.log('[ReactPreviewLayer] Legacy functions already available, setting up event handlers');
+      setupEventHandlers();
+    }
     
-    const handleMouseWheel = (event: WheelEvent) => {
-      // Call legacy mouse_wheel handler
-      const w = window as any;
-      if (w.mouse_wheel) {
-        w.mouse_wheel.call(canvas, event);
+    function setupEventHandlers() {
+      // Create wrapped mouse event handlers that update coordinates properly
+      const handleMouseMove = (event: MouseEvent) => {
+        try {
+          if (canvas) {
+            updateCursorCoords(canvas, event);
+          }
+          
+          // Call legacy mouse_move handler
+          const w = window as any;
+          if (w.mouse_move && canvas) {
+            w.mouse_move.call(canvas, event);
+          } else {
+            console.warn('[ReactPreviewLayer] Legacy mouse_move function not available');
+          }
+        } catch (error) {
+          console.error('Error in mouse move handler:', error);
+        }
+      };
+      
+      const handleMouseDown = (event: MouseEvent) => {
+        try {
+          if (canvas) {
+            updateCursorCoords(canvas, event);
+          }
+          
+          console.log('[ReactPreviewLayer] Mouse down event:', {
+            buttons: event.buttons,
+            hasLegacyMouseDown: !!(window as any).mouse_down
+          });
+          
+          // Call legacy mouse_down handler
+          const w = window as any;
+          if (w.mouse_down && canvas) {
+            w.mouse_down.call(canvas, event);
+          } else {
+            console.warn('[ReactPreviewLayer] Legacy mouse_down function not available');
+          }
+        } catch (error) {
+          console.error('Error in mouse down handler:', error);
+        }
+      };
+      
+      const handleMouseUp = (event: MouseEvent) => {
+        try {
+          // Call legacy mouse_up handler
+          const w = window as any;
+          if (w.mouse_up && canvas) {
+            w.mouse_up.call(canvas, event);
+          }
+        } catch (error) {
+          console.error('Error in mouse up handler:', error);
+        }
+      };
+      
+      const handleMouseEnter = (event: MouseEvent) => {
+        if (canvas) {
+          updateCursorCoords(canvas, event);
+        }
+        
+        // Call legacy mouse_enter handler
+        const w = window as any;
+        if (w.mouse_enter && canvas) {
+          w.mouse_enter.call(canvas, event);
+        }
+      };
+      
+      const handleMouseWheel = (event: WheelEvent) => {
+        console.log('[ReactPreviewLayer] Mouse wheel event:', {
+          deltaY: event.deltaY,
+          wheelDelta: (event as any).wheelDelta,
+          hasLegacyMouseWheel: !!(window as any).mouse_wheel
+        });
+        
+        // Call legacy mouse_wheel handler
+        const w = window as any;
+        if (w.mouse_wheel && canvas) {
+          w.mouse_wheel.call(canvas, event);
+        } else {
+          console.warn('[ReactPreviewLayer] Legacy mouse_wheel function not available');
+        }
+      };
+      
+      // Add event listeners only if canvas exists
+      if (canvas) {
+        canvas.addEventListener("mousemove", handleMouseMove, { passive: false });
+        canvas.addEventListener("mousedown", handleMouseDown, false);
+        canvas.addEventListener("mouseup", handleMouseUp, false);
+        canvas.addEventListener("mouseenter", handleMouseEnter, { passive: false });
+        canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+        
+        // Store cleanup function
+        (canvas as any)._cleanupEventHandlers = () => {
+          if (canvas) {
+            canvas.removeEventListener("mousemove", handleMouseMove);
+            canvas.removeEventListener("mousedown", handleMouseDown);
+            canvas.removeEventListener("mouseup", handleMouseUp);
+            canvas.removeEventListener("mouseenter", handleMouseEnter);
+            canvas.removeEventListener("wheel", handleMouseWheel);
+          }
+        };
       }
-    };
-    
-    // Add event listeners
-    canvas.addEventListener("mousemove", handleMouseMove, { passive: false });
-    canvas.addEventListener("mousedown", handleMouseDown, false);
-    canvas.addEventListener("mouseup", handleMouseUp, false);
-    canvas.addEventListener("mouseenter", handleMouseEnter, { passive: false });
-    canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+    }
     
     return () => {
       // Cleanup event listeners
-      canvas.removeEventListener("mousemove", handleMouseMove);
-      canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mouseup", handleMouseUp);
-      canvas.removeEventListener("mouseenter", handleMouseEnter);
-      canvas.removeEventListener("wheel", handleMouseWheel);
+      if ((canvas as any)._cleanupEventHandlers) {
+        (canvas as any)._cleanupEventHandlers();
+      }
     };
   }, [transform]);
   
@@ -318,14 +381,23 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
   // Listen for zoom/transform changes and re-render
   useEffect(() => {
     const handleTransformChange = () => {
+      // Don't reset transformation - just re-render with current zoom/pan state
       renderPreview();
     };
     
     // Listen for legacy zoom/transform events
     window.addEventListener('iris-transform-change', handleTransformChange);
     
+    // Also listen for the legacy update_views event which is triggered after zoom
+    const handleUpdateViews = () => {
+      renderPreview();
+    };
+    
+    window.addEventListener('iris-update-views', handleUpdateViews);
+    
     return () => {
       window.removeEventListener('iris-transform-change', handleTransformChange);
+      window.removeEventListener('iris-update-views', handleUpdateViews);
     };
   }, [renderPreview]);
   

@@ -34,16 +34,41 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
   // Render mask function - matches legacy MaskLayer exactly
   const renderMask = useCallback((bbox?: [number, number, number, number]) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.warn('[ReactMaskLayer] renderMask: No canvas available');
+      return;
+    }
     
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn('[ReactMaskLayer] renderMask: No canvas context available');
+      return;
+    }
     
     // Get legacy vars for mask data
     const w = window as any;
-    if (!w.vars?.hidden_mask || !w.vars?.mask_area || !w.vars?.image_shape) {
+    if (!w.vars?.hidden_mask) {
+      console.warn('[ReactMaskLayer] renderMask: No hidden_mask available in vars');
       return;
     }
+    
+    if (!w.vars?.mask_area) {
+      console.warn('[ReactMaskLayer] renderMask: No mask_area available in vars');
+      return;
+    }
+    
+    if (!w.vars?.image_shape) {
+      console.warn('[ReactMaskLayer] renderMask: No image_shape available in vars');
+      return;
+    }
+    
+    console.log('[ReactMaskLayer] renderMask: Rendering mask', {
+      bbox,
+      hiddenMaskSize: [w.vars.hidden_mask.width, w.vars.hidden_mask.height],
+      maskArea: w.vars.mask_area,
+      imageShape: w.vars.image_shape,
+      canvasSize: [canvas.width, canvas.height]
+    });
     
     // Use image coordinates exactly like legacy - let canvas transform handle scaling
     if (bbox === undefined) {
@@ -52,13 +77,19 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
       const imageShape = (window as any).getImageShapeFromStore ? 
         (window as any).getImageShapeFromStore() : w.vars?.image_shape;
       
+      // CRITICAL FIX: Save current transformation before clearing
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for clearing
+      
       if (imageShape) {
-        // Clear using image dimensions (like legacy)
-        ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
+        // Clear using canvas dimensions to respect zoom/pan
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       } else {
         console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available from React store or legacy vars');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+      
+      ctx.restore(); // Restore the zoom/pan transformation
       
       // Get mask area from React store or fallback to legacy
       const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : w.vars?.mask_area;
@@ -69,6 +100,7 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
       }
       
       // Draw mask at mask_area position in image coordinates (like legacy)
+      // console.log('[ReactMaskLayer] Drawing full mask at position:', maskArea);
       ctx.drawImage(
         w.vars.hidden_mask,
         maskArea[0], maskArea[1]
@@ -137,9 +169,21 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
           (window as any).getImageShapeFromStore() : w.vars?.image_shape;
         
         if (imageShape) {
-          const scaleX = canvas.width / imageShape[1];  // canvas width / image width
-          const scaleY = canvas.height / imageShape[0]; // canvas height / image height
-          ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          // CRITICAL: Only set base transformation on canvas initialization, not on every render
+          // Check if this canvas already has a transformation applied by legacy zoom
+          const currentTransform = ctx.getTransform();
+          const isIdentityTransform = (
+            currentTransform.a === 1 && currentTransform.b === 0 &&
+            currentTransform.c === 0 && currentTransform.d === 1 &&
+            currentTransform.e === 0 && currentTransform.f === 0
+          );
+          
+          // Only set base transformation if no zoom/pan has been applied yet
+          if (isIdentityTransform) {
+            const scaleX = canvas.width / imageShape[1];  // canvas width / image width
+            const scaleY = canvas.height / imageShape[0]; // canvas height / image height
+            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          }
         } else {
           console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available for canvas transformation - using identity transform');
         }
@@ -154,9 +198,16 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      canvas.style.display = showMask ? 'block' : 'none';
+      const shouldShow = showMask;
+      canvas.style.display = shouldShow ? 'block' : 'none';
+      console.log('[ReactMaskLayer] Mask visibility changed:', shouldShow);
+      
+      // If mask is now visible, trigger a render
+      if (shouldShow) {
+        renderMask();
+      }
     }
-  }, [showMask]);
+  }, [showMask, renderMask]);
   
   // Expose render function for legacy compatibility
   useEffect(() => {
@@ -210,6 +261,36 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     };
   }, [renderMask]);
   
+  // Initial render when component mounts and when mask data becomes available
+  useEffect(() => {
+    // Only render if we have mask data
+    const w = window as any;
+    if (w.vars?.hidden_mask && w.vars?.mask_area && w.vars?.image_shape) {
+      console.log('[ReactMaskLayer] Initial render with mask data available');
+      renderMask();
+    } else {
+      console.log('[ReactMaskLayer] Waiting for mask data to become available', {
+        hasHiddenMask: !!w.vars?.hidden_mask,
+        hasMaskArea: !!w.vars?.mask_area,
+        hasImageShape: !!w.vars?.image_shape
+      });
+    }
+  }, [renderMask]);
+  
+  // Listen for mask data loading events
+  useEffect(() => {
+    const handleMaskLoaded = () => {
+      console.log('[ReactMaskLayer] Mask data loaded event received');
+      renderMask();
+    };
+    
+    window.addEventListener('iris-mask-loaded', handleMaskLoaded);
+    
+    return () => {
+      window.removeEventListener('iris-mask-loaded', handleMaskLoaded);
+    };
+  }, [renderMask]);
+  
   const canvasStyle: React.CSSProperties = {
     position: 'absolute',
     left: 0,
@@ -217,8 +298,6 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     width: '100%',
     height: '100%',
     display: showMask ? 'block' : 'none',
-    // Add distinctive styling to identify React canvas
-    border: '2px solid lime', // Bright green border to identify React canvas
     backgroundColor: 'transparent',
     cursor: 'crosshair',
     WebkitTouchCallout: 'none',

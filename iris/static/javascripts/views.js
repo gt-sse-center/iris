@@ -14,7 +14,7 @@ class ViewManager{
             'invert': false,
             'brightness': 100,
             'saturation': 100,
-        },
+        };
         this.standard_layers = [
             [RGBLayer, (view) => view.type == "image"],
             [BingLayer, (view) => view.type == "bingmap"]
@@ -255,7 +255,15 @@ class ViewManager{
         this.show_controls = show;
     }
     toggleControls(){
-        this.showControls(!vars.vm.show_controls);
+        // PRIMARY: Use React store (ONE-WAY SYNC)
+        if (window.viewManagerStore) {
+            window.viewManagerStore.getState().toggleControls();
+            return;
+        }
+
+        // React store is required - no fallback
+        console.error('[IRIS Migration] ❌ CRITICAL: React store not available for toggleControls');
+        throw new Error('React store not available for ViewManager');
     }
 }
 
@@ -515,3 +523,11 @@ class BingLayer extends ViewLayer{
         this.update();
     }
 }
+
+// Make ViewManager globally available for React services
+window.ViewManager = ViewManager;
+window.ViewPort = ViewPort;
+window.ViewLayer = ViewLayer;
+window.CanvasLayer = CanvasLayer;
+window.RGBLayer = RGBLayer;
+window.BingLayer = BingLayer;

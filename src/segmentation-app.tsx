@@ -6,7 +6,7 @@ import SegmentationModals from './components/segmentation/SegmentationModals';
 import ViewerComparison from './components/segmentation/ViewerComparison';
 import { useSegmentationSetup } from './components/segmentation/hooks/useSegmentationSetup';
 import { useSegmentationStore } from './stores/segmentationStore';
-import { useViewManagerStore } from './stores/viewManagerStore';
+import { useConfigLoader } from './hooks/useConfigLoader';
 import './utils/legacyBridge'; // Initialize legacy bridge functions
 
 // Declare global functions that exist in the legacy JavaScript
@@ -39,6 +39,9 @@ const SegmentationApp: React.FC = () => {
   const [isConfusionMatrixOpen, setIsConfusionMatrixOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Get config loader hook
+  const { loadConfig } = useConfigLoader();
 
   // Export GeoTIFF function - memoized to prevent re-renders
   const exportGeoTIFF = useCallback(async () => {
@@ -116,170 +119,105 @@ const SegmentationApp: React.FC = () => {
     checkAuth();
   }, []);
 
-  // Initialize legacy segmentation system
+  // Initialize app with clean React-first architecture
   useEffect(() => {
-    const initializeLegacySystem = () => {
-      const w = window as any;
-      
-      // Wait for legacy scripts to be loaded
-      if (typeof w.init_segmentation === 'function') {
-        console.log('🔧 Calling legacy init_segmentation...');
-        w.init_segmentation();
-      } else {
-        console.warn('❌ Legacy scripts failed to load - init_segmentation not found');
+    const initializeApp = async () => {
+      if (!authChecked || !isAuthenticated) return;
+
+      try {
+        console.log('🔧 React: Starting app initialization...');
+        
+        // Load config directly (no polling, no legacy dependency)
+        await loadConfig();
+        
+        // Initialize navigation
+        await initializeNavigation();
+        
+        // CRITICAL: Initialize views and mask data (equivalent to init_views)
+        // This handles ViewManager creation, so no separate service needed
+        await initializeMaskData();
+        
+        console.log('✅ React: App initialization complete');
+      } catch (error) {
+        console.error('❌ React: App initialization failed:', error);
+        // You can set error state here if needed
       }
     };
 
-    // Try multiple times with increasing delays to ensure scripts are loaded
-    const tryInit = (attempt: number = 1) => {
-      if (typeof window.init_segmentation === 'function') {
-        initializeLegacySystem();
-      } else if (attempt < 10) {
-        setTimeout(() => tryInit(attempt + 1), attempt * 100);
-      } else {
-        console.error('❌ Failed to find init_segmentation after 10 attempts');
-      }
-    };
-
-    tryInit();
-  }, []);
-
-  // Initialize ViewManager store from React store config (not legacy vars)
-  useEffect(() => {
-    const initializeViewManager = () => {
-      const config = useSegmentationStore.getState().config;
-      console.log('🔧 initializeViewManager called, config:', config ? 'available' : 'null', 'views:', config?.views ? 'available' : 'missing');
-      
-      if (config && config.views) {
-        console.log('🔧 Initializing ViewManager from React store config...');
-        
-        const viewManagerStore = useViewManagerStore.getState();
-        
-        // Set views from config
-        const views: { [name: string]: any } = {};
-        if (Array.isArray(config.views)) {
-          config.views.forEach((view: any) => {
-            views[view.name] = {
-              name: view.name,
-              type: view.type || 'image',
-              description: view.description || '',
-            };
-          });
-        } else if (typeof config.views === 'object') {
-          Object.entries(config.views).forEach(([name, view]: [string, any]) => {
-            views[name] = {
-              name: name,
-              type: view.type || 'image',
-              description: view.description || '',
-            };
-          });
-        }
-        
-        console.log('🔧 ViewManager: Setting views:', Object.keys(views));
-        viewManagerStore.setViews(views);
-        
-        // Set view groups - handle both array and object formats
-        if (config.view_groups) {
-          console.log('🔧 ViewManager: Setting view groups:', config.view_groups);
-          if (Array.isArray(config.view_groups)) {
-            // Convert array format to object format
-            const viewGroupsObj: { [key: string]: string[] } = {};
-            config.view_groups.forEach((group: string[], index: number) => {
-              viewGroupsObj[`group_${index}`] = group;
-            });
-            viewManagerStore.setViewGroups(viewGroupsObj);
-          } else {
-            viewManagerStore.setViewGroups(config.view_groups);
-          }
-        } else {
-          const viewNames = Object.keys(views);
-          if (viewNames.length > 0) {
-            viewManagerStore.setViewGroups({ default: viewNames.slice(0, 3) });
-          }
-        }
-        
-        // Set image info
-        const currentImageId = window.vars?.image_id;
-        if (currentImageId) {
-          viewManagerStore.setImage(currentImageId, window.vars?.image_location || [0, 0]);
-        }
-        
-        // Set image dimensions
-        if (window.vars?.image_shape && window.vars.image_shape.length >= 2) {
-          const [width, height] = window.vars.image_shape;
-          viewManagerStore.setImageDimensions(width, height);
-        }
-        
-        // Mark as initialized
-        viewManagerStore.setInitialized(true);
-        
-        console.log('✅ ViewManager initialized from React store successfully');
-      } else {
-        console.log('⚠️ ViewManager: Config or views not available yet');
-      }
-    };
-
-    // Subscribe to config changes in the segmentation store
-    console.log('🔧 Setting up ViewManager subscription...');
-    const unsubscribe = useSegmentationStore.subscribe(
-      (state) => {
-        console.log('🔧 Store subscription triggered, config available:', !!state.config, 'views available:', !!state.config?.views);
-        const viewManagerState = useViewManagerStore.getState();
-        const hasViews = Object.keys(viewManagerState.views).length > 0;
-        
-        // Initialize if we have config with views but ViewManager doesn't have views yet
-        if (state.config && state.config.views && !hasViews) {
-          console.log('🔧 Config detected in store and ViewManager has no views, initializing ViewManager...');
-          // Add a small delay to ensure the config is fully processed
-          setTimeout(() => {
-            initializeViewManager();
-          }, 100);
-        }
-      }
-    );
-
-    // Try to initialize immediately if config is already available
-    console.log('🔧 Trying immediate ViewManager initialization...');
-    initializeViewManager();
-
-    return unsubscribe;
-  }, []);
+    initializeApp();
+  }, [authChecked, isAuthenticated]); // Remove loadConfig from dependencies to prevent infinite loop
 
   // Initialize navigation store with image list
-  useEffect(() => {
-    const initializeNavigation = async () => {
-      try {
-        const currentImageId = window.vars?.image_id;
-        if (!currentImageId) {
-          console.warn('No current image ID found, skipping navigation initialization');
-          return;
-        }
-
-        const response = await fetch(
-          `/segmentation/api/images/list?current_image_id=${encodeURIComponent(currentImageId)}`,
-          { credentials: 'same-origin' }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch images: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        // Set images in store
-        useSegmentationStore.getState().setImages(data.images);
-
-        // Set current image
-        useSegmentationStore.getState().setCurrentImage(currentImageId);
-      } catch (error) {
-        console.error('Failed to initialize navigation:', error);
+  const initializeNavigation = async () => {
+    try {
+      const currentImageId = (window as any).vars?.image_id;
+      if (!currentImageId) {
+        console.warn('No current image ID found, skipping navigation initialization');
+        return;
       }
-    };
 
-    if (authChecked && isAuthenticated) {
-      initializeNavigation();
+      const response = await fetch(
+        `/segmentation/api/images/list?current_image_id=${encodeURIComponent(currentImageId)}`,
+        { credentials: 'same-origin' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch images: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Set images in store
+      useSegmentationStore.getState().setImages(data.images);
+
+      // Set current image
+      useSegmentationStore.getState().setCurrentImage(currentImageId);
+      
+      console.log('✅ React: Navigation initialized');
+    } catch (error) {
+      console.error('❌ React: Navigation initialization failed:', error);
     }
-  }, [authChecked, isAuthenticated]);
+  };
+
+  // Initialize mask data for current image (equivalent to legacy init_views)
+  const initializeMaskData = async () => {
+    try {
+      const currentImageId = (window as any).vars?.image_id;
+      if (!currentImageId) {
+        console.warn('No current image ID found, skipping mask data initialization');
+        return;
+      }
+
+      console.log('🔧 React: Initializing views and mask data for image:', currentImageId);
+      
+      // Call the full init_views function which handles:
+      // - Hidden mask canvas creation
+      // - Mask data loading
+      // - Toolbar/statusbar visibility
+      // - Event initialization
+      const w = window as any;
+      if (w.init_views) {
+        await w.init_views();
+        console.log('✅ React: Views and mask data initialized successfully');
+        
+        // Verify critical components are available
+        if (w.vars?.hidden_mask && w.vars?.mask && w.vars?.user_mask) {
+          console.log('✅ React: All mask components verified:', {
+            hasHiddenMask: !!w.vars.hidden_mask,
+            maskLength: w.vars.mask.length,
+            userMaskLength: w.vars.user_mask.length,
+            maskShape: w.vars.mask_shape
+          });
+        } else {
+          console.warn('⚠️ React: Some mask components missing after init_views');
+        }
+      } else {
+        console.error('❌ React: init_views function not available');
+      }
+    } catch (error) {
+      console.error('❌ React: Views and mask data initialization failed:', error);
+    }
+  };
 
   // Sync Zustand store with DOM (mask layer visibility)
   // This updates the canvas layers when store changes
@@ -291,10 +229,11 @@ const SegmentationApp: React.FC = () => {
         
         // Update DOM directly (mask layer visibility)
         // This replicates the behavior of legacy show_mask() function
-        if (w.vars?.vm) {
+        const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+        if (viewManager) {
           const displayState = showMask ? "block" : "none";
           try {
-            const maskLayers = w.vars.vm.getLayers("mask");
+            const maskLayers = viewManager.getLayers("mask");
             for (let layer of maskLayers) {
               if (layer.container) {
                 layer.container.style.display = displayState;
@@ -303,6 +242,8 @@ const SegmentationApp: React.FC = () => {
           } catch (error) {
             console.warn('Could not update mask layer visibility:', error);
           }
+        } else {
+          console.warn('[IRIS Migration] ⚠️ ViewManager not available for mask layer visibility');
         }
       }
     );
@@ -373,7 +314,7 @@ const SegmentationApp: React.FC = () => {
         onOpenPreferences={handleOpenPreferences}
       />
 
-      <ViewerComparison showComparison={true} />
+      <ViewerComparison />
 
       <SegmentationStatusBar
         onOpenProfile={handleOpenProfile}

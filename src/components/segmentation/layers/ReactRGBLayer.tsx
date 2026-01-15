@@ -73,18 +73,24 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Clear canvas using image dimensions (like legacy)
+    // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
     // Get image shape from React store with fallback to legacy vars
     const w = window as any;
     const imageShape = (window as any).getImageShapeFromStore ? 
       (window as any).getImageShapeFromStore() : w.vars?.image_shape;
     
+    // CRITICAL FIX: Save current transformation before clearing
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for clearing
+    
     if (imageShape) {
-      ctx.clearRect(0, 0, imageShape[1], imageShape[0]); // width, height
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     } else {
       console.warn('⚠️ [IRIS Migration] ReactRGBLayer: No image shape available from React store or legacy vars');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+    
+    ctx.restore(); // Restore the zoom/pan transformation
     
     // Apply filters via CSS
     const filterParts: string[] = [];
@@ -176,9 +182,21 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
           (window as any).getImageShapeFromStore() : w.vars?.image_shape;
         
         if (imageShape) {
-          const scaleX = canvas.width / imageShape[1];  // canvas width / image width
-          const scaleY = canvas.height / imageShape[0]; // canvas height / image height
-          ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          // CRITICAL: Only set base transformation on canvas initialization, not on every render
+          // Check if this canvas already has a transformation applied by legacy zoom
+          const currentTransform = ctx.getTransform();
+          const isIdentityTransform = (
+            currentTransform.a === 1 && currentTransform.b === 0 &&
+            currentTransform.c === 0 && currentTransform.d === 1 &&
+            currentTransform.e === 0 && currentTransform.f === 0
+          );
+          
+          // Only set base transformation if no zoom/pan has been applied yet
+          if (isIdentityTransform) {
+            const scaleX = canvas.width / imageShape[1];  // canvas width / image width
+            const scaleY = canvas.height / imageShape[0]; // canvas height / image height
+            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          }
         } else {
           console.warn('⚠️ [IRIS Migration] ReactRGBLayer: No image shape available for canvas transformation - using identity transform');
         }
@@ -219,8 +237,6 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     width: '100%',
     height: '100%',
     display: 'block',
-    // Add distinctive styling to identify React canvas
-    border: '2px solid blue', // Bright blue border to identify React RGB canvas
     backgroundColor: 'transparent',
     cursor: 'crosshair',
     WebkitTouchCallout: 'none',

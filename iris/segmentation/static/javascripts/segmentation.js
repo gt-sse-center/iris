@@ -108,21 +108,6 @@ let commands = {
     }
 };
 
-function init_segmentation(){
-    show_loader("Fetching user information...");
-
-    // Before we start, we check for the login, etc.
-    // Use React store as primary source
-    if (window.setNextActionInStore) {
-        window.setNextActionInStore(init_views);
-    } else {
-        // Fallback to legacy vars during initialization
-        console.warn('[IRIS Migration] Using legacy vars.next_action fallback');
-        vars.next_action = init_views;
-    }
-    fetch_server_update(update_config=true);
-}
-
 function newuser_help_popup(){
     // Open the help menu if the user is new (no saved masks):
     // Use React store as primary source
@@ -154,65 +139,77 @@ function newuser_help_popup(){
         }
     }
 }
-function save_config(config){
-    // Primary destination: React store, fallback: legacy vars
-    if (window.setConfigInStore) {
-        window.setConfigInStore(config);
-    } else {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
-        vars.config = config;
-    }
-
-    // Use React store as primary source, fallback to legacy vars
-    const userUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('user') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.user - React store not available');
-        return vars.url.user;
-    })();
-
-    if (!userUrl) {
-        console.error('[IRIS Migration] ❌ No user URL available for save_config');
-        return;
-    }
-
-    fetch(userUrl + 'save_config', {
-        method: "POST",
-        body: JSON.stringify(config)
-    })
-}
 async function init_views(){
     show_loader("Loading views...");
+    
+    // Check if views-container exists (React ViewManager migration)
+    const viewsContainer = get_object('views-container');
+    const useLegacyViewManager = !!viewsContainer;
+    
+    if (!useLegacyViewManager) {
+        console.log('[IRIS Migration] 🔧 Legacy ViewManager disabled - using React ViewManager only');
+    }
+    
     // Use React store as primary source, fallback to legacy vars
     const mainUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
         console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main - React store not available');
         return vars.url.main;
     })();
 
-    vars.vm = new ViewManager(
-        get_object('views-container'),
-        // Primary source: React store, fallback: legacy vars
-        window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views - React store not available');
-            return vars.config.views;
-        })(),
-        window.getConfigSectionFromStore ? window.getConfigSectionFromStore('view_groups') : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups - React store not available');
-            return vars.config.view_groups;
-        })(),
-        mainUrl+"image/",
-        image_aspect_ratio = window.getImageAspectRatioFromStore ? 
-            window.getImageAspectRatioFromStore() : 
-            (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
-    );
+    // Only create legacy ViewManager if container exists
+    if (useLegacyViewManager) {
+        const viewManager = new ViewManager(
+            viewsContainer,
+            // Primary source: React store, fallback: legacy vars
+            window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views - React store not available');
+                return vars.config.views;
+            })(),
+            window.getConfigSectionFromStore ? window.getConfigSectionFromStore('view_groups') : (() => {
+                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups - React store not available');
+                return vars.config.view_groups;
+            })(),
+            mainUrl+"image/",
+            image_aspect_ratio = window.getImageAspectRatioFromStore ? 
+                window.getImageAspectRatioFromStore() : 
+                (vars.image_shape ? vars.image_shape[0] / vars.image_shape[1] : 1)
+        );
 
-    // Add standard layers to all view ports if the view type is not "bingmap":
-    vars.vm.addStandardLayer(
-        MaskLayer,
-        (view) => view.type != "bingmap"
-    );
-    vars.vm.addStandardLayer(
-        PreviewLayer,
-        (view) => view.type != "bingmap"
-    );
+        // Store ViewManager instance in React store (only source)
+        if (window.setViewManagerInStore) {
+            window.setViewManagerInStore(viewManager);
+        } else {
+            console.error('[IRIS Migration] ❌ CRITICAL: setViewManagerInStore not available - React store required');
+            throw new Error('React store not available for ViewManager - initialization failed');
+        }
+
+        // Add standard layers to all view ports if the view type is not "bingmap":
+        viewManager.addStandardLayer(
+            MaskLayer,
+            (view) => view.type != "bingmap"
+        );
+        viewManager.addStandardLayer(
+            PreviewLayer,
+            (view) => view.type != "bingmap"
+        );
+    } else {
+        // Create a minimal mock ViewManager for compatibility
+        const mockViewManager = {
+            setImage: () => {},
+            showGroup: () => {},
+            getLayers: () => [],
+            updateViewDimensions: () => {},
+            updateSize: () => {}
+        };
+        
+        // Store mock ViewManager in React store (only source)
+        if (window.setViewManagerInStore) {
+            window.setViewManagerInStore(mockViewManager);
+        } else {
+            console.error('[IRIS Migration] ❌ CRITICAL: setViewManagerInStore not available - React store required');
+            throw new Error('React store not available for ViewManager - initialization failed');
+        }
+    }
 
     // It much faster to change some pixel values on a sprite and draw it then
     // to the canvas once than redrawing each pixel to the canvas directly.
@@ -269,7 +266,13 @@ async function init_views(){
     // Load mask (now properly awaited):
     await load_mask();
 
-    vars.vm.setImage(
+    // Get ViewManager from React store (only source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available - React store required');
+        throw new Error('React store not available for ViewManager');
+    })();
+
+    viewManager.setImage(
         window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
             console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in init_views() - React store not available');
             return vars.image_id;
@@ -279,7 +282,7 @@ async function init_views(){
             return vars.image_location;
         })()
     );
-    vars.vm.showGroup();
+    viewManager.showGroup();
 
     set_tool(vars.tool.type);
     const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
@@ -302,7 +305,16 @@ async function init_views(){
 function init_events(){
     document.body.onkeydown = key_down;
     document.body.onkeyup = key_up;
-    document.body.onresize = () => vars.vm.updateSize();
+    document.body.onresize = () => {
+        // PRIMARY: Use React store (ONE-WAY SYNC)
+        if (window.viewManagerStore) {
+            window.viewManagerStore.getState().updateSize();
+        } else {
+            // React store is required - no fallback
+            console.error('[IRIS Migration] ❌ CRITICAL: React store not available for updateSize');
+            throw new Error('React store not available for ViewManager');
+        }
+    };
 
     window.addEventListener('unload', (event) => {
       // Cancel the event as stated by the standard.
@@ -359,9 +371,25 @@ function key_down(event){
     } else if (key == "KeyR"){
         redo();
     } else if (key == "KeyC"){
-        set_contrast(!vars.vm.filters.contrast);
+        // PRIMARY: Use React store for filter operations (ONE-WAY SYNC)
+        if (window.viewManagerStore) {
+            const currentFilters = window.viewManagerStore.getState().filters;
+            window.viewManagerStore.getState().setFilters({ contrast: !currentFilters.contrast });
+        } else {
+            // React store is required - no fallback
+            console.error('[IRIS Migration] ❌ CRITICAL: React store not available for contrast filter');
+            throw new Error('React store not available for filter operations');
+        }
     } else if (key == "KeyI"){
-        set_invert(!vars.vm.filters.invert);
+        // PRIMARY: Use React store for filter operations (ONE-WAY SYNC)
+        if (window.viewManagerStore) {
+            const currentFilters = window.viewManagerStore.getState().filters;
+            window.viewManagerStore.getState().setFilters({ invert: !currentFilters.invert });
+        } else {
+            // React store is required - no fallback
+            console.error('[IRIS Migration] ❌ CRITICAL: React store not available for invert filter');
+            throw new Error('React store not available for filter operations');
+        }
     } else if (key == "ArrowUp"){
         change_brightness(up=true);
     } else if (key == "ArrowDown"){
@@ -402,9 +430,25 @@ function key_down(event){
     } else if (key == "KeyN"){
         dialogue_reset_mask();
     } else if (key == "KeyV"){
-        vars.vm.toggleControls();
+        // Use React store ViewManager (only source)
+        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+            console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for toggleControls');
+            throw new Error('React store not available for ViewManager');
+        })();
+        
+        if (viewManager && viewManager.toggleControls) {
+            viewManager.toggleControls();
+        }
     } else if (key == "KeyB"){
-        vars.vm.showNextGroup();
+        // Use React store ViewManager (only source)
+        const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+            console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for showNextGroup');
+            throw new Error('React store not available for ViewManager');
+        })();
+        
+        if (viewManager && viewManager.showNextGroup) {
+            viewManager.showNextGroup();
+        }
     } else if (event.shiftKey){
         // Update tool resizing mode through React store (primary source)
         if (window.segmentationStore) {
@@ -438,20 +482,26 @@ function change_brightness(up){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy brightness fallback, store not available');
     
+    // Get ViewManager from React store (only source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for brightness');
+        throw new Error('React store not available for ViewManager');
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping brightness change');
         return;
     }
     
     if (up){
-        vars.vm.filters.brightness += 10;
-        vars.vm.filters.brightness = Math.min(800, vars.vm.filters.brightness);
+        viewManager.filters.brightness += 10;
+        viewManager.filters.brightness = Math.min(800, viewManager.filters.brightness);
     } else {
-        vars.vm.filters.brightness -= 10;
-        vars.vm.filters.brightness = Math.max(0, vars.vm.filters.brightness);
+        viewManager.filters.brightness -= 10;
+        viewManager.filters.brightness = Math.max(0, viewManager.filters.brightness);
     }
-    vars.vm.render();
+    viewManager.render();
 }
 function change_saturation(up){
     // Use React store if available (new source of truth)
@@ -463,20 +513,26 @@ function change_saturation(up){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy saturation fallback, store not available');
     
+    // Get ViewManager from React store (only source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for saturation');
+        throw new Error('React store not available for ViewManager');
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping saturation change');
         return;
     }
     
     if (up){
-        vars.vm.filters.saturation += 20;
-        vars.vm.filters.saturation = Math.min(800, vars.vm.filters.saturation);
+        viewManager.filters.saturation += 20;
+        viewManager.filters.saturation = Math.min(800, viewManager.filters.saturation);
     } else {
-        vars.vm.filters.saturation -= 20;
-        vars.vm.filters.saturation = Math.max(0, vars.vm.filters.saturation);
+        viewManager.filters.saturation -= 20;
+        viewManager.filters.saturation = Math.max(0, viewManager.filters.saturation);
     }
-    vars.vm.render();
+    viewManager.render();
 }
 
 function set_current_class(class_id){
@@ -515,21 +571,27 @@ function set_contrast(visible){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy contrast fallback, store not available');
     
+    // Get ViewManager from React store (only source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for contrast');
+        throw new Error('React store not available for ViewManager');
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping contrast change');
         return;
     }
     
-    vars.vm.filters.contrast = visible;
+    viewManager.filters.contrast = visible;
 
-    if (vars.vm.filters.contrast){
+    if (viewManager.filters.contrast){
         get_object("tb_toggle_contrast").classList.add("checked");
     } else {
         get_object("tb_toggle_contrast").classList.remove("checked");
     }
 
-    vars.vm.render();
+    viewManager.render();
 }
 
 function set_invert(visible){
@@ -542,21 +604,27 @@ function set_invert(visible){
     // Fallback to legacy behavior
     console.log('[IRIS] Using legacy invert fallback, store not available');
     
+    // Get ViewManager from React store (only source)
+    const viewManager = window.getViewManagerFromStore ? window.getViewManagerFromStore() : (() => {
+        console.error('[IRIS Migration] ❌ CRITICAL: getViewManagerFromStore not available for invert');
+        throw new Error('React store not available for ViewManager');
+    })();
+    
     // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
+    if (!viewManager || !viewManager.filters) {
         console.log('[IRIS] ViewManager not initialized, skipping invert change');
         return;
     }
     
-    vars.vm.filters.invert = visible;
+    viewManager.filters.invert = visible;
 
-    if (vars.vm.filters.invert){
+    if (viewManager.filters.invert){
         get_object("tb_toggle_invert").classList.add("checked");
     } else {
         get_object("tb_toggle_invert").classList.remove("checked");
     }
 
-    vars.vm.render();
+    viewManager.render();
 }
 
 function set_tool(tool){
@@ -792,42 +860,38 @@ function mouse_enter(event){
 }
 
 function zoom(delta){
-    // PHASE 3A: For now, use legacy zoom until React components fully handle canvas transformations
-    // TODO: Enable React zoom when canvas transformation is implemented in React components
-    console.log('[IRIS] Using legacy zoom (React canvas transformations not yet implemented)');
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.zoomCanvasFromStore) {
+        window.zoomCanvasFromStore(delta);
+        return;
+    }
+
+    // FALLBACK: Legacy (should rarely happen)
+    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy zoom - React store not available');
     
     let factor = Math.pow(1.1, delta);
-
-    // Get cursor image from React store (primary source) with fallback to legacy vars
-    let cursorImage;
-    if (window.getCursorImageFromStore) {
-        cursorImage = window.getCursorImageFromStore();
-    } else {
-        console.warn('[IRIS Migration] zoom: Using legacy vars.cursor_image fallback - React store not available yet');
-        cursorImage = vars.cursor_image; // Fallback during initialization
-    }
+    let cursorImage = vars.cursor_image || [0, 0];
 
     for (let canvas of document.getElementsByClassName('view-canvas')){
         let ctx = canvas.getContext('2d');
-        // This makes sure that we zoom onto the current cursor position:
         ctx.translate(...cursorImage);
         ctx.scale(factor, factor);
         ctx.translate(-cursorImage[0], -cursorImage[1]);
-
         constrain_view(ctx, factor, 0, 0);
-    }
-    update_views();
-    
-    // Also update React store for consistency
-    if (window.reactViewManager && window.reactViewManager.setZoom) {
-        const currentZoom = window.reactViewManager.getZoom();
-        const newZoom = currentZoom * factor;
-        window.reactViewManager.setZoom(newZoom);
     }
     update_views();
 }
 
 function move(dx, dy){
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.moveCanvasFromStore) {
+        window.moveCanvasFromStore(dx, dy);
+        return;
+    }
+
+    // FALLBACK: Legacy (should rarely happen)
+    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy move - React store not available');
+    
     if (dx == 0 && dy == 0){
         return;
     }
@@ -895,54 +959,26 @@ function update_views(){
     /*Update all views in all canvases. Always required after a zooming or
     translation action.*/
 
-    // PHASE 3A: For now, use legacy update until React components fully handle canvas transformations
-
-    // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.render) {
-        console.log('[IRIS] update_views called but ViewManager not initialized yet');
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.updateViewsFromStore) {
+        window.updateViewsFromStore();
         return;
     }
 
-    // The coordinate system has changed:
-    let one_canvas = document.getElementsByClassName("view-canvas")[0];
-    if (!one_canvas) {
-        console.log('[IRIS] No view canvas found, skipping update_views');
-        return;
-    }
-    
-    let ctx = one_canvas.getContext("2d");
-    if (!ctx || !ctx.getWorldCoords) {
-        console.log('[IRIS] Canvas context not ready, skipping update_views');
-        return;
-    }
-    
-    // Get canvas coordinates from React store (primary source)
-    let canvasCoords;
-    if (window.getCanvasMousePositionFromStore) {
-        canvasCoords = window.getCanvasMousePositionFromStore();
-    } else {
-        console.warn('[IRIS Migration] update_views: Using legacy vars.cursor_canvas fallback - React store not available yet');
-        canvasCoords = vars.cursor_canvas || [0, 0];
-    }
-    
-    let image_coords = ctx.getWorldCoords(...canvasCoords);
-    let newCursorImage = [image_coords.x, image_coords.y];
-    
-    // Update through React store (primary source)
-    if (window.setCursorImageInStore) {
-        window.setCursorImageInStore(newCursorImage[0], newCursorImage[1]);
-    } else {
-        // Fallback to legacy vars during initialization
-        console.warn('[IRIS Migration] update_cursor_coords: Using legacy vars.cursor_image update fallback - React store not available yet');
-        vars.cursor_image = newCursorImage;
-    }
-
-    // Redraw everything:
-    vars.vm.render();
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for render');
+    throw new Error('React store not available for ViewManager');
 }
 
 function reset_views(){
-    // PHASE 3A: For now, use legacy reset until React components fully handle canvas transformations
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.resetCanvasFromStore) {
+        window.resetCanvasFromStore();
+        return;
+    }
+
+    // FALLBACK: Legacy (should rarely happen)
+    console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy reset_views - React store not available');
     console.log('[IRIS] Using legacy reset_views (React canvas transformations not yet implemented)');
     
     // Get image shape from React store with fallback to legacy vars
@@ -1298,14 +1334,25 @@ function updateMaskPixels(updates) {
         console.warn('[IRIS Migration] ⚠️ React store not available for batch mask update, using legacy vars fallback');
     }
     
-    // Fallback to legacy vars
+    // Fallback to legacy vars - check if they exist first
+    if (!vars.mask || !vars.user_mask) {
+        console.error('[IRIS Migration] ❌ CRITICAL: Both React store and legacy vars mask data are null!', {
+            hasMask: !!vars.mask,
+            hasUserMask: !!vars.user_mask,
+            hasMaskShape: !!vars.mask_shape,
+            maskShape: vars.mask_shape
+        });
+        return; // Cannot proceed without mask data
+    }
+    
+    // Apply updates to legacy vars
     updates.forEach(({x, y, maskValue, userMaskValue}) => {
         if (x >= 0 && x < vars.mask_shape[0] && y >= 0 && y < vars.mask_shape[1]) {
             const index = y * vars.mask_shape[0] + x;
-            if (maskValue !== undefined) {
+            if (maskValue !== undefined && vars.mask) {
                 vars.mask[index] = maskValue;
             }
-            if (userMaskValue !== undefined) {
+            if (userMaskValue !== undefined && vars.user_mask) {
                 vars.user_mask[index] = userMaskValue;
             }
         }
@@ -2095,28 +2142,27 @@ function render_mask(bbox=null){
         area again.
     */
 
-    // Safety check: only render if ViewManager is initialized
-    if (!vars.vm || !vars.vm.getLayers) {
-        console.log('[IRIS] render_mask called but ViewManager not initialized yet');
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.renderMaskFromStore) {
+        window.renderMaskFromStore(bbox);
         return;
     }
 
-    // Render the new mask sprite to all canvases:
-    for (let layer of vars.vm.getLayers("mask")) {
-        layer.render(bbox);
-    }
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for render_mask');
+    throw new Error('React store not available for ViewManager');
 }
 
 function render_preview(){
-    // Safety check: only render if ViewManager is initialized
-    if (!vars.vm || !vars.vm.getLayers) {
-        console.log('[IRIS] render_preview called but ViewManager not initialized yet');
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.renderPreviewFromStore) {
+        window.renderPreviewFromStore();
         return;
     }
-    
-    for (let layer of vars.vm.getLayers("preview")) {
-        layer.render();
-    }
+
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for render_preview');
+    throw new Error('React store not available for ViewManager');
 }
 
 function reset_mask(){
@@ -2188,26 +2234,15 @@ function reset_mask(){
 }
 
 function reset_filters(){
-    // Use React store if available (new source of truth)
-    if (window.segmentationStore) {
-        window.segmentationStore.getState().resetFilters();
+    // PRIMARY: Use React store (ONE-WAY SYNC)
+    if (window.resetFiltersFromStore) {
+        window.resetFiltersFromStore();
         return;
     }
     
-    // Fallback to legacy behavior
-    console.log('[IRIS] Using legacy reset filters fallback, store not available');
-    
-    // Safety check: only proceed if ViewManager is initialized
-    if (!vars.vm || !vars.vm.filters) {
-        console.log('[IRIS] ViewManager not initialized, skipping filter reset');
-        return;
-    }
-    
-    vars.vm.filters.brightness = 100;
-    vars.vm.filters.saturation = 100;
-    set_contrast(false);
-    set_invert(false);
-    vars.vm.render();
+    // React store is required - no fallback
+    console.error('[IRIS Migration] ❌ CRITICAL: React store not available for reset filters');
+    throw new Error('React store not available for filter operations');
 }
 
 // TODO: how to get the action_id without sending an additional request?
@@ -2246,7 +2281,8 @@ function show_mask(visible){
 }
 
 function login_finished(){
-    fetch_server_update(update_config=true);
+    // REMOVED: fetch_server_update call - React now handles config loading directly
+    console.log('🔧 login_finished called - React will handle reinitialization');
 }
 
 function logout_finished(){
@@ -2271,257 +2307,8 @@ function logout_finished(){
     goto_url(segmentationUrl + '?image_id=' + currentImageId);
 }
 
-async function fetch_server_update(update_config=true){
-    // Use React store as primary source, fallback to legacy vars
-    const userUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('user') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.user - React store not available');
-        return vars.url.user;
-    })();
-
-    if (!userUrl) {
-        console.error('[IRIS Migration] ❌ No user URL available for fetch_server_update');
-        return;
-    }
-
-    let response = await fetch(userUrl + "get/current");
-    if (response.status == 403) {
-        dialogue_login();
-        
-        // Use React store as primary source
-        if (window.setJustLoggedInInStore) {
-            window.setJustLoggedInInStore(true);
-        } else {
-            // Fallback to legacy vars during initialization
-            console.warn('[IRIS Migration] Using legacy vars.just_logged_in fallback for setting true');
-            vars.just_logged_in = true;
-        }
-        return;
-    }
-    let user = await response.json();
-
-    // Use React store as primary source, fallback to legacy vars
-    const mainUrlForImageInfo = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main for image info - React store not available');
-        return vars.url.main;
-    })();
-
-    // Get more information about the current image:
-    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in fetch_server_update() - React store not available');
-        return vars.image_id;
-    })();
-
-    response = await fetch(mainUrlForImageInfo+"image_info/"+currentImageId);
-    if (response.status != 404) {
-        image = await response.json();
-
-        let info_box = '<div class="info-box-top" style="position: relative;">';
-        info_box += clip_string(image.id, 20);
-        let masks = image.segmentation.count;
-        if (image.segmentation.current_user_score !== null){
-            masks -= 1;
-        }
-
-        if (masks != 0){
-            let text = '1 other mask';
-            if (masks > 1){
-                text = masks.toString() + ' other masks';
-            }
-
-            info_box += '<span style="position: absolute; right: -12px; top: -25px; align-text: right;" class="tag">'+text+'</span>';
-        }
-        info_box += '</div>';
-        info_box += '<div class="info-box-bottom">image</div>';
-        get_object('image-info').innerHTML = info_box;
-    } else {
-        return;
-    }
-
-    info_box = '<div class="info-box-top" style="position: relative;">';
-    info_box += nice_number(user.segmentation.score);
-    if (image.segmentation.current_user_score !== null){
-        let image_score = image.segmentation.current_user_score;
-        let colour = "red";
-        if (image_score > 85){
-            colour = "green";
-        } else if (image_score > 70){
-            colour = "";
-        }
-        image_score = image_score.toString();
-        if (image.segmentation.current_user_score_unverified){
-            image_score += '?';
-        }
-        info_box += '<span style="position: absolute; right: -12px; top: -25px; align-text: right;" class="tag '+colour+'">'+image_score+'</span>';
-    }
-    info_box += '</div>';
-    info_box += '<div class="info-box-bottom">'+clip_string(user.name, 20)+'</div>';
-    get_object('user-info').innerHTML = info_box;
-    
-    // Use React store as primary source, fallback to legacy vars
-    if (window.setUserInStore) {
-        try {
-            window.setUserInStore(user);
-            console.log('[IRIS Migration] ✅ User set in React store successfully');
-        } catch (error) {
-            console.error('[IRIS Migration] ❌ Failed to set user in React store:', error);
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user due to store error');
-            vars.user = user;
-        }
-    } else {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user - React store not available');
-        vars.user = user;
-    }
-
-    if (update_config){
-        console.log('[IRIS Migration] 🔧 Loading config from server:', user.config);
-        
-        // Primary destination: React store, fallback: legacy vars
-        if (window.setConfigInStore) {
-            try {
-                window.setConfigInStore(user.config);
-                console.log('[IRIS Migration] ✅ Config set in React store successfully');
-            } catch (error) {
-                console.error('[IRIS Migration] ❌ Failed to set config in React store:', error);
-                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config due to store error');
-                vars.config = user.config;
-            }
-        } else {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
-            vars.config = user.config;
-        }
-
-        // Set mask area in React store (primary source)
-        const maskArea = window.getConfigSectionFromStore ? 
-            window.getConfigSectionFromStore('segmentation')?.mask_area : (() => {
-                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.segmentation.mask_area - React store not available');
-                return user.config.segmentation.mask_area;
-            })();
-
-        if (window.setMaskAreaInStore) {
-            window.setMaskAreaInStore(maskArea);
-        } else {
-            console.warn('[IRIS Migration] fetch_server_update: Using legacy vars.mask_area fallback - React store not available');
-            vars.mask_area = maskArea;
-        }
-
-        // Get image shape from config
-        const imageShape = window.getConfigSectionFromStore ? 
-            window.getConfigSectionFromStore('images')?.shape : (() => {
-                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.images.shape - React store not available');
-                return user.config.images.shape;
-            })();
-
-        vars.image_shape = imageShape;
-        
-        // Sync image shape to React store (primary source)
-        if (imageShape && Array.isArray(imageShape) && imageShape.length >= 2) {
-            const [width, height] = imageShape;
-            if (window.setImageShapeInStore) {
-                window.setImageShapeInStore(width, height);
-            }
-        }
-        
-        // Get classes from config
-        const classes = window.getConfigSectionFromStore ? 
-            window.getConfigSectionFromStore('classes') : (() => {
-                console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.classes - React store not available');
-                return user.config.classes;
-            })();
-
-        vars.classes = classes;
-
-        // Sync classes to React store after loading from config
-        if (window.setClassesInStore && classes) {
-            window.setClassesInStore(classes);
-            
-            // Also set the current class if it's valid
-            const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
-                console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in fetch_server_update()');
-                return classes ? classes.length : 0;
-            })();
-            if (typeof vars.current_class === 'number' && vars.current_class < classCount) {
-                if (window.setCurrentClassInStore) {
-                    window.setCurrentClassInStore(vars.current_class);
-                }
-            } else if (classCount > 0) {
-                // Default to first class if current class is invalid
-                vars.current_class = 0;
-                if (window.setCurrentClassInStore) {
-                    window.setCurrentClassInStore(0);
-                }
-            }
-        } else if (window.segmentationStore) {
-            const store = window.segmentationStore.getState();
-            if (classes) {
-                store.setClasses(classes);
-                
-                // Also set the current class if it's valid
-                if (typeof vars.current_class === 'number' && vars.current_class < classes.length) {
-                    store.setCurrentClass(vars.current_class);
-                } else if (classes.length > 0) {
-                    // Default to first class if current class is invalid
-                    vars.current_class = 0;
-                    store.setCurrentClass(0);
-                }
-            } else {
-                console.warn('[IRIS Migration] No classes available to set in store');
-            }
-        }
-
-        // The size (shape) of the mask area:
-        const currentMaskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
-        if (currentMaskArea) {
-            const maskWidth = currentMaskArea[2] - currentMaskArea[0];
-            const maskHeight = currentMaskArea[3] - currentMaskArea[1];
-            vars.mask_shape = [maskWidth, maskHeight];
-            
-            // Update React store with mask dimensions
-            if (window.setMaskShapeInStore) {
-                window.setMaskShapeInStore(maskWidth, maskHeight);
-            } else {
-                console.warn('[IRIS Migration] setMaskShapeInStore not available, using legacy vars.mask_shape only');
-            }
-        } else {
-            console.error('[IRIS Migration] No mask area available for calculating mask dimensions');
-        }
-    }
-
-    // Use React store as primary source, fallback to legacy vars
-    const isAdmin = window.isAdminFromStore ? window.isAdminFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.user.admin - React store not available');
-        return user.admin;
-    })();
-
-    if (isAdmin){
-        get_object('admin-button').style.display = "block";
-    } else {
-        get_object('admin-button').style.display = "none";
-    }
-
-    // Handle next_action execution (simplified to avoid syntax issues)
-    if (window.getNextActionFromStore) {
-        const nextAction = window.getNextActionFromStore();
-        if (nextAction !== null) {
-            window.setNextActionInStore(null);
-            try {
-                nextAction();
-            } catch (error) {
-                console.error('[IRIS] Error executing React store next_action:', error);
-            }
-        }
-    } else if (vars.next_action !== null) {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.next_action - React store not available');
-        try {
-            vars.next_action();
-        } catch (error) {
-            console.error('[IRIS] Error executing legacy next_action:', error);
-        }
-        vars.next_action = null;
-    }
-
-    // Check every 15 seconds the current state on the server:
-    setTimeout(fetch_server_update, 15000);
-}
+// REMOVED: async function fetch_server_update - React now handles config loading directly
+// This function has been replaced by useConfigLoader hook in React
 
 async function load_mask(){
     // PHASE 2: Check React store first (new source of truth)
@@ -2604,29 +2391,38 @@ async function legacyLoadMask(){
         userMaskData.fill(0);
     }
 
-    // CRITICAL: Use React store as primary source of truth
+    // CRITICAL: Always set legacy vars first as fallback, then try React store
+    vars.mask = maskData;
+    vars.user_mask = userMaskData;
+    vars.errors_mask = errorsMaskData;
+    
+    console.log('[IRIS Migration] ✅ Legacy vars mask data set:', {
+        maskLength: vars.mask ? vars.mask.length : 'null',
+        userMaskLength: vars.user_mask ? vars.user_mask.length : 'null',
+        errorsMaskLength: vars.errors_mask ? vars.errors_mask.length : 'null',
+        maskShape: vars.mask_shape
+    });
+
+    // THEN try to update React store as well (but legacy vars are always available)
     if (window.setMaskDataInStore && window.setUserMaskDataInStore && window.setErrorsMaskDataInStore) {
         try {
             window.setMaskDataInStore(maskData, vars.mask_shape[0], vars.mask_shape[1]);
             window.setUserMaskDataInStore(userMaskData);
             window.setErrorsMaskDataInStore(errorsMaskData);
+            console.log('[IRIS Migration] ✅ React store mask data also updated');
         } catch (error) {
-            console.error('[IRIS Migration] ❌ React store mask loading failed:', error);
-            console.warn('[IRIS Migration] Using legacy vars fallback');
-            // Fallback to legacy vars
-            vars.mask = maskData;
-            vars.user_mask = userMaskData;
-            vars.errors_mask = errorsMaskData;
+            console.error('[IRIS Migration] ❌ React store mask loading failed (legacy vars still available):', error);
         }
     } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available, using legacy vars fallback');
-        vars.mask = maskData;
-        vars.user_mask = userMaskData;
-        vars.errors_mask = errorsMaskData;
+        console.warn('[IRIS Migration] ⚠️ React store not available, but legacy vars are set');
     }
 
     set_mask_type(vars.mask_type);
     hide_loader();
+    
+    // Notify React components that mask data is loaded
+    window.dispatchEvent(new CustomEvent('iris-mask-loaded'));
+    
     update_drawn_pixels();
 
     // Part of the history (undo-redo) system. When new pixels are drawn, we
@@ -2894,7 +2690,8 @@ function legacySaveMask(call_afterwards=null){
 }
 
 async function save_mask_finished(response, call_afterwards){
-    fetch_server_update();
+    // Note: fetch_server_update() removed - React handles config updates directly
+    // Mask saving doesn't require config reload, just success/error handling
 
     if (response.status === 200) {
         show_message('Mask saved', 1000);
@@ -3342,3 +3139,22 @@ function update_ai_box(score, cm, tp, user_classes){
 
     get_object("ai-recommendation").innerHTML = recommendation;
 }
+
+// REMOVED: window.init_segmentation - React now handles initialization directly
+
+// CRITICAL: Expose legacy functions to window object for React canvas integration
+// These exports MUST be at the end of the file to ensure all functions are defined first
+window.mouse_wheel = mouse_wheel;
+window.mouse_move = mouse_move;
+window.mouse_down = mouse_down;
+window.mouse_up = mouse_up;
+window.mouse_enter = mouse_enter;
+window.zoom = zoom;
+window.update_cursor_coords = update_cursor_coords;
+window.user_draws_on_mask = user_draws_on_mask;
+window.render_preview = render_preview;
+window.get_tool_offset = get_tool_offset;
+window.legacySaveMask = legacySaveMask;
+window.load_mask = load_mask;
+window.legacyLoadMask = legacyLoadMask;
+window.init_views = init_views;

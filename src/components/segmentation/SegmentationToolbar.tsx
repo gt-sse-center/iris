@@ -24,7 +24,7 @@ const SegmentationToolbar: React.FC<SegmentationToolbarProps> = ({
   onOpenPreferences
 }) => {
   return (
-    <ul className="toolbar" id="toolbar" style={{ visibility: 'hidden' }}>
+    <ul className="toolbar" id="toolbar" style={{ visibility: 'visible' }}>
       <NavigationTools onExportGeoTIFF={onExportGeoTIFF} />
       <EditingTools />
       <ToolbarSeparator />

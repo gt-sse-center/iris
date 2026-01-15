@@ -736,9 +736,12 @@ const createConfusionMatrixFromStore = (
 
 // Helper function to trigger legacy rendering
 const triggerLegacyRender = () => {
+  // Use React store ViewManager for rendering
   const w = window as any;
-  if (w.vars?.vm?.render) {
-    w.vars.vm.render();
+  if (w.renderFromStore) {
+    w.renderFromStore();
+  } else {
+    console.warn('[IRIS Migration] ⚠️ renderFromStore not available - React store ViewManager required');
   }
 };
 
@@ -1304,10 +1307,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const clampedValue = Math.max(0, Math.min(800, value));
     set({ brightness: clampedValue });
     
-    // Sync with legacy vars object during migration
+    // Sync with legacy ViewManager instance via store
     const w = window as any;
-    if (w.vars?.vm?.filters) {
-      w.vars.vm.filters.brightness = clampedValue;
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.filters) {
+      viewManager.filters.brightness = clampedValue;
     }
     triggerLegacyRender();
   },
@@ -1316,10 +1320,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const clampedValue = Math.max(0, Math.min(800, value));
     set({ saturation: clampedValue });
     
-    // Sync with legacy vars object during migration
+    // Sync with legacy ViewManager instance via store
     const w = window as any;
-    if (w.vars?.vm?.filters) {
-      w.vars.vm.filters.saturation = clampedValue;
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.filters) {
+      viewManager.filters.saturation = clampedValue;
     }
     triggerLegacyRender();
   },
@@ -1327,10 +1332,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   setContrast: (enabled: boolean) => {
     set({ contrast: enabled });
     
-    // Sync with legacy vars object during migration
+    // Sync with legacy ViewManager instance via store
     const w = window as any;
-    if (w.vars?.vm?.filters) {
-      w.vars.vm.filters.contrast = enabled;
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.filters) {
+      viewManager.filters.contrast = enabled;
     }
     triggerLegacyRender();
   },
@@ -1338,10 +1344,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   setInvert: (enabled: boolean) => {
     set({ invert: enabled });
     
-    // Sync with legacy vars object during migration
+    // Sync with legacy ViewManager instance via store
     const w = window as any;
-    if (w.vars?.vm?.filters) {
-      w.vars.vm.filters.invert = enabled;
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.filters) {
+      viewManager.filters.invert = enabled;
     }
     triggerLegacyRender();
   },
@@ -1354,13 +1361,14 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       invert: false 
     });
     
-    // Sync with legacy vars object during migration
+    // Sync with legacy ViewManager instance via store
     const w = window as any;
-    if (w.vars?.vm?.filters) {
-      w.vars.vm.filters.brightness = 100;
-      w.vars.vm.filters.saturation = 100;
-      w.vars.vm.filters.contrast = false;
-      w.vars.vm.filters.invert = false;
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.filters) {
+      viewManager.filters.brightness = 100;
+      viewManager.filters.saturation = 100;
+      viewManager.filters.contrast = false;
+      viewManager.filters.invert = false;
     }
     triggerLegacyRender();
   },
@@ -1537,8 +1545,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       if (currentBtn) currentBtn.classList.add('checked');
     }
     
-    // Trigger legacy preview render (with safety check for initialization)
-    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+    // Trigger legacy preview render via store ViewManager
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
     } else {
       console.log('[IRIS] setCurrentTool: Skipping render_preview, ViewManager not initialized yet');
@@ -1555,8 +1564,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       w.vars.tool.size = clampedSize;
     }
     
-    // Trigger legacy preview render (with safety check for initialization)
-    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+    // Trigger legacy preview render via store ViewManager
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
     } else {
       console.log('[IRIS] setToolSize: Skipping render_preview, ViewManager not initialized yet');
@@ -1592,8 +1602,9 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       w.vars.tool.shape = shape;
     }
     
-    // Trigger legacy preview render (with safety check for initialization)
-    if (w.vars && w.vars.vm && w.vars.vm.getLayers && w.render_preview) {
+    // Trigger legacy preview render via store ViewManager
+    const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+    if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
     } else {
       console.log('[IRIS] setToolShape: Skipping render_preview, ViewManager not initialized yet');
@@ -2576,12 +2587,13 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 // Initialize store from legacy vars if available
 const initializeFiltersFromLegacy = () => {
   const w = window as any;
-  if (w.vars?.vm?.filters) {
+  const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
+  if (viewManager?.filters) {
     const store = useSegmentationStore.getState();
-    store.setBrightness(w.vars.vm.filters.brightness || 100);
-    store.setSaturation(w.vars.vm.filters.saturation || 100);
-    store.setContrast(w.vars.vm.filters.contrast || false);
-    store.setInvert(w.vars.vm.filters.invert || false);
+    store.setBrightness(viewManager.filters.brightness || 100);
+    store.setSaturation(viewManager.filters.saturation || 100);
+    store.setContrast(viewManager.filters.contrast || false);
+    store.setInvert(viewManager.filters.invert || false);
   }
 };
 
@@ -2682,6 +2694,26 @@ const initializeNavigationActionsStateFromLegacy = () => {
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
 if (typeof window !== 'undefined') {
   (window as any).segmentationStore = useSegmentationStore;
+  
+  // CRITICAL: Check for pending image ID from early bridge
+  const checkForPendingImageId = () => {
+    const w = window as any;
+    if (w._pendingImageId) {
+      console.log('[IRIS Migration] ✅ Found pending image ID, setting in React store');
+      useSegmentationStore.getState().setCurrentImage(w._pendingImageId);
+      w._pendingImageId = null;
+    }
+  };
+  
+  // Check immediately
+  checkForPendingImageId();
+  
+  // Replace early bridge with real bridge function
+  (window as any).setCurrentImageIdInStore = (imageId: string) => {
+    console.log('[IRIS Migration] ✅ Real bridge: Setting current image ID in React store');
+    useSegmentationStore.getState().setCurrentImage(imageId);
+  };
+  
   (window as any).getApiUrlsFromStore = getApiUrlsFromStore;
   (window as any).getApiUrlFromStore = getApiUrlFromStore;
   (window as any).setApiUrlsInStore = setApiUrlsInStore;

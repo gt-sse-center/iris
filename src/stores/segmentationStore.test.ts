@@ -2,21 +2,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useSegmentationStore } from './segmentationStore';
 
 // Mock window object
+const mockViewManager = {
+  filters: { brightness: 100, saturation: 100, contrast: false, invert: false },
+  render: vi.fn(),
+  getLayers: vi.fn(() => []),
+};
+
 const mockWindow = {
   vars: {
-    vm: {
-      filters: { brightness: 100, saturation: 100, contrast: false, invert: false },
-      render: vi.fn(),
-    },
     tool: { size: 5, type: 'draw', resizing_mode: false },
     cursor_image: [0, 0],
     drag_start: null,
   },
   render_preview: vi.fn(),
+  getViewManagerFromStore: vi.fn(() => mockViewManager),
 };
 
 Object.defineProperty(window, 'vars', { value: mockWindow.vars, writable: true });
 Object.defineProperty(window, 'render_preview', { value: mockWindow.render_preview, writable: true });
+Object.defineProperty(window, 'getViewManagerFromStore', { value: mockWindow.getViewManagerFromStore, writable: true });
 
 describe('segmentationStore - Navigation Dialog Bug Fix', () => {
   beforeEach(() => {
@@ -46,7 +50,7 @@ describe('segmentationStore - Filter Functions', () => {
     
     store.setBrightness(150);
     expect(useSegmentationStore.getState().brightness).toBe(150);
-    expect(mockWindow.vars.vm.filters.brightness).toBe(150);
+    expect(mockViewManager.filters.brightness).toBe(150);
     
     store.setBrightness(1000); // Should clamp to 800
     expect(useSegmentationStore.getState().brightness).toBe(800);
