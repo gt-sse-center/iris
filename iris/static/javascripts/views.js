@@ -25,11 +25,13 @@ class ViewManager{
         this.clear();
         this.image_id = image_id;
         
-        // Primary source: React store, fallback: legacy vars
-        const location = window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_location - React store not available');
-            return image_location;
-        })();
+        // Get location from React store (ONLY source)
+        const location = window.getImageLocationFromStore ? 
+            window.getImageLocationFromStore() : image_location;
+        
+        if (!window.getImageLocationFromStore) {
+            console.warn('[IRIS] ⚠️ Image location store not available, using parameter fallback');
+        }
         
         this.image_location = location;
         
@@ -493,11 +495,13 @@ class BingLayer extends ViewLayer{
         this.update();
     }
     update(){
-        // Primary source: React store, fallback: legacy vars
-        const imageLocation = window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy this.vm.image_location - React store not available');
-            return this.vm.image_location;
-        })();
+        // Get image location from React store (ONLY source)
+        const imageLocation = window.getImageLocationFromStore ? 
+            window.getImageLocationFromStore() : this.vm.image_location;
+        
+        if (!window.getImageLocationFromStore) {
+            console.warn('[IRIS] ⚠️ Image location store not available, using ViewManager fallback');
+        }
         
         // Default location
         let location = imageLocation[0]+"~"+imageLocation[1];
