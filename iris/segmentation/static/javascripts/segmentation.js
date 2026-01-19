@@ -203,7 +203,7 @@ async function init_views(){
     if (window.createHiddenMaskCanvasFromStore) {
         // Use React store for hidden mask canvas creation
         try {
-            const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+            const maskShape = window.getMaskShapeFromStore();
             if (maskShape) {
                 window.createHiddenMaskCanvasFromStore(maskShape[0], maskShape[1]);
             } else {
@@ -259,8 +259,8 @@ async function init_views(){
     })();
 
     viewManager.setImage(
-        window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : null, 
-        window.getImageLocationFromStore ? window.getImageLocationFromStore() : [0, 0]
+        window.getCurrentImageIdFromStore(), 
+        window.getImageLocationFromStore()
     );
     viewManager.showGroup();
 
@@ -646,7 +646,7 @@ function mouse_wheel(event){
         }
         
         let newSize = currentSize + delta * 0.5 * currentSize;
-        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+        const maskShape = window.getMaskShapeFromStore();
         if (maskShape) {
             newSize = round_number(Math.max(
                 1, Math.min(
@@ -1221,7 +1221,7 @@ function updateMaskPixels(updates) {
     if (!updates || updates.length === 0) return;
     
     // Get mask shape from store
-    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+    const maskShape = window.getMaskShapeFromStore();
     
     if (!window.getMaskDataFromStore || !window.getUserMaskDataFromStore || 
         !window.setMaskDataInStore || !window.setUserMaskDataInStore) {
@@ -1360,7 +1360,7 @@ function user_draws_on_mask(){
     }
 
     // Get mask shape from store for bounds checking
-    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+    const maskShape = window.getMaskShapeFromStore();
     if (!maskShape) {
         console.error('[IRIS Migration] ❌ No mask shape available for drawing bounds check');
         return;
@@ -1828,8 +1828,8 @@ function reload_hidden_mask(){
     }
     
     // Safety check: ensure mask data is available from store
-    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
-    const maskData = window.getMaskDataFromStore ? window.getMaskDataFromStore() : null;
+    const maskShape = window.getMaskShapeFromStore();
+    const maskData = window.getMaskDataFromStore();
     if (!maskShape || !maskData) {
         console.error('[IRIS] ❌ Mask data not available for reload_hidden_mask');
         throw new Error('Mask data not available');
@@ -2186,7 +2186,7 @@ async function legacyLoadMask(){
     }
 
     // Get mask shape from React store
-    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+    const maskShape = window.getMaskShapeFromStore();
     if (!maskShape) {
         console.error('[IRIS Migration] ❌ No mask shape available from store');
         hide_loader();
@@ -2472,7 +2472,7 @@ function legacySaveMask(call_afterwards=null){
 
     // Combine both masks together to one byte array only with padding magic
     // numbers 254 to make sure the transaction was done successfully
-    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+    const maskShape = window.getMaskShapeFromStore();
     if (!maskShape) {
         console.error('[IRIS Migration] No mask shape available for save operation');
         if (call_afterwards !== null) {
@@ -2499,7 +2499,7 @@ function legacySaveMask(call_afterwards=null){
         return;
     }
 
-    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : null;
+    const currentImageId = window.getCurrentImageIdFromStore();
     if (!currentImageId) {
         console.error('[IRIS Migration] ❌ No current image ID available for legacySaveMask');
         if (call_afterwards !== null) {
@@ -2857,7 +2857,7 @@ async function legacyPredictMask(){
     
     const currentMaskData = window.getMaskDataFromStore();
     const currentUserMaskData = window.getUserMaskDataFromStore();
-    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+    const maskShape = window.getMaskShapeFromStore();
     
     if (!currentMaskData || !currentUserMaskData || !maskShape) {
         console.error('[IRIS Migration] ❌ Mask data not available from store for prediction');
