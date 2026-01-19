@@ -96,16 +96,12 @@ class SuperpixelsLayer extends CanvasLayer{
             
             ctx.clearRect(0, 0, ...imageShape);
             
-            // Get mask area from React store or fallback to legacy
+            // Get mask area from React store (ONLY source)
             const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
-                console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
+                console.error('[IRIS] ❌ Mask area not available for SuperpixelsLayer render');
                 return;
-            }
-            
-            if (!window.getMaskAreaFromStore && vars.mask_area) {
-                console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.mask_area fallback - React store not available');
             }
             
             ctx.drawImage(

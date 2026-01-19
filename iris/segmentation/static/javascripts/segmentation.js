@@ -1305,21 +1305,17 @@ function user_draws_on_mask(){
     y_end = Math.min(round_number(canvas_bounds[1].y), y_end);
 
     // Transform into mask coordinates:
-    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
-    if (maskArea) {
-        x_start -= maskArea[0];
-        x_end -= maskArea[0];
-        y_start -= maskArea[1];
-        y_end -= maskArea[1];
-    } else {
-        console.warn('[IRIS Migration] No mask area available for coordinate transformation');
-        return; // or use existing logic
+    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
+    
+    if (!maskArea) {
+        console.error('[IRIS] ❌ Mask area not available for coordinate transformation');
+        return;
     }
-
-    // Add warning when falling back to legacy vars
-    if (!window.getMaskAreaFromStore && vars.mask_area) {
-        console.warn('⚠️ [IRIS Migration] Using legacy vars.mask_area fallback - React store not available');
-    }
+    
+    x_start -= maskArea[0];
+    x_end -= maskArea[0];
+    y_start -= maskArea[1];
+    y_end -= maskArea[1];
 
     // Get mask shape from store for bounds checking
     const maskShape = window.getMaskShapeFromStore();
@@ -1472,11 +1468,13 @@ function user_draws_on_mask(){
             for (let x = x_start; x < x_end; x++) {
                 for (let y = y_start; y < y_end; y++) {
                     // Convert mask coordinates back to image coordinates for distance calculation
-                    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+                    const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
+                    
                     if (!maskArea) {
-                        console.warn('[IRIS Migration] No mask area available for distance calculation');
+                        console.error('[IRIS] ❌ Mask area not available for distance calculation');
                         continue;
                     }
+                    
                     const imageX = x + maskArea[0];
                     const imageY = y + maskArea[1];
                     
@@ -1653,11 +1651,13 @@ function user_draws_on_mask(){
                     for (let x = x_start; x < x_end; x++) {
                         for (let y = y_start; y < y_end; y++) {
                             // Convert mask coordinates back to image coordinates for distance calculation
-                            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+                            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
+                            
                             if (!maskArea) {
-                                console.warn('[IRIS Migration] No mask area available for distance calculation');
+                                console.error('[IRIS] ❌ Mask area not available for distance calculation');
                                 continue;
                             }
+                            
                             const imageX = x + maskArea[0];
                             const imageY = y + maskArea[1];
                             
@@ -1684,11 +1684,13 @@ function user_draws_on_mask(){
                         for (let x = x_start; x < x_end; x++) {
                             for (let y = y_start; y < y_end; y++) {
                                 // Convert mask coordinates back to image coordinates for distance calculation
-                                const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+                                const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
+                                
                                 if (!maskArea) {
-                                    console.warn('[IRIS Migration] No mask area available for distance calculation');
+                                    console.error('[IRIS] ❌ Mask area not available for distance calculation');
                                     continue;
                                 }
+                                
                                 const imageX = x + maskArea[0];
                                 const imageY = y + maskArea[1];
                                 
