@@ -2074,14 +2074,15 @@ function login_finished(){
 function logout_finished(){
     save_mask();
     
-    // Use React store as primary source, fallback to legacy vars
-    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
-        return vars.url.segmentation;
-    })();
-
+    // Get segmentation URL from React store (ONLY source)
+    if (!window.getApiUrlFromStore) {
+        console.error('[IRIS] ❌ API URL store not available for logout_finished');
+        return;
+    }
+    
+    const segmentationUrl = window.getApiUrlFromStore('segmentation');
     if (!segmentationUrl) {
-        console.error('[IRIS Migration] ❌ No segmentation URL available for logout_finished');
+        console.error('[IRIS] ❌ No segmentation URL available for logout_finished');
         return;
     }
 
@@ -2128,14 +2129,16 @@ async function load_mask(){
 async function legacyLoadMask(){
     show_loader("Loading masks...");
 
-    // Use React store as primary source, fallback to legacy vars
-    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
-        return vars.url.segmentation;
-    })();
-
+    // Get segmentation URL from React store (ONLY source)
+    if (!window.getApiUrlFromStore) {
+        console.error('[IRIS] ❌ API URL store not available for legacyLoadMask');
+        hide_loader();
+        return;
+    }
+    
+    const segmentationUrl = window.getApiUrlFromStore('segmentation');
     if (!segmentationUrl) {
-        console.error('[IRIS Migration] ❌ No segmentation URL available for legacyLoadMask');
+        console.error('[IRIS] ❌ No segmentation URL available for legacyLoadMask');
         hide_loader();
         return;
     }
@@ -2376,11 +2379,17 @@ function dialogue_before_next_image_save_and_continue(action_id){
         "notes": get_object('dbni-notes').value
     }
 
-    // Use React store as primary source, fallback to legacy vars
-    const mainUrlForActionInfo = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.main for action info - React store not available');
-        return vars.url.main;
-    })();
+    // Get main URL from React store (ONLY source)
+    if (!window.getApiUrlFromStore) {
+        console.error('[IRIS] ❌ API URL store not available for action info');
+        return;
+    }
+    
+    const mainUrlForActionInfo = window.getApiUrlFromStore('main');
+    if (!mainUrlForActionInfo) {
+        console.error('[IRIS] ❌ No main URL available for action info');
+        return;
+    }
 
     console.log('action',action_info.complete)
 
@@ -2564,13 +2573,18 @@ async function legacyPredictMask(){
         console.warn('[IRIS Migration] ⚠️ React store AI validation not available, using legacy fallback');
     }
     
-    // Get pixel counts from React store (primary) or legacy vars (fallback)
-    let pixelCounts;
-    if (window.getUserPixelCountsFromStore) {
-        pixelCounts = window.getUserPixelCountsFromStore();
-    } else {
-        console.warn('[IRIS Migration] ⚠️ Using legacy vars.n_user_pixels fallback');
-        pixelCounts = vars.n_user_pixels;
+    // Get pixel counts from React store (ONLY source)
+    if (!window.getUserPixelCountsFromStore) {
+        console.error('[IRIS] ❌ User pixel counts store not available');
+        hide_loader();
+        return;
+    }
+    
+    const pixelCounts = window.getUserPixelCountsFromStore();
+    if (!pixelCounts) {
+        console.error('[IRIS] ❌ No pixel counts available');
+        hide_loader();
+        return;
     }
     
     // Get class count from React store (ONLY source)
@@ -2707,11 +2721,19 @@ async function legacyPredictMask(){
 
     show_loader("Train AI...");
     
-    // Use React store as primary source, fallback to legacy vars
-    const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.url.segmentation - React store not available');
-        return vars.url.segmentation;
-    })();
+    // Get segmentation URL from React store (ONLY source)
+    if (!window.getApiUrlFromStore) {
+        console.error('[IRIS] ❌ API URL store not available for legacyPredictMask');
+        hide_loader();
+        return;
+    }
+    
+    const segmentationUrl = window.getApiUrlFromStore('segmentation');
+    if (!segmentationUrl) {
+        console.error('[IRIS] ❌ No segmentation URL available for legacyPredictMask');
+        hide_loader();
+        return;
+    }
 
     if (!segmentationUrl) {
         console.error('[IRIS Migration] ❌ No segmentation URL available for legacyPredictMask');
@@ -2837,8 +2859,7 @@ async function legacyPredictMask(){
         
         console.log('[IRIS Migration] ✅ Confusion matrix set through React store');
     } else {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: setConfusionMatrixInStore not available, using legacy vars.confusion_matrix');
-        vars.confusion_matrix = cm;
+        console.error('[IRIS] ❌ Confusion matrix store not available - cannot save confusion matrix');
     }
 
     update_ai_box(acc_prod / acc_sum, cm, tp, user_classes);
@@ -2946,20 +2967,24 @@ function update_ai_box(score, cm, tp, user_classes){
     if (!accuracyStats) {
         console.warn('[IRIS Migration] ⚠️ FALLBACK: getAccuracyStatsFromStore not available, using legacy calculation');
         
-        // Get pixel counts from React store (primary) or legacy vars (fallback)
-        let pixelCounts;
-        if (window.getUserPixelCountsFromStore) {
-            pixelCounts = window.getUserPixelCountsFromStore();
+        // Get pixel counts from React store (ONLY source)
+        if (!window.getUserPixelCountsFromStore) {
+            console.error('[IRIS] ❌ User pixel counts store not available for accuracy calculation');
+            // Continue without accuracy stats
         } else {
-            console.warn('[IRIS Migration] ⚠️ Using legacy vars.n_user_pixels fallback in accuracy calculation');
-            pixelCounts = vars.n_user_pixels;
-        }
-        
-        for (let label of user_classes){
-            let acc = tp[label] / (pixelCounts[label]);
-            if (acc < min_acc){
-                min_acc = acc;
-                worst_label = label;
+            const pixelCounts = window.getUserPixelCountsFromStore();
+            if (!pixelCounts) {
+                console.error('[IRIS] ❌ No pixel counts available for accuracy calculation');
+                // Continue without accuracy stats
+            } else {
+                // Calculate accuracy for each class
+                for (let label of user_classes){
+                    let acc = tp[label] / (pixelCounts[label]);
+                    if (acc < min_acc){
+                        min_acc = acc;
+                        worst_label = label;
+                    }
+                }
             }
         }
     }
