@@ -200,54 +200,19 @@ async function init_views(){
     // It much faster to change some pixel values on a sprite and draw it then
     // to the canvas once than redrawing each pixel to the canvas directly.
     // Hence, we use a hidden canvas for the mask:
-    if (window.createHiddenMaskCanvasFromStore) {
-        // Use React store for hidden mask canvas creation
-        try {
-            const maskShape = window.getMaskShapeFromStore();
-            if (maskShape) {
-                window.createHiddenMaskCanvasFromStore(maskShape[0], maskShape[1]);
-            } else {
-                console.warn('[IRIS Migration] No mask shape available, using legacy fallback');
-                throw new Error('No mask shape available');
-            }
-        } catch (error) {
-            console.error('[IRIS Migration] Failed to create hidden mask canvas from store:', error);
-            // Fallback to legacy approach
-            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback');
-            vars.hidden_mask = document.createElement('canvas');
-            const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
-            if (maskShape) {
-                vars.hidden_mask.width = maskShape[0];
-                vars.hidden_mask.height = maskShape[1];
-            } else {
-                console.error('[IRIS Migration] No mask shape available for legacy fallback');
-                return;
-            }
-            let hidden_ctx = vars.hidden_mask.getContext('2d');
-            hidden_ctx.shadowOffsetX = 0;
-            hidden_ctx.shadowOffsetY = 0;
-            hidden_ctx.shadowBlur = 0;
-            hidden_ctx.shadowColor = null;
-            hidden_ctx.imageSmoothingEnabled = false;
-        }
-    } else {
-        console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - React store not available');
-        vars.hidden_mask = document.createElement('canvas');
-        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
-        if (maskShape) {
-            vars.hidden_mask.width = maskShape[0];
-            vars.hidden_mask.height = maskShape[1];
-        } else {
-            console.error('[IRIS Migration] No mask shape available for legacy fallback');
-            return;
-        }
-        let hidden_ctx = vars.hidden_mask.getContext('2d');
-        hidden_ctx.shadowOffsetX = 0;
-        hidden_ctx.shadowOffsetY = 0;
-        hidden_ctx.shadowBlur = 0;
-        hidden_ctx.shadowColor = null;
-        hidden_ctx.imageSmoothingEnabled = false;
+    if (!window.createHiddenMaskCanvasFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Hidden mask canvas store not available');
+        throw new Error('React store required for hidden mask canvas');
     }
+    
+    // Use React store for hidden mask canvas creation
+    const maskShape = window.getMaskShapeFromStore();
+    if (!maskShape) {
+        console.error('[IRIS] ❌ CRITICAL: No mask shape available for hidden canvas creation');
+        throw new Error('Mask shape required for hidden canvas');
+    }
+    
+    window.createHiddenMaskCanvasFromStore(maskShape[0], maskShape[1]);
 
     // Load mask (now properly awaited):
     await load_mask();
