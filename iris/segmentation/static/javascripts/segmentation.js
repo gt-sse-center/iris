@@ -865,18 +865,12 @@ function move(dx, dy){
 function constrain_view(ctx, scale, dx, dy){
     let transforms = ctx.getTransform();
 
-    // Get image shape from React store with fallback to legacy vars
-    const imageShape = window.getImageShapeFromStore ? 
-        window.getImageShapeFromStore() : vars.image_shape;
+    // Get image shape from React store (ONLY source)
+    const imageShape = window.getImageShapeFromStore();
     
     if (!imageShape) {
-        console.warn('[IRIS Migration] constrain_view: No image shape available');
+        console.error('[IRIS] ❌ No image shape available for constrain_view');
         return;
-    }
-    
-    // Warn if falling back to legacy vars
-    if (!window.getImageShapeFromStore && vars.image_shape) {
-        console.warn('⚠️ [IRIS Migration] constrain_view: Using legacy vars.image_shape fallback - React store not available');
     }
 
     if (transforms.a*scale < ctx.canvas.width / imageShape[0]){
@@ -939,18 +933,12 @@ function reset_views(){
     console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy reset_views - React store not available');
     console.log('[IRIS] Using legacy reset_views (React canvas transformations not yet implemented)');
     
-    // Get image shape from React store with fallback to legacy vars
-    const imageShape = window.getImageShapeFromStore ? 
-        window.getImageShapeFromStore() : vars.image_shape;
+    // Get image shape from React store (ONLY source)
+    const imageShape = window.getImageShapeFromStore();
     
     if (!imageShape) {
-        console.warn('[IRIS Migration] reset_views: No image shape available');
+        console.error('[IRIS] ❌ No image shape available for reset_views');
         return;
-    }
-    
-    // Warn if falling back to legacy vars
-    if (!window.getImageShapeFromStore && vars.image_shape) {
-        console.warn('⚠️ [IRIS Migration] reset_views: Using legacy vars.image_shape fallback - React store not available');
     }
     
     for (let canvas of document.getElementsByClassName('view-canvas')){
@@ -1271,18 +1259,12 @@ function user_draws_on_mask(){
     let canvas = document.getElementsByClassName("view-canvas")[0];
     let ctx = canvas.getContext('2d');
 
-    // Get image shape from React store with fallback to legacy vars
-    const imageShape = window.getImageShapeFromStore ? 
-        window.getImageShapeFromStore() : vars.image_shape;
+    // Get image shape from React store (ONLY source)
+    const imageShape = window.getImageShapeFromStore();
     
     if (!imageShape) {
-        console.warn('[IRIS Migration] user_draws_on_mask: No image shape available');
+        console.error('[IRIS] ❌ No image shape available for user_draws_on_mask');
         return;
-    }
-    
-    // Warn if falling back to legacy vars
-    if (!window.getImageShapeFromStore && vars.image_shape) {
-        console.warn('⚠️ [IRIS Migration] user_draws_on_mask: Using legacy vars.image_shape fallback - React store not available');
     }
 
     // Get the area we finally have to render (update) in canvas coordinates.
@@ -2111,11 +2093,11 @@ function logout_finished(){
         return;
     }
 
-    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in logout_finished() - React store not available');
-        return vars.image_id;
-    })();
-
+    const currentImageId = window.getCurrentImageIdFromStore();
+    if (!currentImageId) {
+        console.error('[IRIS] ❌ No current image ID available for logout_finished');
+        return;
+    }
     goto_url(segmentationUrl + '?image_id=' + currentImageId);
 }
 
@@ -2126,10 +2108,11 @@ async function load_mask(){
     // PHASE 2: Check React store first (new source of truth)
     if (window.segmentationStore) {
         const store = window.segmentationStore.getState();
-        const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in load_mask() - React store not available');
-            return vars.image_id;
-        })();
+        const currentImageId = window.getCurrentImageIdFromStore();
+        if (!currentImageId) {
+            console.error('[IRIS] ❌ No current image ID available for load_mask');
+            return;
+        }
         
         if (currentImageId) {
             try {
@@ -2165,10 +2148,11 @@ async function legacyLoadMask(){
         return;
     }
 
-    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in legacyLoadMask() - React store not available');
-        return vars.image_id;
-    })();
+    const currentImageId = window.getCurrentImageIdFromStore();
+    if (!currentImageId) {
+        console.error('[IRIS] ❌ No current image ID available for legacyLoadMask');
+        return;
+    }
 
     var results = await download(
         segmentationUrl + "load_mask/" + currentImageId
@@ -2331,10 +2315,11 @@ async function dialogue_before_next_image(){
         return;
     }
 
-    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in dialogue_before_next_image() - React store not available');
-        return vars.image_id;
-    })();
+    const currentImageId = window.getCurrentImageIdFromStore();
+    if (!currentImageId) {
+        console.error('[IRIS] ❌ No current image ID available for dialogue_before_next_image');
+        return;
+    }
 
     let response = await fetch(`${mainUrl}get_action_info/${currentImageId}/segmentation`);
     if (response.status >= 400){
@@ -2728,10 +2713,11 @@ async function legacyPredictMask(){
         return;
     }
 
-    const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_id in legacyPredictMask() - React store not available');
-        return vars.image_id;
-    })();
+    const currentImageId = window.getCurrentImageIdFromStore();
+    if (!currentImageId) {
+        console.error('[IRIS] ❌ No current image ID available for legacyPredictMask');
+        return;
+    }
 
     let results = await download(
             segmentationUrl + "predict_mask/" + currentImageId,

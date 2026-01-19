@@ -87,19 +87,14 @@ class SuperpixelsLayer extends CanvasLayer{
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
             // Get image shape from React store with fallback to legacy vars
-            const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
+            const imageShape = window.getImageShapeFromStore();
             
-            if (imageShape) {
-                ctx.clearRect(0, 0, ...imageShape);
-            } else {
-                console.warn('[IRIS Migration] SuperpixelsLayer.render: No image shape available');
+            if (!imageShape) {
+                console.error('[IRIS] ❌ No image shape available for SuperpixelsLayer.render');
                 return;
             }
             
-            // Warn if falling back to legacy vars
-            if (!window.getImageShapeFromStore && vars.image_shape) {
-                console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.image_shape fallback - React store not available');
-            }
+            ctx.clearRect(0, 0, ...imageShape);
             
             // Get mask area from React store or fallback to legacy
             const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
@@ -157,20 +152,15 @@ class PreviewLayer extends CanvasLayer{
 
         let ctx = this.container.getContext("2d");
         
-        // Get image shape from React store with fallback to legacy vars
-        const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
+        // Get image shape from React store (ONLY source)
+        const imageShape = window.getImageShapeFromStore();
         
-        if (imageShape) {
-            ctx.clearRect(0, 0, ...imageShape);
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: No image shape available');
+        if (!imageShape) {
+            console.error('[IRIS] ❌ No image shape available for PreviewLayer.render');
             return;
         }
         
-        // Warn if falling back to legacy vars
-        if (!window.getImageShapeFromStore && vars.image_shape) {
-            console.warn('⚠️ [IRIS Migration] PreviewLayer.render: Using legacy vars.image_shape fallback - React store not available');
-        }
+        ctx.clearRect(0, 0, ...imageShape);
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
         
         // Get tool size from React store (primary source) with fallback to legacy vars
