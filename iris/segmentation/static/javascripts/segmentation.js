@@ -722,6 +722,10 @@ function mouse_up(event){
     }
     
     window.setDragStartInStore(null);
+    
+    // Save history after drawing stroke completes (groups entire stroke into one undo/redo entry)
+    // This is called here instead of in user_draws_on_mask() to avoid saving history for every pixel
+    update_history();
 }
 
 function mouse_enter(event){
@@ -1050,41 +1054,60 @@ function render_mask_to_hidden_canvas() {
 }
 
 function undo(){
-    // Use React store as primary source with fallback to legacy vars
-    if (window.undoInStore) {
-        try {
-            window.undoInStore();
-            
-            // Still need to trigger legacy rendering functions
-            update_drawn_pixels();
-            reload_hidden_mask();
-            render_mask();
-            return;
-        } catch (error) {
-            console.error('[IRIS Migration] ❌ React store undo failed:', error);
-            console.warn('[IRIS Migration] Using legacy vars fallback');
-        }
-    } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available for undo, using legacy vars fallback');
+    console.log('[IRIS] 🔙 Undo called');
+    
+    // Use React store as ONLY source
+    if (!window.undoInStore) {
+        console.error('[IRIS] ❌ Store not available for undo');
+        throw new Error('React store required for undo operation');
     }
-
-    // Fallback to legacy behavior
-    if (vars.history.mask.length == 0){
-        // There is no history saved
+    
+    // Check if undo is possible
+    if (window.canUndoFromStore && !window.canUndoFromStore()) {
+        console.log('[IRIS] ⚠️ Cannot undo - no history available');
         return;
     }
-
-    vars.history.current_epoch -= 1;
-    vars.history.current_epoch = Math.max(
-        vars.history.current_epoch, 0
-    );
-
-    vars.mask = vars.history.mask[vars.history.current_epoch].slice();
-    vars.user_mask = vars.history.user_mask[vars.history.current_epoch].slice();
-
-    update_drawn_pixels();
-    reload_hidden_mask();
-    render_mask();
+    
+    // Log current state before undo
+    const maskDataBefore = window.getMaskDataFromStore ? window.getMaskDataFromStore() : null;
+    const historyInfo = window.segmentationStore ? window.segmentationStore.getState() : null;
+    console.log('[IRIS] 🔙 Before undo:', {
+        historyLength: historyInfo?.maskHistory?.length,
+        currentEpoch: historyInfo?.historyCurrentEpoch,
+        maskDataLength: maskDataBefore?.length,
+        firstFewPixels: maskDataBefore ? Array.from(maskDataBefore.slice(0, 20)) : null
+    });
+    
+    console.log('[IRIS] 🔙 Calling undoInStore...');
+    
+    // Call store undo
+    window.undoInStore();
+    
+    // Log state after undo
+    const maskDataAfter = window.getMaskDataFromStore ? window.getMaskDataFromStore() : null;
+    const historyInfoAfter = window.segmentationStore ? window.segmentationStore.getState() : null;
+    console.log('[IRIS] 🔙 After undo:', {
+        historyLength: historyInfoAfter?.maskHistory?.length,
+        currentEpoch: historyInfoAfter?.historyCurrentEpoch,
+        maskDataLength: maskDataAfter?.length,
+        firstFewPixels: maskDataAfter ? Array.from(maskDataAfter.slice(0, 20)) : null,
+        maskChanged: maskDataBefore && maskDataAfter ? (maskDataBefore[0] !== maskDataAfter[0]) : 'unknown'
+    });
+    
+    console.log('[IRIS] 🔙 Store undo completed, scheduling render...');
+    
+    // CRITICAL: Use setTimeout to ensure store update completes before rendering
+    // Zustand updates are synchronous, but we need to ensure the mask data is accessible
+    setTimeout(() => {
+        console.log('[IRIS] 🔙 Rendering after undo...');
+        
+        // Trigger legacy rendering functions with updated mask from store
+        update_drawn_pixels();
+        reload_hidden_mask();
+        render_mask();
+        
+        console.log('[IRIS] ✅ Undo render complete');
+    }, 0);
 
     // Notify React store that mask has changed
     if (!window.segmentationStore) {
@@ -1098,41 +1121,39 @@ function undo(){
 }
 
 function redo(){
-    // Use React store as primary source with fallback to legacy vars
-    if (window.redoInStore) {
-        try {
-            window.redoInStore();
-            
-            // Still need to trigger legacy rendering functions
-            update_drawn_pixels();
-            reload_hidden_mask();
-            render_mask();
-            return;
-        } catch (error) {
-            console.error('[IRIS Migration] ❌ React store redo failed:', error);
-            console.warn('[IRIS Migration] Using legacy vars fallback');
-        }
-    } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available for redo, using legacy vars fallback');
+    console.log('[IRIS] 🔜 Redo called');
+    
+    // Use React store as ONLY source
+    if (!window.redoInStore) {
+        console.error('[IRIS] ❌ Store not available for redo');
+        throw new Error('React store required for redo operation');
     }
-
-    // Fallback to legacy behavior
-    if (vars.history.mask.length == 0){
-        // There is no history saved
+    
+    // Check if redo is possible
+    if (window.canRedoFromStore && !window.canRedoFromStore()) {
+        console.log('[IRIS] ⚠️ Cannot redo - no future history available');
         return;
     }
-
-    vars.history.current_epoch += 1;
-    vars.history.current_epoch = Math.min(
-        vars.history.current_epoch, vars.history.mask.length-1
-    );
-
-    vars.mask = vars.history.mask[vars.history.current_epoch].slice();
-    vars.user_mask = vars.history.user_mask[vars.history.current_epoch].slice();
-
-    update_drawn_pixels();
-    reload_hidden_mask();
-    render_mask();
+    
+    console.log('[IRIS] 🔜 Calling redoInStore...');
+    
+    // Call store redo
+    window.redoInStore();
+    
+    console.log('[IRIS] 🔜 Store redo completed, scheduling render...');
+    
+    // CRITICAL: Use setTimeout to ensure store update completes before rendering
+    // Zustand updates are synchronous, but we need to ensure the mask data is accessible
+    setTimeout(() => {
+        console.log('[IRIS] 🔜 Rendering after redo...');
+        
+        // Trigger legacy rendering functions with updated mask from store
+        update_drawn_pixels();
+        reload_hidden_mask();
+        render_mask();
+        
+        console.log('[IRIS] ✅ Redo render complete');
+    }, 0);
 
     // Notify React store that mask has changed
     if (!window.segmentationStore) {
@@ -1737,18 +1758,9 @@ function user_draws_on_mask(){
 
     update_drawn_pixels();
 
-    // Part of the history (undo-redo) system. When new pixels are drawn, we
-    // delete all saved future elements in the history stack and add the
-    // current masks to the history (DEBOUNCED for smooth drawing)
+    // Discard future history when drawing (undo-redo system)
+    // Note: update_history() is called in mouse_up() to group entire strokes
     discard_future();
-    
-    // Use debounced history update for drawing operations
-    if (window.scheduleHistoryUpdateInStore) {
-        window.scheduleHistoryUpdateInStore();
-    } else {
-        console.warn('[IRIS Migration] ⚠️ scheduleHistoryUpdateInStore not available, using immediate update');
-        update_history();
-    }
 
     // Set flag to show confirmation dialog before navigating away
     if (!window.segmentationStore) {
