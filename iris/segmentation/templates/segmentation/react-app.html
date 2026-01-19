@@ -18,9 +18,13 @@
     <script type="text/javascript" src="{{ url_for('segmentation.static', filename='javascripts/segmentation/views.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('segmentation.static', filename='javascripts/segmentation.js') }}"></script>
     
-    <!-- CRITICAL: Verify legacy functions are available immediately after segmentation.js loads -->
+    <!-- CRITICAL: Signal that legacy scripts are fully loaded -->
     <script type="text/javascript">
+        // Mark legacy scripts as ready
+        window.legacyScriptsReady = true;
+        
         console.log('🔧 Verifying legacy function exports after segmentation.js load:');
+        console.log('- window.init_views:', typeof window.init_views);
         console.log('- window.mouse_wheel:', typeof window.mouse_wheel);
         console.log('- window.mouse_move:', typeof window.mouse_move);
         console.log('- window.mouse_down:', typeof window.mouse_down);
@@ -31,10 +35,10 @@
         console.log('- window.render_preview:', typeof window.render_preview);
         console.log('- window.get_tool_offset:', typeof window.get_tool_offset);
         
-        if (typeof window.mouse_wheel === 'undefined') {
-            console.error('❌ CRITICAL: Legacy mouse functions not exported! Check segmentation.js');
+        if (typeof window.init_views === 'undefined' || typeof window.mouse_wheel === 'undefined') {
+            console.error('❌ CRITICAL: Legacy functions not exported! Check segmentation.js');
         } else {
-            console.log('✅ Legacy functions successfully exported');
+            console.log('✅ Legacy functions successfully exported and ready');
         }
     </script>
     

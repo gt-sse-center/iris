@@ -194,12 +194,27 @@ const SegmentationApp: React.FC = () => {
 
       console.log('🔧 React: Initializing views and mask data for image:', currentImageId);
       
+      // CRITICAL: Wait for legacy scripts to be fully loaded
+      const w = window as any;
+      if (!w.legacyScriptsReady) {
+        console.log('⏳ React: Waiting for legacy scripts to be ready...');
+        const maxWait = 5000; // 5 seconds
+        const startTime = Date.now();
+        while (!w.legacyScriptsReady) {
+          if (Date.now() - startTime > maxWait) {
+            console.error('❌ React: Legacy scripts not ready after 5 seconds');
+            throw new Error('Legacy scripts failed to load');
+          }
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        console.log('✅ React: Legacy scripts ready');
+      }
+      
       // Call the full init_views function which handles:
       // - Hidden mask canvas creation
       // - Mask data loading
       // - Toolbar/statusbar visibility
       // - Event initialization
-      const w = window as any;
       if (w.init_views) {
         await w.init_views();
         console.log('✅ React: Views and mask data initialized successfully');

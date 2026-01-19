@@ -110,14 +110,12 @@ let commands = {
 
 function newuser_help_popup(){
     // Open the help menu if the user is new (no saved masks):
-    // Use React store as primary source
-    let justLoggedIn;
-    if (window.getJustLoggedInFromStore) {
-        justLoggedIn = window.getJustLoggedInFromStore();
-    } else {
-        // Fallback to legacy vars during initialization
-        console.warn('[IRIS Migration] Using legacy vars.just_logged_in fallback');
-        justLoggedIn = vars.just_logged_in;
+    // Get just logged in flag from React store (ONLY source)
+    const justLoggedIn = window.getJustLoggedInFromStore ? 
+        window.getJustLoggedInFromStore() : false;
+    
+    if (!window.getJustLoggedInFromStore) {
+        console.error('[IRIS] ❌ Just logged in store not available');
     }
     
     // Use React store as primary source, fallback to legacy vars
@@ -1089,13 +1087,14 @@ function undo(){
     render_mask();
 
     // Notify React store that mask has changed
-    if (window.segmentationStore) {
-        const store = window.segmentationStore.getState();
-        store.setMaskChanged(true);
-        store.setShowDialogueBeforeNextImage(true);
-    } else {
-        vars.show_dialogue_before_next_image = true;
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available for undo');
+        return;
     }
+    
+    const store = window.segmentationStore.getState();
+    store.setMaskChanged(true);
+    store.setShowDialogueBeforeNextImage(true);
 }
 
 function redo(){
@@ -1136,13 +1135,14 @@ function redo(){
     render_mask();
 
     // Notify React store that mask has changed
-    if (window.segmentationStore) {
-        const store = window.segmentationStore.getState();
-        store.setMaskChanged(true);
-        store.setShowDialogueBeforeNextImage(true);
-    } else {
-        vars.show_dialogue_before_next_image = true;
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available for redo');
+        return;
     }
+    
+    const store = window.segmentationStore.getState();
+    store.setMaskChanged(true);
+    store.setShowDialogueBeforeNextImage(true);
 }
 
 // CRITICAL: Helper function for efficient mask pixel updates during drawing
@@ -1489,7 +1489,14 @@ function user_draws_on_mask(){
     drawing_area = [x_start, y_start, x_end-x_start, y_end-y_start];
 
     // Now we draw on the hidden mask and render it
-    if (vars.mask_type == 'final' || vars.mask_type == 'user'){
+    // Get mask type from React store (ONLY source)
+    if (!window.getMaskTypeFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for mask type');
+        throw new Error('React store required for mask type');
+    }
+    const maskType = window.getMaskTypeFromStore();
+    
+    if (maskType == 'final' || maskType == 'user'){
         // Get hidden mask context from React store (ONLY source)
         if (!window.getHiddenMaskContextFromStore) {
             console.error('[IRIS] ❌ CRITICAL: Store not available for hidden mask context');
@@ -1728,14 +1735,15 @@ function user_draws_on_mask(){
     }
 
     // Set flag to show confirmation dialog before navigating away
-    if (window.segmentationStore) {
-        const store = window.segmentationStore.getState();
-        store.setShowDialogueBeforeNextImage(true);
-        // IMPORTANT: Mark mask as changed so it gets saved properly
-        store.setMaskChanged(true);
-    } else {
-        vars.show_dialogue_before_next_image = true;
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available for user_draws_on_mask');
+        return;
     }
+    
+    const store = window.segmentationStore.getState();
+    store.setShowDialogueBeforeNextImage(true);
+    // IMPORTANT: Mark mask as changed so it gets saved properly
+    store.setMaskChanged(true);
 }
 
 function reload_hidden_mask(){
@@ -1783,33 +1791,30 @@ function reload_hidden_mask(){
 }
 
 function set_mask_type(type){
-    // PHASE 1: Check React store first (new source of truth)
-    if (window.segmentationStore) {
-        window.segmentationStore.getState().setMaskType(type);
-        return; // Store handles everything including DOM updates
+    // Use React store as ONLY source
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for set_mask_type');
+        throw new Error('React store required for mask type operations');
     }
     
-    // FALLBACK: Legacy behavior (should rarely be used)
-    console.log('[IRIS] Using legacy set_mask_type fallback, store not available');
-    get_object("tb_mask_"+vars.mask_type).classList.remove("checked");
-    get_object("tb_mask_"+type).classList.add("checked");
-
-    vars.mask_type = type;
-
-    reload_hidden_mask();
-    render_mask();
-    show_mask(true);
+    window.segmentationStore.getState().setMaskType(type);
+    // Store handles everything including DOM updates
 }
 
 function get_current_class_colour(){
-    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in get_current_class_colour()');
-        return vars.current_class;
-    })();
-    const maskType = window.getMaskTypeFromStore ? window.getMaskTypeFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getMaskTypeFromStore not available, using legacy vars.mask_type in get_current_class_colour()');
-        return vars.mask_type;
-    })();
+    // Get current class from React store (ONLY source)
+    if (!window.getCurrentClassFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for current class');
+        throw new Error('React store required for current class');
+    }
+    const currentClass = window.getCurrentClassFromStore();
+    
+    // Get mask type from React store (ONLY source)
+    if (!window.getMaskTypeFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for mask type');
+        throw new Error('React store required for mask type');
+    }
+    const maskType = window.getMaskTypeFromStore();
     
     if (maskType == "user"){
         const classInfo = window.getClassFromStore ? window.getClassFromStore(currentClass) : (vars.classes && vars.classes[currentClass] ? vars.classes[currentClass] : null);
@@ -1961,14 +1966,15 @@ function reset_mask(){
     update_drawn_pixels();
 
     // Set flag to show confirmation dialog before navigating away
-    if (window.segmentationStore) {
-        const store = window.segmentationStore.getState();
-        store.setShowDialogueBeforeNextImage(true);
-        // IMPORTANT: Mark mask as changed so it gets saved properly
-        store.setMaskChanged(true);
-    } else {
-        vars.show_dialogue_before_next_image = true;
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available for reset_mask');
+        return;
     }
+    
+    const store = window.segmentationStore.getState();
+    store.setShowDialogueBeforeNextImage(true);
+    // IMPORTANT: Mark mask as changed so it gets saved properly
+    store.setMaskChanged(true);
 }
 
 function reset_filters(){
@@ -2167,7 +2173,13 @@ async function legacyLoadMask(){
         console.warn('[IRIS Migration] ⚠️ React store not available, but legacy vars are set');
     }
 
-    set_mask_type(vars.mask_type);
+    // Get mask type from React store (ONLY source)
+    if (!window.getMaskTypeFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for mask type in reload_mask');
+        throw new Error('React store required for mask type');
+    }
+    const maskType = window.getMaskTypeFromStore();
+    set_mask_type(maskType);
     
     // CRITICAL: Render the loaded mask to the hidden canvas
     // This was missing - the mask data was loaded but never drawn to the canvas!
@@ -2239,10 +2251,14 @@ async function download(url, init=null, html_object=null){
 }
 
 async function dialogue_before_next_image(){
-    // Check store first, fallback to vars during migration
+    // Check store for dialogue flag
     const shouldShowDialogue = window.segmentationStore 
         ? window.segmentationStore.getState().showDialogueBeforeNextImage
-        : vars.show_dialogue_before_next_image;
+        : false;
+    
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available for dialogue_before_next_image');
+    }
     
     if (!shouldShowDialogue){
         return;
@@ -2269,11 +2285,12 @@ async function dialogue_before_next_image(){
     if (response.status >= 400){
         // Continue without any dialogue
         hide_loader(); // Fix: Hide the loader before continuing
-        if (window.segmentationStore) {
-            window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
-        } else {
-            vars.show_dialogue_before_next_image = false;
+        if (!window.segmentationStore) {
+            console.error('[IRIS] ❌ Segmentation store not available');
+            return;
         }
+        
+        window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
         next_image();
         return;
     }
@@ -2304,11 +2321,12 @@ async function dialogue_before_next_image(){
 
 function dialogue_before_next_image_save_and_continue(action_id){
     // Clear the dialogue flag
-    if (window.segmentationStore) {
-        window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
-    } else {
-        vars.show_dialogue_before_next_image = false;
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available');
+        return;
     }
+    
+    window.segmentationStore.getState().setShowDialogueBeforeNextImage(false);
 
     action_info = {
         "complete": get_object('dbni-complete_action').checked,
@@ -2840,7 +2858,13 @@ async function legacyPredictMask(){
 
     hide_loader();
 
-    vars.show_dialogue_before_next_image = true;
+    // Set dialogue flag in store
+    if (!window.segmentationStore) {
+        console.error('[IRIS] ❌ Segmentation store not available for AI prediction');
+        return;
+    }
+    
+    window.segmentationStore.getState().setShowDialogueBeforeNextImage(true);
 }
 
 
