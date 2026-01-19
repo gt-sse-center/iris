@@ -1845,26 +1845,40 @@ function get_current_class_colour(){
     const maskType = window.getMaskTypeFromStore();
     
     if (maskType == "user"){
-        const classInfo = window.getClassFromStore ? window.getClassFromStore(currentClass) : (vars.classes && vars.classes[currentClass] ? vars.classes[currentClass] : null);
-        if (classInfo && "user_colour" in classInfo){
+        // Get class info from React store (ONLY source)
+        if (!window.getClassFromStore) {
+            console.error('[IRIS] ❌ Class store not available');
+            return [255, 255, 255, 255]; // Default white color
+        }
+        
+        const classInfo = window.getClassFromStore(currentClass);
+        if (!classInfo) {
+            console.error('[IRIS] ❌ Class info not found for class:', currentClass);
+            return [255, 255, 255, 255]; // Default white color
+        }
+        
+        if ("user_colour" in classInfo){
             return classInfo.user_colour;
-        } else if (classInfo) {
+        } else if (classInfo.colour) {
             return classInfo.colour;
         } else {
-            console.warn('[IRIS Migration] Using legacy vars.classes fallback in get_current_class_colour');
-            return vars.classes && vars.classes[currentClass] ? vars.classes[currentClass].colour : [255, 255, 255, 255];
+            console.error('[IRIS] ❌ No colour found in class info');
+            return [255, 255, 255, 255]; // Default white color
         }
     } else {
-        const classColor = window.getClassColorFromStore ? window.getClassColorFromStore(currentClass) : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassColorFromStore not available, using legacy vars.classes in get_current_class_colour()');
-            return null;
-        })();
-        if (classColor) {
-            return classColor;
-        } else {
-            console.warn('[IRIS Migration] Using legacy vars.classes fallback in get_current_class_colour');
-            return vars.classes && vars.classes[currentClass] ? vars.classes[currentClass].colour : [255, 255, 255, 255];
+        // Get class color from React store (ONLY source)
+        if (!window.getClassColorFromStore) {
+            console.error('[IRIS] ❌ Class color store not available');
+            return [255, 255, 255, 255]; // Default white color
         }
+        
+        const classColor = window.getClassColorFromStore(currentClass);
+        if (!classColor) {
+            console.error('[IRIS] ❌ Class color not found for class:', currentClass);
+            return [255, 255, 255, 255]; // Default white color
+        }
+        
+        return classColor;
     }
 }
 
@@ -2559,11 +2573,12 @@ async function legacyPredictMask(){
         pixelCounts = vars.n_user_pixels;
     }
     
-    // Get class count for later use
-    const classCount = window.getClassCountFromStore ? window.getClassCountFromStore() : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassCountFromStore not available, using legacy vars.classes.length in legacyPredictMask()');
-        return vars.classes ? vars.classes.length : 0;
-    })();
+    // Get class count from React store (ONLY source)
+    if (!window.getClassCountFromStore) {
+        console.error('[IRIS] ❌ Class count store not available');
+        throw new Error('React store required for class count');
+    }
+    const classCount = window.getClassCountFromStore();
     
     // Get user classes from validation result or calculate from pixel counts
     let user_classes;
@@ -2806,10 +2821,13 @@ async function legacyPredictMask(){
 
     // CRITICAL: Set the confusion matrix through React store (primary source) with fallback to legacy vars
     if (window.createConfusionMatrixFromStore && window.setConfusionMatrixInStore) {
-        // Get class names from React store or fallback to legacy vars
-        const classNames = window.getClassesFromStore ? 
-            window.getClassesFromStore().map(cls => cls.name) : 
-            (vars.classes ? vars.classes.map(cls => cls.name) : user_classes.map(id => `Class ${id}`));
+        // Get class names from React store (ONLY source)
+        if (!window.getClassesFromStore) {
+            console.error('[IRIS] ❌ Classes store not available for confusion matrix');
+            return; // Cannot create confusion matrix without class names
+        }
+        
+        const classNames = window.getClassesFromStore().map(cls => cls.name);
         
         // Create structured confusion matrix object
         const confusionMatrixObj = window.createConfusionMatrixFromStore(cm, tp, user_classes, classNames);
@@ -2946,11 +2964,19 @@ function update_ai_box(score, cm, tp, user_classes){
         }
     }
     if (worst_label !== null){
-        const className = window.getClassNameFromStore ? window.getClassNameFromStore(worst_label) : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassNameFromStore not available, using legacy vars.classes in update_ai_box()');
-            return vars.classes && vars.classes[worst_label] ? vars.classes[worst_label].name : `Class ${worst_label}`;
-        })();
-        recommendation = "Could you provide more training pixels for <b>"+className+"</b>";
+        // Get class name from React store (ONLY source)
+        if (!window.getClassNameFromStore) {
+            console.error('[IRIS] ❌ Class name store not available');
+            recommendation = "Could you provide more training pixels for <b>Class " + worst_label + "</b>";
+        } else {
+            const className = window.getClassNameFromStore(worst_label);
+            if (!className) {
+                console.error('[IRIS] ❌ Class name not found for label:', worst_label);
+                recommendation = "Could you provide more training pixels for <b>Class " + worst_label + "</b>";
+            } else {
+                recommendation = "Could you provide more training pixels for <b>"+className+"</b>";
+            }
+        }
     }
 
     get_object("ai-recommendation").innerHTML = recommendation;
