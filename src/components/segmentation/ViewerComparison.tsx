@@ -92,10 +92,10 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
           }
         }
 
-        // Set current image from legacy vars (still needed for image ID)
-        const currentImageId = (window as any).vars?.image_id;
+        // Set current image from store
+        const currentImageId = segmentationStore.currentImageId;
         if (currentImageId) {
-          const imageLocation = (window as any).vars?.image_location || [0, 0];
+          const imageLocation = viewManagerStore.imageLocation || [0, 0];
           viewManagerStore.setImage(currentImageId, imageLocation);
           console.log('🔧 ViewerComparison: Setting image:', currentImageId, 'at', imageLocation);
         }

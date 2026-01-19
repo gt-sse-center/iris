@@ -94,12 +94,13 @@ describe('canvasMousePosition', () => {
     consoleSpy.mockRestore();
   });
 
-  test('syncs with legacy vars object', () => {
+  test('no longer syncs with legacy vars object (vars removed)', () => {
     const store = useViewManagerStore.getState();
     
     store.setCanvasMousePosition([150, 250]);
     
-    expect(mockWindow.vars.cursor_canvas).toEqual([150, 250]);
+    // Verify store has the value - vars sync has been removed
+    expect(useViewManagerStore.getState().canvasMousePosition).toEqual([150, 250]);
   });
 
   test('handles invalid coordinates gracefully (NaN)', () => {

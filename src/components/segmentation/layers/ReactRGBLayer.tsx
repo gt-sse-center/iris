@@ -43,9 +43,8 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     setHasError(false);
     
     const image = new Image();
-    // Use the same URL pattern as legacy ViewManager: vars.url.main + "image/" + imageId + "/" + viewName
-    const w = window as any;
-    const baseUrl = w.vars?.url?.main || '/';
+    // Use the same URL pattern as legacy ViewManager
+    const baseUrl = segmentationStore.apiUrls?.main || '/';
     const imageUrl = `${baseUrl}image/${imageId}/${view.name}`;
     
     image.onload = () => {
@@ -76,8 +75,7 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
     // Get image shape from React store with fallback to legacy vars
     const w = window as any;
-    const imageShape = (window as any).getImageShapeFromStore ? 
-      (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+    const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
     
     // CRITICAL FIX: Save current transformation before clearing
     ctx.save();
@@ -177,9 +175,9 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
         // We need to scale canvas dimensions to image dimensions
         const w = window as any;
         
-        // Get image shape from React store with fallback to legacy vars
+        // Get image shape from React store
         const imageShape = (window as any).getImageShapeFromStore ? 
-          (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+          (window as any).getImageShapeFromStore() : null;
         
         if (imageShape) {
           // CRITICAL: Only set base transformation on canvas initialization, not on every render

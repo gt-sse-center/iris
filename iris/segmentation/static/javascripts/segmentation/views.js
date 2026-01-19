@@ -8,8 +8,7 @@ class MaskLayer extends CanvasLayer{
         let ctx = this.container.getContext("2d");
         
         // Get hidden canvas from React store or fallback to legacy
-        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
-            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? window.getHiddenMaskCanvasFromStore() : null;
         
         if (!hiddenCanvas) {
             console.error('[IRIS] Hidden mask canvas not available for MaskLayer render');
@@ -19,8 +18,7 @@ class MaskLayer extends CanvasLayer{
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
             // Get image shape from React store with fallback to legacy vars
-            const imageShape = window.getImageShapeFromStore ? 
-                window.getImageShapeFromStore() : vars.image_shape;
+            const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
             
             if (imageShape) {
                 ctx.clearRect(0, 0, ...imageShape);
@@ -30,21 +28,14 @@ class MaskLayer extends CanvasLayer{
             }
             
             // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for MaskLayer render');
                 return;
             }
             
-            // Warn if falling back to legacy vars
-            if (!window.getImageShapeFromStore && vars.image_shape) {
-                console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.image_shape fallback - React store not available');
-            }
-            
-            if (!window.getMaskAreaFromStore && vars.mask_area) {
-                console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.mask_area fallback - React store not available');
-            }
+            // Store-based mask rendering
             
             ctx.drawImage(
                 hiddenCanvas,
@@ -52,7 +43,7 @@ class MaskLayer extends CanvasLayer{
             );
         } else {
             // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for MaskLayer render');
@@ -86,8 +77,7 @@ class SuperpixelsLayer extends CanvasLayer{
         let ctx = this.container.getContext("2d");
         
         // Get hidden canvas from React store or fallback to legacy
-        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
-            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? window.getHiddenMaskCanvasFromStore() : null;
         
         if (!hiddenCanvas) {
             console.error('[IRIS] Hidden mask canvas not available for SuperpixelsLayer render');
@@ -97,8 +87,7 @@ class SuperpixelsLayer extends CanvasLayer{
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
             // Get image shape from React store with fallback to legacy vars
-            const imageShape = window.getImageShapeFromStore ? 
-                window.getImageShapeFromStore() : vars.image_shape;
+            const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
             
             if (imageShape) {
                 ctx.clearRect(0, 0, ...imageShape);
@@ -113,7 +102,7 @@ class SuperpixelsLayer extends CanvasLayer{
             }
             
             // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
@@ -130,7 +119,7 @@ class SuperpixelsLayer extends CanvasLayer{
             );
         } else {
             // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
@@ -169,8 +158,7 @@ class PreviewLayer extends CanvasLayer{
         let ctx = this.container.getContext("2d");
         
         // Get image shape from React store with fallback to legacy vars
-        const imageShape = window.getImageShapeFromStore ? 
-            window.getImageShapeFromStore() : vars.image_shape;
+        const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
         
         if (imageShape) {
             ctx.clearRect(0, 0, ...imageShape);
@@ -250,7 +238,7 @@ class PreviewLayer extends CanvasLayer{
         ctx.strokeStyle = "red";
         ctx.setLineDash([5, 15]);
         const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : vars.mask_shape;
-        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
         
         if (maskShape && maskArea) {
             ctx.rect(

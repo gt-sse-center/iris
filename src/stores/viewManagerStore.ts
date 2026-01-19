@@ -254,12 +254,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
 
     const locationCopy: [number, number] = [lat, lon];
     set({ imageLocation: locationCopy });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.image_location = locationCopy;
-    }
   },
 
   validateImageLocation: (location) => {
@@ -316,12 +310,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       imageDimensions: { width, height },
       imageAspectRatio: aspectRatio
     });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.image_shape = [width, height];
-    }
 
     // Update view dimensions when image dimensions change
     get().updateViewDimensions();
@@ -433,12 +421,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
 
     const coordsCopy: [number, number] = [coords[0], coords[1]];
     set({ canvasMousePosition: coordsCopy });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.cursor_canvas = coordsCopy;
-    }
   },
   
   setMouseDown: (isMouseDown) => {

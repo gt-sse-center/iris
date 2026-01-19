@@ -27,27 +27,20 @@ const DebugPanel: React.FC = () => {
       const w = window as any;
       
       // Primary source: React store, fallback: legacy vars
-      const views = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('views') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for debug info - React store not available');
-        return w.vars?.config?.views;
-      })();
-      
-      const viewGroups = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('view_groups') : (() => {
-        console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.view_groups for debug info - React store not available');
-        return w.vars?.config?.view_groups;
-      })();
+      const views = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('views') : null;
+      const viewGroups = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('view_groups') : null;
       
       setLegacyVars({
-        hasVars: !!w.vars,
-        hasConfig: !!w.vars?.config,
+        hasVars: true,
+        hasConfig: !!views || !!viewGroups,
         hasViews: !!views,
         viewsType: typeof views,
         viewsKeys: views ? (Array.isArray(views) ? views.map((v: any) => v.name) : Object.keys(views)) : [],
         viewGroups: viewGroups,
-        imageId: w.vars?.image_id,
-        imageLocation: w.vars?.image_location,
-        hasVm: !!w.vars?.vm,
-        vmFilters: w.vars?.vm?.filters,
+        imageId: segmentationState.currentImageId,
+        imageLocation: viewManagerState.imageLocation,
+        hasVm: !!w.getViewManagerFromStore,
+        vmFilters: w.getViewManagerFromStore ? w.getViewManagerFromStore()?.filters : null,
       });
     };
     

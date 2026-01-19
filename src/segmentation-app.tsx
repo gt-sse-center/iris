@@ -6,6 +6,7 @@ import SegmentationModals from './components/segmentation/SegmentationModals';
 import ViewerComparison from './components/segmentation/ViewerComparison';
 import { useSegmentationSetup } from './components/segmentation/hooks/useSegmentationSetup';
 import { useSegmentationStore } from './stores/segmentationStore';
+import { useViewManagerStore } from './stores/viewManagerStore';
 import { useConfigLoader } from './hooks/useConfigLoader';
 import './utils/legacyBridge'; // Initialize legacy bridge functions
 
@@ -46,7 +47,8 @@ const SegmentationApp: React.FC = () => {
   // Export GeoTIFF function - memoized to prevent re-renders
   const exportGeoTIFF = useCallback(async () => {
     try {
-      const imageId = window.vars?.image_id;
+      // Get current image ID from React store (primary source)
+      const imageId = useSegmentationStore.getState().currentImageId;
       if (!imageId) {
         alert('No image loaded');
         return;
@@ -150,9 +152,10 @@ const SegmentationApp: React.FC = () => {
   // Initialize navigation store with image list
   const initializeNavigation = async () => {
     try {
-      const currentImageId = (window as any).vars?.image_id;
+      // Get current image ID from React store (primary source)
+      const currentImageId = useSegmentationStore.getState().currentImageId;
       if (!currentImageId) {
-        console.warn('No current image ID found, skipping navigation initialization');
+        console.warn('No current image ID found in store, skipping navigation initialization');
         return;
       }
 
@@ -182,9 +185,10 @@ const SegmentationApp: React.FC = () => {
   // Initialize mask data for current image (equivalent to legacy init_views)
   const initializeMaskData = async () => {
     try {
-      const currentImageId = (window as any).vars?.image_id;
+      // Get current image ID from React store (primary source)
+      const currentImageId = useSegmentationStore.getState().currentImageId;
       if (!currentImageId) {
-        console.warn('No current image ID found, skipping mask data initialization');
+        console.warn('No current image ID found in store, skipping mask data initialization');
         return;
       }
 
@@ -200,13 +204,18 @@ const SegmentationApp: React.FC = () => {
         await w.init_views();
         console.log('✅ React: Views and mask data initialized successfully');
         
+        // CRITICAL: Set the image in viewManagerStore after init_views completes
+        const imageLocation = useViewManagerStore.getState().imageLocation || [0, 0];
+        useViewManagerStore.getState().setImage(currentImageId, imageLocation);
+        console.log('✅ React: Image set in viewManagerStore:', currentImageId);
+        
         // Verify critical components are available
         if (w.vars?.hidden_mask && w.vars?.mask && w.vars?.user_mask) {
           console.log('✅ React: All mask components verified:', {
             hasHiddenMask: !!w.vars.hidden_mask,
             maskLength: w.vars.mask.length,
             userMaskLength: w.vars.user_mask.length,
-            maskShape: w.vars.mask_shape
+            maskShape: w.getMaskShapeFromStore ? w.getMaskShapeFromStore() : null
           });
         } else {
           console.warn('⚠️ React: Some mask components missing after init_views');

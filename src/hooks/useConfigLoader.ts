@@ -13,6 +13,12 @@ export const useConfigLoader = (): ConfigLoaderResult => {
     try {
       console.log('🔧 React: Loading config directly from APIs...');
       
+      // Extract image_id from URL parameters OR from initial vars (set by backend template)
+      const urlParams = new URLSearchParams(window.location.search);
+      const imageIdFromUrl = urlParams.get('image_id');
+      const imageIdFromVars = (window as any).vars?.image_id;
+      const imageId = imageIdFromUrl || imageIdFromVars;
+      
       // Load config and user data in parallel
       const [configResponse, userResponse] = await Promise.all([
         fetch('/segmentation/api/config', { credentials: 'same-origin' }),
@@ -34,6 +40,14 @@ export const useConfigLoader = (): ConfigLoaderResult => {
       // Get stores directly to avoid dependency issues
       const segmentationStore = useSegmentationStore.getState();
       const viewManagerStore = useViewManagerStore.getState();
+
+      // CRITICAL: Set current image ID from URL or initial vars (before other initialization)
+      if (imageId) {
+        segmentationStore.setCurrentImage(imageId);
+        console.log('🔧 React: Set current image ID:', imageId, 'from', imageIdFromUrl ? 'URL' : 'vars');
+      } else {
+        console.warn('⚠️ React: No image ID found in URL or vars');
+      }
 
       // Initialize segmentation store
       segmentationStore.setConfig(config);
@@ -117,11 +131,11 @@ export const useConfigLoader = (): ConfigLoaderResult => {
         }
       }
 
-      // Set current image from URL params or legacy vars
-      const currentImageId = (window as any).vars?.image_id;
+      // Set current image from URL params
+      const currentImageId = segmentationStore.currentImageId;
       if (currentImageId) {
         segmentationStore.setCurrentImage(currentImageId);
-        const imageLocation = (window as any).vars?.image_location || [0, 0];
+        const imageLocation = viewManagerStore.imageLocation || [0, 0];
         viewManagerStore.setImage(currentImageId, imageLocation);
       }
 

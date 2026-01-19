@@ -24,9 +24,8 @@ const ImageInfoModal: React.FC<ImageInfoModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       const fetchMetadata = async () => {
-        const w = window as any;
-        const imageId = w.vars?.image_id;
-        const mainUrl = w.vars?.url?.main;
+        const imageId = segmentationStore.currentImageId;
+        const mainUrl = segmentationStore.apiUrls?.main;
 
         if (!imageId || !mainUrl) {
           setError('Image ID not available');
@@ -75,9 +74,8 @@ const ImageInfoModal: React.FC<ImageInfoModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const w = window as any;
-  const imageId = w.vars?.image_id || 'Unknown';
-  const mainUrl = w.vars?.url?.main || '';
+  const imageId = segmentationStore.currentImageId || 'Unknown';
+  const mainUrl = segmentationStore.apiUrls?.main || '';
 
   return (
     <div id="dialogue" className="dialogue" style={{ display: 'block' }} data-testid="image-info-modal">
