@@ -181,7 +181,11 @@ async function init_views(){
             showGroup: () => {},
             getLayers: () => [],
             updateViewDimensions: () => {},
-            updateSize: () => {}
+            updateSize: () => {},
+            render: () => {
+                // Mock render - React ViewManager handles rendering
+                console.log('[IRIS Migration] Mock ViewManager render called - React handles rendering');
+            }
         };
         
         // Store mock ViewManager in React store (only source)

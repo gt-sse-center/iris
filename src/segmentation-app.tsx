@@ -209,16 +209,24 @@ const SegmentationApp: React.FC = () => {
         useViewManagerStore.getState().setImage(currentImageId, imageLocation);
         console.log('✅ React: Image set in viewManagerStore:', currentImageId);
         
-        // Verify critical components are available
-        if (w.vars?.hidden_mask && w.vars?.mask && w.vars?.user_mask) {
-          console.log('✅ React: All mask components verified:', {
-            hasHiddenMask: !!w.vars.hidden_mask,
-            maskLength: w.vars.mask.length,
-            userMaskLength: w.vars.user_mask.length,
+        // Verify critical components are available from store
+        const maskData = w.getMaskDataFromStore ? w.getMaskDataFromStore() : null;
+        const userMaskData = w.getUserMaskDataFromStore ? w.getUserMaskDataFromStore() : null;
+        const hiddenMaskContext = w.getHiddenMaskContextFromStore ? w.getHiddenMaskContextFromStore() : null;
+        
+        if (hiddenMaskContext && maskData && userMaskData) {
+          console.log('✅ React: All mask components verified from store:', {
+            hasHiddenMaskContext: !!hiddenMaskContext,
+            maskLength: maskData.length,
+            userMaskLength: userMaskData.length,
             maskShape: w.getMaskShapeFromStore ? w.getMaskShapeFromStore() : null
           });
         } else {
-          console.warn('⚠️ React: Some mask components missing after init_views');
+          console.warn('⚠️ React: Some mask components missing after init_views', {
+            hasHiddenMaskContext: !!hiddenMaskContext,
+            hasMaskData: !!maskData,
+            hasUserMaskData: !!userMaskData
+          });
         }
       } else {
         console.error('❌ React: init_views function not available');
