@@ -163,31 +163,25 @@ class PreviewLayer extends CanvasLayer{
         ctx.clearRect(0, 0, ...imageShape);
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
         
-        // Get tool size from React store (primary source) with fallback to legacy vars
-        let toolSize;
-        if (window.getToolSizeFromStore) {
-            toolSize = window.getToolSizeFromStore();
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.size fallback - React store not available yet');
-            toolSize = vars.tool.size; // Fallback during initialization
+        // Get tool size from React store (ONLY source)
+        const toolSize = window.getToolSizeFromStore ? window.getToolSizeFromStore() : 1;
+        
+        if (!window.getToolSizeFromStore) {
+            console.error('[IRIS] ❌ Tool size not available from store');
         }
         
-        // Get cursor image from React store (primary source) with fallback to legacy vars
-        let cursorImage;
-        if (window.getCursorImageFromStore) {
-            cursorImage = window.getCursorImageFromStore();
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.cursor_image fallback - React store not available yet');
-            cursorImage = vars.cursor_image; // Fallback during initialization
+        // Get cursor image from React store (ONLY source)
+        const cursorImage = window.getCursorImageFromStore ? window.getCursorImageFromStore() : [0, 0];
+        
+        if (!window.getCursorImageFromStore) {
+            console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
-        // Get tool shape from React store (primary source) with fallback to legacy vars
-        let toolShape;
-        if (window.getToolShapeFromStore) {
-            toolShape = window.getToolShapeFromStore();
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.shape fallback - React store not available yet');
-            toolShape = vars.tool.shape || 'square'; // Fallback during initialization
+        // Get tool shape from React store (ONLY source)
+        const toolShape = window.getToolShapeFromStore ? window.getToolShapeFromStore() : 'square';
+        
+        if (!window.getToolShapeFromStore) {
+            console.error('[IRIS] ❌ Tool shape not available from store');
         }
         
         // Draw tool cursor preview based on shape

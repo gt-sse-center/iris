@@ -586,31 +586,23 @@ function set_invert(visible){
 }
 
 function set_tool(tool){
-    // Update through React store (primary source)
-    if (window.setCurrentToolInStore) {
-        window.setCurrentToolInStore(tool);
-        return; // Store handles everything including DOM updates
+    // Update through React store (ONLY source)
+    if (!window.setCurrentToolInStore) {
+        console.error('[IRIS] ❌ Tool store not available');
+        return;
     }
     
-    // FALLBACK: Legacy behavior (should rarely be used)
-    console.warn('[IRIS Migration] set_tool: Using legacy vars.tool.type update fallback - React store not available yet');
-    get_object("tb_tool_"+vars.tool.type).classList.remove("checked");
-    get_object("tb_tool_"+tool).classList.add("checked");
-
-    vars.tool.type = tool;
-
-    render_preview();
+    window.setCurrentToolInStore(tool);
+    // Store handles everything including DOM updates
 }
 
 function get_tool_offset(){
     /*Since we have draw with a tool, this returns the offset of the tool sprite*/
-    // Get tool size from React store (primary source) with fallback to legacy vars
-    let toolSize;
-    if (window.getToolSizeFromStore) {
-        toolSize = window.getToolSizeFromStore();
-    } else {
-        console.warn('[IRIS Migration] get_tool_offset: Using legacy vars.tool.size fallback - React store not available yet');
-        toolSize = vars.tool.size; // Fallback during initialization
+    // Get tool size from React store (ONLY source)
+    const toolSize = window.getToolSizeFromStore ? window.getToolSizeFromStore() : 1;
+    
+    if (!window.getToolSizeFromStore) {
+        console.error('[IRIS] ❌ Tool size not available from store');
     }
     
     if (toolSize == 1){
@@ -626,23 +618,20 @@ function get_tool_offset(){
 function mouse_wheel(event){
     var delta = Math.max(-1, Math.min(1, (event.wheelDelta || -event.detail)));
     
-    // Get resizing mode from React store (primary source) with fallback to legacy vars
-    let resizingMode;
-    if (window.getToolResizingModeFromStore) {
-        resizingMode = window.getToolResizingModeFromStore();
-    } else {
-        console.warn('[IRIS Migration] mouse_wheel: Using legacy vars.tool.resizing_mode fallback - React store not available yet');
-        resizingMode = vars.tool.resizing_mode; // Fallback during initialization
+    // Get resizing mode from React store (ONLY source)
+    const resizingMode = window.getToolResizingModeFromStore ? window.getToolResizingModeFromStore() : false;
+    
+    if (!window.getToolResizingModeFromStore) {
+        console.error('[IRIS] ❌ Tool resizing mode not available from store');
     }
     
     if (resizingMode){
-        // Change size of tool using React store (primary source)
-        let currentSize;
-        if (window.getToolSizeFromStore) {
-            currentSize = window.getToolSizeFromStore();
-        } else {
-            console.warn('[IRIS Migration] mouse_wheel: Using legacy vars.tool.size fallback - React store not available yet');
-            currentSize = vars.tool.size; // Fallback during initialization
+        // Change size of tool using React store (ONLY source)
+        const currentSize = window.getToolSizeFromStore ? window.getToolSizeFromStore() : 1;
+        
+        if (!window.getToolSizeFromStore) {
+            console.error('[IRIS] ❌ Tool size not available from store');
+            return;
         }
         
         let newSize = currentSize + delta * 0.5 * currentSize;
@@ -654,19 +643,17 @@ function mouse_wheel(event){
                 )
             ));
         } else {
-            console.warn('[IRIS Migration] mouse_wheel: No mask shape available, using fallback bounds');
-            newSize = round_number(Math.max(1, Math.min(newSize, 100))); // Fallback to reasonable bounds
+            console.warn('[IRIS] No mask shape available, using fallback bounds');
+            newSize = round_number(Math.max(1, Math.min(newSize, 100)));
         }
         
-        // Update through React store (primary source)
-        if (window.segmentationStore) {
-            window.segmentationStore.getState().setToolSize(newSize);
-        } else {
-            // Fallback to legacy vars during initialization
-            console.warn('[IRIS Migration] mouse_wheel: Using legacy vars.tool.size update fallback - React store not available yet');
-            vars.tool.size = newSize;
+        // Update through React store (ONLY source)
+        if (!window.segmentationStore) {
+            console.error('[IRIS] ❌ Segmentation store not available');
+            return;
         }
         
+        window.segmentationStore.getState().setToolSize(newSize);
         render_preview();
     } else {
         zoom(delta);
@@ -676,13 +663,11 @@ function mouse_wheel(event){
 function mouse_move(event){
     update_cursor_coords(this, event);
     
-    // Get current tool from React store (primary source) with fallback to legacy vars
-    let currentTool;
-    if (window.getCurrentToolFromStore) {
-        currentTool = window.getCurrentToolFromStore();
-    } else {
-        console.warn('[IRIS Migration] mouse_move: Using legacy vars.tool.type fallback - React store not available yet');
-        currentTool = vars.tool.type; // Fallback during initialization
+    // Get current tool from React store (ONLY source)
+    const currentTool = window.getCurrentToolFromStore ? window.getCurrentToolFromStore() : 'draw';
+    
+    if (!window.getCurrentToolFromStore) {
+        console.error('[IRIS] ❌ Current tool not available from store');
     }
     
     if (
@@ -728,13 +713,11 @@ function mouse_move(event){
 function mouse_down(event){
     update_cursor_coords(this, event);
 
-    // Get current tool from React store (primary source) with fallback to legacy vars
-    let currentTool;
-    if (window.getCurrentToolFromStore) {
-        currentTool = window.getCurrentToolFromStore();
-    } else {
-        console.warn('[IRIS Migration] mouse_down: Using legacy vars.tool.type fallback - React store not available yet');
-        currentTool = vars.tool.type; // Fallback during initialization
+    // Get current tool from React store (ONLY source)
+    const currentTool = window.getCurrentToolFromStore ? window.getCurrentToolFromStore() : 'draw';
+    
+    if (!window.getCurrentToolFromStore) {
+        console.error('[IRIS] ❌ Current tool not available from store');
     }
 
     if (event.buttons == 1 && currentTool != 'move'){
@@ -784,13 +767,11 @@ function mouse_up(event){
 function mouse_enter(event){
     update_cursor_coords(this, event);
     
-    // Get current tool from React store (primary source) with fallback to legacy vars
-    let currentTool;
-    if (window.getCurrentToolFromStore) {
-        currentTool = window.getCurrentToolFromStore();
-    } else {
-        console.warn('[IRIS Migration] mouse_enter: Using legacy vars.tool.type fallback - React store not available yet');
-        currentTool = vars.tool.type; // Fallback during initialization
+    // Get current tool from React store (ONLY source)
+    const currentTool = window.getCurrentToolFromStore ? window.getCurrentToolFromStore() : 'draw';
+    
+    if (!window.getCurrentToolFromStore) {
+        console.error('[IRIS] ❌ Current tool not available from store');
     }
     
     if (
@@ -1286,22 +1267,20 @@ function user_draws_on_mask(){
     // canvas coordinates.
 
     // Get the bounding box mask coordinates:
-    // Get tool size from React store (primary source) with fallback to legacy vars
-    let toolSize;
-    if (window.getToolSizeFromStore) {
-        toolSize = window.getToolSizeFromStore();
-    } else {
-        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.tool.size fallback - React store not available yet');
-        toolSize = vars.tool.size; // Fallback during initialization
+    // Get tool size from React store (ONLY source)
+    const toolSize = window.getToolSizeFromStore ? window.getToolSizeFromStore() : 1;
+    
+    if (!window.getToolSizeFromStore) {
+        console.error('[IRIS] ❌ Tool size not available from store');
+        return;
     }
     
-    // Get cursor image from React store (primary source) with fallback to legacy vars
-    let cursorImage;
-    if (window.getCursorImageFromStore) {
-        cursorImage = window.getCursorImageFromStore();
-    } else {
-        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.cursor_image fallback - React store not available yet');
-        cursorImage = vars.cursor_image; // Fallback during initialization
+    // Get cursor image from React store (ONLY source)
+    const cursorImage = window.getCursorImageFromStore ? window.getCursorImageFromStore() : [0, 0];
+    
+    if (!window.getCursorImageFromStore) {
+        console.error('[IRIS] ❌ Cursor image not available from store');
+        return;
     }
     
     let x_start = cursorImage[0] + offset.x,
@@ -1354,22 +1333,19 @@ function user_draws_on_mask(){
     y_start = Math.max(0, y_start);
     y_end = Math.min(maskShape[1]-1, y_end);
 
-    // Get current tool from React store (primary source) with fallback to legacy vars
-    let currentTool;
-    if (window.getCurrentToolFromStore) {
-        currentTool = window.getCurrentToolFromStore();
-    } else {
-        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.tool.type fallback - React store not available yet');
-        currentTool = vars.tool.type; // Fallback during initialization
+    // Get current tool from React store (ONLY source)
+    const currentTool = window.getCurrentToolFromStore ? window.getCurrentToolFromStore() : 'draw';
+    
+    if (!window.getCurrentToolFromStore) {
+        console.error('[IRIS] ❌ Current tool not available from store');
+        return;
     }
 
-    // Get tool shape from React store (primary source) with fallback to legacy vars
-    let toolShape;
-    if (window.getToolShapeFromStore) {
-        toolShape = window.getToolShapeFromStore();
-    } else {
-        console.warn('[IRIS Migration] user_draws_on_mask: Using legacy vars.tool.shape fallback - React store not available yet');
-        toolShape = vars.tool.shape || 'square'; // Fallback during initialization
+    // Get tool shape from React store (ONLY source)
+    const toolShape = window.getToolShapeFromStore ? window.getToolShapeFromStore() : 'square';
+    
+    if (!window.getToolShapeFromStore) {
+        console.error('[IRIS] ❌ Tool shape not available from store');
     }
 
     // Draw pixels based on tool shape
