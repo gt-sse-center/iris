@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSegmentationStore } from '../stores/segmentationStore';
 
 interface ImageInfoModalProps {
   isOpen: boolean;
@@ -19,13 +20,16 @@ const ImageInfoModal: React.FC<ImageInfoModalProps> = ({ isOpen, onClose }) => {
   const [metadata, setMetadata] = useState<ImageMetadata | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get current image ID and API URLs from React store
+  const { currentImageId, apiUrls } = useSegmentationStore();
 
   // Fetch metadata when modal opens
   useEffect(() => {
     if (isOpen) {
       const fetchMetadata = async () => {
-        const imageId = segmentationStore.currentImageId;
-        const mainUrl = segmentationStore.apiUrls?.main;
+        const imageId = currentImageId;
+        const mainUrl = apiUrls?.main;
 
         if (!imageId || !mainUrl) {
           setError('Image ID not available');
@@ -54,7 +58,7 @@ const ImageInfoModal: React.FC<ImageInfoModalProps> = ({ isOpen, onClose }) => {
 
       fetchMetadata();
     }
-  }, [isOpen]);
+  }, [isOpen, currentImageId, apiUrls]);
 
   // Handle Escape key
   useEffect(() => {
@@ -74,8 +78,8 @@ const ImageInfoModal: React.FC<ImageInfoModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const imageId = segmentationStore.currentImageId || 'Unknown';
-  const mainUrl = segmentationStore.apiUrls?.main || '';
+  const imageId = currentImageId || 'Unknown';
+  const mainUrl = apiUrls?.main || '';
 
   return (
     <div id="dialogue" className="dialogue" style={{ display: 'block' }} data-testid="image-info-modal">
