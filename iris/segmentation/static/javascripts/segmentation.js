@@ -675,13 +675,12 @@ function mouse_move(event){
         || event.buttons == 4
         || (event.buttons == 1 && currentTool == 'move'))
     ){
-        // Get drag start from React store (primary source) with fallback to legacy vars
-        let dragStart;
-        if (window.getDragStartFromStore) {
-            dragStart = window.getDragStartFromStore();
-        } else {
-            console.warn('[IRIS Migration] mouse_move: Using legacy vars.drag_start fallback - React store not available yet');
-            dragStart = vars.drag_start;
+        // Get drag start from React store (ONLY source)
+        const dragStart = window.getDragStartFromStore ? 
+            window.getDragStartFromStore() : null;
+        
+        if (!window.getDragStartFromStore) {
+            console.error('[IRIS] ❌ Drag start not available from store');
         }
         
         if (dragStart !== null) {
@@ -722,13 +721,13 @@ function mouse_down(event){
     if (event.buttons == 1 && currentTool != 'move'){
         user_draws_on_mask();
         
-        // Clear drag start using React store (primary) with fallback to legacy vars
-        if (window.setDragStartInStore) {
-            window.setDragStartInStore(null);
-        } else {
-            console.warn('[IRIS Migration] mouse_down: Using legacy vars.drag_start fallback - React store not available yet');
-            vars.drag_start = null;
+        // Clear drag start using React store (ONLY source)
+        if (!window.setDragStartInStore) {
+            console.error('[IRIS] ❌ Drag start store not available');
+            return;
         }
+        
+        window.setDragStartInStore(null);
     } else if (
         event.buttons == 2
         || event.buttons == 4
@@ -742,24 +741,24 @@ function mouse_down(event){
             console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
-        // Set drag start using React store (primary) with fallback to legacy vars
-        if (window.setDragStartInStore) {
-            window.setDragStartInStore([...cursorImage]);
-        } else {
-            console.warn('[IRIS Migration] mouse_down: Using legacy vars.drag_start fallback - React store not available yet');
-            vars.drag_start = [...cursorImage];
+        // Set drag start using React store (ONLY source)
+        if (!window.setDragStartInStore) {
+            console.error('[IRIS] ❌ Drag start store not available');
+            return;
         }
+        
+        window.setDragStartInStore([...cursorImage]);
     }
 }
 
 function mouse_up(event){
-    // Clear drag start using React store (primary) with fallback to legacy vars
-    if (window.setDragStartInStore) {
-        window.setDragStartInStore(null);
-    } else {
-        console.warn('[IRIS Migration] mouse_up: Using legacy vars.drag_start fallback - React store not available yet');
-        vars.drag_start = null;
+    // Clear drag start using React store (ONLY source)
+    if (!window.setDragStartInStore) {
+        console.error('[IRIS] ❌ Drag start store not available');
+        return;
     }
+    
+    window.setDragStartInStore(null);
 }
 
 function mouse_enter(event){
@@ -785,13 +784,13 @@ function mouse_enter(event){
             console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
-        // Set drag start using React store (primary) with fallback to legacy vars
-        if (window.setDragStartInStore) {
-            window.setDragStartInStore([...cursorImage]);
-        } else {
-            console.warn('[IRIS Migration] mouse_enter: Using legacy vars.drag_start fallback - React store not available yet');
-            vars.drag_start = [...cursorImage];
+        // Set drag start using React store (ONLY source)
+        if (!window.setDragStartInStore) {
+            console.error('[IRIS] ❌ Drag start store not available');
+            return;
         }
+        
+        window.setDragStartInStore([...cursorImage]);
     }
 }
 
