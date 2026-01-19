@@ -1322,10 +1322,12 @@ function user_draws_on_mask(){
             if (currentTool == "eraser"){
                 pixelUpdates.push({x, y, userMaskValue: 0});
             } else {
-                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in drawing');
-                    return vars.current_class;
-                })();
+                // Get current class from React store (ONLY source)
+                if (!window.getCurrentClassFromStore) {
+                    console.error('[IRIS] ❌ Store not available for current class in drawing');
+                    throw new Error('React store required for current class');
+                }
+                const currentClass = window.getCurrentClassFromStore();
                 pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
             }
             
@@ -1358,10 +1360,12 @@ function user_draws_on_mask(){
                     if (currentTool == "eraser"){
                         pixelUpdates.push({x, y, userMaskValue: 0});
                     } else {
-                        const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                            console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in cross pattern drawing');
-                            return vars.current_class;
-                        })();
+                        // Get current class from React store (ONLY source)
+                        if (!window.getCurrentClassFromStore) {
+                            console.error('[IRIS] ❌ Store not available for current class in cross pattern drawing');
+                            throw new Error('React store required for current class');
+                        }
+                        const currentClass = window.getCurrentClassFromStore();
                         pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
                     }
                 }
@@ -1453,10 +1457,12 @@ function user_draws_on_mask(){
                         if (currentTool == "eraser"){
                             pixelUpdates.push({x, y, userMaskValue: 0});
                         } else {
-                            const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                                console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in circle drawing');
-                                return vars.current_class;
-                            })();
+                            // Get current class from React store (ONLY source)
+                            if (!window.getCurrentClassFromStore) {
+                                console.error('[IRIS] ❌ Store not available for current class in circle drawing');
+                                throw new Error('React store required for current class');
+                            }
+                            const currentClass = window.getCurrentClassFromStore();
                             pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
                         }
                     }
@@ -1474,10 +1480,12 @@ function user_draws_on_mask(){
                 if (currentTool == "eraser"){
                     pixelUpdates.push({x, y, userMaskValue: 0});
                 } else {
-                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in single pixel drawing');
-                        return vars.current_class;
-                    })();
+                    // Get current class from React store (ONLY source)
+                    if (!window.getCurrentClassFromStore) {
+                        console.error('[IRIS] ❌ Store not available for current class in single pixel drawing');
+                        throw new Error('React store required for current class');
+                    }
+                    const currentClass = window.getCurrentClassFromStore();
                     pixelUpdates.push({x, y, maskValue: currentClass, userMaskValue: 1});
                 }
             }
@@ -1515,10 +1523,12 @@ function user_draws_on_mask(){
                 const x = x_start;
                 const y = y_start;
                 
-                const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in 1-pixel canvas drawing');
-                    return vars.current_class;
-                })();
+                // Get current class from React store (ONLY source)
+                if (!window.getCurrentClassFromStore) {
+                    console.error('[IRIS] ❌ Store not available for current class in 1-pixel canvas drawing');
+                    throw new Error('React store required for current class');
+                }
+                const currentClass = window.getCurrentClassFromStore();
                 
                 if (currentTool == "eraser" || currentClass == 0){
                     hidden_ctx.clearRect(x, y, 1, 1);
@@ -1547,10 +1557,12 @@ function user_draws_on_mask(){
                     const x = centerX + dx;
                     const y = centerY + dy;
                     
-                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in 3-pixel cross canvas drawing');
-                        return vars.current_class;
-                    })();
+                    // Get current class from React store (ONLY source)
+                    if (!window.getCurrentClassFromStore) {
+                        console.error('[IRIS] ❌ Store not available for current class in 3-pixel cross canvas drawing');
+                        throw new Error('React store required for current class');
+                    }
+                    const currentClass = window.getCurrentClassFromStore();
                     
                     // Check bounds
                     if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
@@ -1594,10 +1606,12 @@ function user_draws_on_mask(){
                     const x = centerX + dx;
                     const y = centerY + dy;
                     
-                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in 5-pixel diamond canvas drawing');
-                        return vars.current_class;
-                    })();
+                    // Get current class from React store (ONLY source)
+                    if (!window.getCurrentClassFromStore) {
+                        console.error('[IRIS] ❌ Store not available for current class in 5-pixel diamond canvas drawing');
+                        throw new Error('React store required for current class');
+                    }
+                    const currentClass = window.getCurrentClassFromStore();
                     
                     // Check bounds
                     if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
@@ -1646,10 +1660,12 @@ function user_draws_on_mask(){
                     }
                 } else {
                     // For drawing, check if we're drawing "clear" class (0) or a real class
-                    const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
-                        console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in circular brush canvas drawing');
-                        return vars.current_class;
-                    })();
+                    // Get current class from React store (ONLY source)
+                    if (!window.getCurrentClassFromStore) {
+                        console.error('[IRIS] ❌ Store not available for current class in circular brush canvas drawing');
+                        throw new Error('React store required for current class');
+                    }
+                    const currentClass = window.getCurrentClassFromStore();
                     
                     if (currentClass == 0) {
                         // Clear class: clear pixels within the circle
