@@ -202,11 +202,13 @@ class PreviewLayer extends CanvasLayer{
         // Draw the boundaries of the masking area
         ctx.beginPath();
         
-        // Primary source: React store, fallback: legacy vars
-        const views = window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for line width - React store not available');
-            return vars.config.views;
-        })();
+        // Get views from React store (ONLY source)
+        const views = window.getConfigSectionFromStore ? 
+            window.getConfigSectionFromStore('views') : null;
+        
+        if (!window.getConfigSectionFromStore) {
+            console.error('[IRIS] ❌ Config store not available for views');
+        }
         
         const viewCount = views ? (Array.isArray(views) ? views.length : Object.keys(views).length) : 0;
         if (viewCount < 2){
@@ -217,7 +219,12 @@ class PreviewLayer extends CanvasLayer{
 
         ctx.strokeStyle = "red";
         ctx.setLineDash([5, 15]);
-        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : vars.mask_shape;
+        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+        
+        if (!window.getMaskShapeFromStore) {
+            console.error('[IRIS] ❌ Mask shape store not available');
+        }
+        
         const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
         
         if (maskShape && maskArea) {
@@ -227,7 +234,7 @@ class PreviewLayer extends CanvasLayer{
             );
             ctx.stroke();
         } else {
-            console.warn('[IRIS Migration] No mask shape or mask area available for ViewLayer rendering');
+            console.warn('[IRIS] No mask shape or mask area available for ViewLayer rendering');
         }
     }
 }

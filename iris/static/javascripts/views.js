@@ -124,24 +124,25 @@ class ViewManager{
         this.render();
         this.showControls(this.show_controls);
 
-        // Primary destination: React store, fallback: legacy vars
-        if (window.updateConfigSectionInStore) {
-            window.updateConfigSectionInStore('view_groups', this.view_groups);
-        } else {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
-            vars.config.view_groups = this.view_groups;
+        // Update view_groups in React store (ONLY destination)
+        if (!window.updateConfigSectionInStore) {
+            console.error('[IRIS] ❌ Config store not available for view_groups update');
+            return;
         }
+        
+        window.updateConfigSectionInStore('view_groups', this.view_groups);
 
         // Get current config for saving
-        const config = window.getConfigFromStore ? window.getConfigFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config for save_config - React store not available');
-            return vars.config;
-        })();
+        const config = window.getConfigFromStore ? window.getConfigFromStore() : null;
+        
+        if (!window.getConfigFromStore) {
+            console.error('[IRIS] ❌ Config store not available for save_config');
+        }
 
         if (config) {
             save_config(config);
         } else {
-            console.error('[IRIS Migration] ❌ No config available for save_config in ViewManager');
+            console.error('[IRIS] ❌ No config available for save_config in ViewManager');
         }
     }
 

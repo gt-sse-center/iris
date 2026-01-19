@@ -2591,15 +2591,16 @@ async function legacyPredictMask(){
     let n_samples = {};
     let test_n_samples = {};
     
-    // Primary source: React store, fallback: legacy vars
+    // Get AI model config from React store (ONLY source)
     const aiModel = window.getConfigSectionFromStore ? 
-        window.getConfigSectionFromStore('segmentation')?.ai_model : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.segmentation.ai_model - React store not available');
-            return vars.config.segmentation.ai_model;
-        })();
+        window.getConfigSectionFromStore('segmentation')?.ai_model : null;
+    
+    if (!window.getConfigSectionFromStore) {
+        console.error('[IRIS] ❌ Config store not available for AI model');
+    }
 
     if (!aiModel) {
-        console.error('[IRIS Migration] ❌ No AI model config available for legacyPredictMask');
+        console.error('[IRIS] ❌ No AI model config available for legacyPredictMask');
         hide_loader();
         return;
     }
