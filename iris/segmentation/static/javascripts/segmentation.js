@@ -1142,6 +1142,79 @@ function update_history(){
     vars.history.current_epoch = vars.history.mask.length - 1;
 }
 
+// CRITICAL: Render the entire mask to the hidden canvas
+// This is needed after loading a mask from the server
+function render_mask_to_hidden_canvas() {
+    console.log('[IRIS] Rendering loaded mask to hidden canvas...');
+    
+    // Get hidden mask canvas
+    let hidden_ctx;
+    if (window.getHiddenMaskContextFromStore) {
+        hidden_ctx = window.getHiddenMaskContextFromStore();
+        if (!hidden_ctx) {
+            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - context not available from store');
+            hidden_ctx = vars.hidden_mask?.getContext('2d');
+        }
+    } else {
+        console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - store not available');
+        hidden_ctx = vars.hidden_mask?.getContext('2d');
+    }
+    
+    if (!hidden_ctx) {
+        console.error('[IRIS] Hidden mask context not available for rendering');
+        return;
+    }
+    
+    // Get mask shape
+    const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+    if (!maskShape) {
+        console.error('[IRIS] No mask shape available for rendering');
+        return;
+    }
+    
+    // Get mask data
+    const maskData = window.getMaskDataFromStore ? window.getMaskDataFromStore() : vars.mask;
+    const userMaskData = window.getUserMaskDataFromStore ? window.getUserMaskDataFromStore() : vars.user_mask;
+    
+    if (!maskData || !userMaskData) {
+        console.error('[IRIS] No mask data available for rendering');
+        return;
+    }
+    
+    // Get classes for colors
+    const classes = window.getClassesFromStore ? window.getClassesFromStore() : vars.classes;
+    if (!classes) {
+        console.error('[IRIS] No classes available for rendering');
+        return;
+    }
+    
+    // Clear the hidden canvas first
+    hidden_ctx.clearRect(0, 0, maskShape[0], maskShape[1]);
+    
+    // Render each pixel that has been drawn by the user
+    let pixelsRendered = 0;
+    for (let y = 0; y < maskShape[1]; y++) {
+        for (let x = 0; x < maskShape[0]; x++) {
+            const index = y * maskShape[0] + x;
+            
+            // Only render pixels that the user has drawn (userMaskData[index] === 1)
+            if (userMaskData[index] === 1) {
+                const classId = maskData[index];
+                
+                // Get the color for this class
+                if (classId >= 0 && classId < classes.length) {
+                    const color = classes[classId].colour;
+                    hidden_ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3] / 255})`;
+                    hidden_ctx.fillRect(x, y, 1, 1);
+                    pixelsRendered++;
+                }
+            }
+        }
+    }
+    
+    console.log(`[IRIS] ✅ Mask rendered to hidden canvas: ${pixelsRendered} pixels`);
+}
+
 function undo(){
     // Use React store as primary source with fallback to legacy vars
     if (window.undoInStore) {
@@ -1240,13 +1313,13 @@ function redo(){
 function updateMaskPixels(updates) {
     /*
     Updates mask pixels efficiently using React store as primary source
+    CRITICAL: Also updates legacy vars.mask and vars.user_mask to keep them in sync
     
     Args:
         updates: Array of {x, y, maskValue, userMaskValue} objects
     */
     if (!updates || updates.length === 0) return;
     
-    // Use React store as primary source with fallback to legacy vars
     // Get mask shape from store
     const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
     
@@ -1257,7 +1330,7 @@ function updateMaskPixels(updates) {
             const userMaskData = window.getUserMaskDataFromStore();
             
             if (!maskData || !userMaskData || !maskShape) {
-                console.warn('[IRIS Migration] ⚠️ Mask data not available, using legacy vars fallback');
+                console.warn('[IRIS Migration] ⚠️ Mask data not available from store');
                 throw new Error('Mask data not available');
             }
             
@@ -1281,6 +1354,11 @@ function updateMaskPixels(updates) {
             // Update store with new data
             window.setMaskDataInStore(newMaskData, maskShape[0], maskShape[1]);
             window.setUserMaskDataInStore(newUserMaskData);
+            
+            // CRITICAL: Also update legacy vars to keep them in sync
+            // This ensures that save operations can use either source
+            vars.mask = newMaskData;
+            vars.user_mask = newUserMaskData;
             
             return;
         } catch (error) {
@@ -1546,6 +1624,10 @@ function user_draws_on_mask(){
                         try {
                             if (currentTool == "eraser"){
                                 window.setUserMaskPixelInStore(x, y, 0);
+                                // CRITICAL: Also update legacy vars to keep in sync
+                                if (vars.user_mask) {
+                                    vars.user_mask[y*maskShape[0]+x] = 0;
+                                }
                             } else {
                                 const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
                                     console.warn('[IRIS Migration] ⚠️ FALLBACK: getCurrentClassFromStore not available, using legacy vars.current_class in diamond pattern');
@@ -1553,6 +1635,11 @@ function user_draws_on_mask(){
                                 })();
                                 window.setMaskPixelInStore(x, y, currentClass);
                                 window.setUserMaskPixelInStore(x, y, 1);
+                                // CRITICAL: Also update legacy vars to keep in sync
+                                if (vars.mask && vars.user_mask) {
+                                    vars.mask[y*maskShape[0]+x] = currentClass;
+                                    vars.user_mask[y*maskShape[0]+x] = 1;
+                                }
                             }
                         } catch (error) {
                             console.error('[IRIS Migration] ❌ React store pixel update failed in diamond pattern:', error);
@@ -2400,6 +2487,11 @@ async function legacyLoadMask(){
     }
 
     set_mask_type(vars.mask_type);
+    
+    // CRITICAL: Render the loaded mask to the hidden canvas
+    // This was missing - the mask data was loaded but never drawn to the canvas!
+    render_mask_to_hidden_canvas();
+    
     hide_loader();
     
     // Notify React components that mask data is loaded
