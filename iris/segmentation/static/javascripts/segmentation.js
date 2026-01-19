@@ -685,13 +685,12 @@ function mouse_move(event){
         }
         
         if (dragStart !== null) {
-            // Get cursor image from React store (primary source) with fallback to legacy vars
-            let cursorImage;
-            if (window.getCursorImageFromStore) {
-                cursorImage = window.getCursorImageFromStore();
-            } else {
-                console.warn('[IRIS Migration] mouse_move: Using legacy vars.cursor_image fallback - React store not available yet');
-                cursorImage = vars.cursor_image; // Fallback during initialization
+            // Get cursor image from React store (ONLY source)
+            const cursorImage = window.getCursorImageFromStore ? 
+                window.getCursorImageFromStore() : [0, 0];
+            
+            if (!window.getCursorImageFromStore) {
+                console.error('[IRIS] ❌ Cursor image not available from store');
             }
             
             move(
@@ -735,13 +734,12 @@ function mouse_down(event){
         || event.buttons == 4
         || (event.buttons == 1 && currentTool == 'move')
     ){
-        // Get cursor image from React store (primary source) with fallback to legacy vars
-        let cursorImage;
-        if (window.getCursorImageFromStore) {
-            cursorImage = window.getCursorImageFromStore();
-        } else {
-            console.warn('[IRIS Migration] mouse_down: Using legacy vars.cursor_image fallback - React store not available yet');
-            cursorImage = vars.cursor_image; // Fallback during initialization
+        // Get cursor image from React store (ONLY source)
+        const cursorImage = window.getCursorImageFromStore ? 
+            window.getCursorImageFromStore() : [0, 0];
+        
+        if (!window.getCursorImageFromStore) {
+            console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
         // Set drag start using React store (primary) with fallback to legacy vars
@@ -779,13 +777,12 @@ function mouse_enter(event){
         || event.buttons == 4
         || (event.buttons == 1 && currentTool == 'move')
     ){
-        // Get cursor image from React store (primary source) with fallback to legacy vars
-        let cursorImage;
-        if (window.getCursorImageFromStore) {
-            cursorImage = window.getCursorImageFromStore();
-        } else {
-            console.warn('[IRIS Migration] mouse_enter: Using legacy vars.cursor_image fallback - React store not available yet');
-            cursorImage = vars.cursor_image; // Fallback during initialization
+        // Get cursor image from React store (ONLY source)
+        const cursorImage = window.getCursorImageFromStore ? 
+            window.getCursorImageFromStore() : [0, 0];
+        
+        if (!window.getCursorImageFromStore) {
+            console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
         // Set drag start using React store (primary) with fallback to legacy vars
@@ -809,7 +806,13 @@ function zoom(delta){
     console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy zoom - React store not available');
     
     let factor = Math.pow(1.1, delta);
-    let cursorImage = vars.cursor_image || [0, 0];
+    // Get cursor image from React store (ONLY source)
+    const cursorImage = window.getCursorImageFromStore ? 
+        window.getCursorImageFromStore() : [0, 0];
+    
+    if (!window.getCursorImageFromStore) {
+        console.error('[IRIS] ❌ Cursor image not available from store for zoom fallback');
+    }
 
     for (let canvas of document.getElementsByClassName('view-canvas')){
         let ctx = canvas.getContext('2d');
@@ -947,13 +950,13 @@ function update_cursor_coords(obj, event){
         (event.clientY - rect.top) / (rect.bottom - rect.top) * obj.height
     );
 
-    // Update canvas coordinates through React store (primary source)
-    if (window.setCanvasMousePositionInStore) {
-        window.setCanvasMousePositionInStore(x, y);
-    } else {
-        console.warn('[IRIS Migration] update_cursor_coords: Using legacy vars.cursor_canvas fallback - React store not available yet');
-        vars.cursor_canvas = [x, y];
+    // Update canvas coordinates through React store (ONLY source)
+    if (!window.setCanvasMousePositionInStore) {
+        console.error('[IRIS] ❌ Canvas mouse position store not available');
+        return;
     }
+    
+    window.setCanvasMousePositionInStore(x, y);
 
     let canvas = document.getElementsByClassName('view-canvas')[0];
     let image_coords = canvas.getContext("2d").getWorldCoords(x, y);
@@ -961,14 +964,13 @@ function update_cursor_coords(obj, event){
         round_number(image_coords.x), round_number(image_coords.y)
     ];
     
-    // Update through React store (primary source)
-    if (window.setCursorImageInStore) {
-        window.setCursorImageInStore(newCursorImage[0], newCursorImage[1]);
-    } else {
-        // Fallback to legacy vars during initialization
-        console.warn('[IRIS Migration] update_cursor_coords: Using legacy vars.cursor_image update fallback - React store not available yet');
-        vars.cursor_image = newCursorImage;
+    // Update through React store (ONLY source)
+    if (!window.setCursorImageInStore) {
+        console.error('[IRIS] ❌ Cursor image store not available');
+        return;
     }
+    
+    window.setCursorImageInStore(newCursorImage[0], newCursorImage[1]);
 }
 
 function update_drawn_pixels(){
