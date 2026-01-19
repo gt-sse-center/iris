@@ -1568,21 +1568,16 @@ function user_draws_on_mask(){
 
     // Now we draw on the hidden mask and render it
     if (vars.mask_type == 'final' || vars.mask_type == 'user'){
-        var hidden_ctx;
-        if (window.getHiddenMaskContextFromStore) {
-            hidden_ctx = window.getHiddenMaskContextFromStore();
-            if (!hidden_ctx) {
-                console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - context not available from store');
-                hidden_ctx = vars.hidden_mask?.getContext('2d');
-            }
-        } else {
-            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - store not available');
-            hidden_ctx = vars.hidden_mask?.getContext('2d');
+        // Get hidden mask context from React store (ONLY source)
+        if (!window.getHiddenMaskContextFromStore) {
+            console.error('[IRIS] ❌ CRITICAL: Store not available for hidden mask context');
+            throw new Error('React store required for hidden mask');
         }
         
+        const hidden_ctx = window.getHiddenMaskContextFromStore();
         if (!hidden_ctx) {
-            console.error('[IRIS] Hidden mask context not available');
-            return;
+            console.error('[IRIS] ❌ Hidden mask context not available from store');
+            throw new Error('Hidden mask context not available');
         }
         
         if (toolShape === 'round') {
@@ -1820,39 +1815,24 @@ function user_draws_on_mask(){
 function reload_hidden_mask(){
     /*Update hidden mask on a offscreen canvas*/
     
-    // Get hidden mask context from React store or fallback to legacy
-    let ctx;
-    if (window.getHiddenMaskContextFromStore) {
-        ctx = window.getHiddenMaskContextFromStore();
-        if (!ctx) {
-            console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - context not available from store');
-            // Safety check: only proceed if hidden mask canvas is initialized
-            if (!vars.hidden_mask) {
-                console.error('[IRIS] Hidden mask canvas not available');
-                return;
-            }
-            ctx = vars.hidden_mask.getContext('2d');
-        }
-    } else {
-        console.warn('[IRIS Migration] Using legacy vars.hidden_mask fallback - store not available');
-        // Safety check: only proceed if hidden mask canvas is initialized
-        if (!vars.hidden_mask) {
-            console.error('[IRIS] Hidden mask canvas not available');
-            return;
-        }
-        ctx = vars.hidden_mask.getContext('2d');
+    // Get hidden mask context from React store (ONLY source)
+    if (!window.getHiddenMaskContextFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for hidden mask context');
+        throw new Error('React store required for hidden mask');
     }
     
+    const ctx = window.getHiddenMaskContextFromStore();
     if (!ctx) {
-        console.error('[IRIS] Hidden mask context not available');
-        return;
+        console.error('[IRIS] ❌ Hidden mask context not available from store');
+        throw new Error('Hidden mask context not available');
     }
     
-    // Safety check: ensure mask data is available
+    // Safety check: ensure mask data is available from store
     const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
-    if (!maskShape || !vars.mask) {
-        console.error('[IRIS] Mask data not available for reload_hidden_mask');
-        return;
+    const maskData = window.getMaskDataFromStore ? window.getMaskDataFromStore() : null;
+    if (!maskShape || !maskData) {
+        console.error('[IRIS] ❌ Mask data not available for reload_hidden_mask');
+        throw new Error('Mask data not available');
     }
 
     // Prepare the actual mask which will be drawn:
@@ -1930,47 +1910,21 @@ function get_current_class_colour(){
 }
 
 function get_current_mask_and_colours(){
-    // Use React store as primary source with fallback to legacy vars
-    let maskData, userMaskData, maskType, classes;
+    // Use React store as ONLY source (no fallbacks)
+    if (!window.getMaskDataFromStore || !window.getUserMaskDataFromStore || 
+        !window.getMaskTypeFromStore || !window.getClassesFromStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for get_current_mask_and_colours');
+        throw new Error('React store required for mask operations');
+    }
     
-    if (window.getMaskDataFromStore && window.getUserMaskDataFromStore && 
-        window.getMaskTypeFromStore && window.getClassesFromStore) {
-        try {
-            maskData = window.getMaskDataFromStore();
-            userMaskData = window.getUserMaskDataFromStore();
-            maskType = window.getMaskTypeFromStore();
-            classes = window.getClassesFromStore();
-            
-            if (!maskData || !classes) {
-                console.warn('[IRIS Migration] ⚠️ Mask data not available from React store, using legacy vars fallback');
-                maskData = vars.mask;
-                userMaskData = vars.user_mask;
-                maskType = vars.mask_type;
-                classes = window.getClassesFromStore ? window.getClassesFromStore() : (() => {
-                    console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassesFromStore not available, using legacy vars.classes in get_current_mask_and_colours()');
-                    return vars.classes;
-                })();
-            }
-        } catch (error) {
-            console.error('[IRIS Migration] ❌ React store mask access failed in get_current_mask_and_colours:', error);
-            console.warn('[IRIS Migration] Using legacy vars fallback');
-            maskData = vars.mask;
-            userMaskData = vars.user_mask;
-            maskType = vars.mask_type;
-            classes = window.getClassesFromStore ? window.getClassesFromStore() : (() => {
-                console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassesFromStore not available, using legacy vars.classes in get_current_mask_and_colours() error handler');
-                return vars.classes;
-            })();
-        }
-    } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available in get_current_mask_and_colours, using legacy vars fallback');
-        maskData = vars.mask;
-        userMaskData = vars.user_mask;
-        maskType = vars.mask_type;
-        classes = window.getClassesFromStore ? window.getClassesFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: getClassesFromStore not available, using legacy vars.classes in get_current_mask_and_colours() no store fallback');
-            return vars.classes;
-        })();
+    const maskData = window.getMaskDataFromStore();
+    const userMaskData = window.getUserMaskDataFromStore();
+    const maskType = window.getMaskTypeFromStore();
+    const classes = window.getClassesFromStore();
+    
+    if (!maskData || !classes) {
+        console.error('[IRIS] ❌ Mask data or classes not available from store');
+        throw new Error('Mask data not available');
     }
 
     if (maskType == "final"){
@@ -2002,14 +1956,12 @@ function get_current_mask_and_colours(){
 
         return [mask, colours]
     } else if (maskType == "errors"){ // error mask
-        // Get errors mask from React store (primary source) with fallback to legacy vars
-        let errorsMask;
-        if (window.getErrorsMaskDataFromStore) {
-            errorsMask = window.getErrorsMaskDataFromStore();
-        } else {
-            console.warn('[IRIS Migration] get_current_mask_and_colours: Using legacy vars.errors_mask fallback - React store not available yet');
-            errorsMask = vars.errors_mask;
+        // Get errors mask from React store (ONLY source)
+        if (!window.getErrorsMaskDataFromStore) {
+            console.error('[IRIS] ❌ CRITICAL: Store not available for errors mask');
+            throw new Error('React store required for errors mask');
         }
+        const errorsMask = window.getErrorsMaskDataFromStore();
         
         var colours = [
             [255, 255, 255,0], // no validation possible
@@ -2054,57 +2006,29 @@ function render_preview(){
 }
 
 function reset_mask(){
-    // Use React store as primary source with fallback to legacy vars
-    if (window.getMaskShapeFromStore && window.setMaskDataInStore && window.setUserMaskDataInStore) {
-        try {
-            const maskShape = window.getMaskShapeFromStore();
-            if (!maskShape) {
-                console.error('[IRIS Migration] ❌ No mask shape available from React store for reset_mask');
-                return;
-            }
-            
-            // Create new empty mask arrays
-            const newMaskData = new Uint8Array(maskShape[0] * maskShape[1]);
-            const newUserMaskData = new Uint8Array(maskShape[0] * maskShape[1]);
-            newMaskData.fill(0);
-            newUserMaskData.fill(0);
-            
-            // Update React store with reset mask data (primary source)
-            window.setMaskDataInStore(newMaskData, maskShape[0], maskShape[1]);
-            window.setUserMaskDataInStore(newUserMaskData);
-            
-            console.log('[IRIS Migration] ✅ Reset mask using React store as primary source');
-        } catch (error) {
-            console.error('[IRIS Migration] ❌ React store reset_mask failed:', error);
-            console.warn('[IRIS Migration] Using legacy vars fallback');
-            
-            // Fallback to legacy behavior - get mask shape from store
-            const fallbackMaskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
-            if (!fallbackMaskShape) {
-                console.error('[IRIS Migration] No mask shape available for reset_mask fallback');
-                return;
-            }
-            
-            vars.mask = new Uint8Array(fallbackMaskShape[1] * fallbackMaskShape[0]);
-            vars.user_mask = new Uint8Array(fallbackMaskShape[1] * fallbackMaskShape[0]);
-            vars.mask.fill(0);
-            vars.user_mask.fill(0);
-        }
-    } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available for reset_mask, using legacy vars fallback');
-        
-        // Fallback to legacy behavior - get mask shape from store
-        const fallbackMaskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
-        if (!fallbackMaskShape) {
-            console.error('[IRIS Migration] No mask shape available for reset_mask fallback');
-            return;
-        }
-        
-        vars.mask = new Uint8Array(fallbackMaskShape[1] * fallbackMaskShape[0]);
-        vars.user_mask = new Uint8Array(fallbackMaskShape[1] * fallbackMaskShape[0]);
-        vars.mask.fill(0);
-        vars.user_mask.fill(0);
+    // Use React store as ONLY source (no fallbacks)
+    if (!window.getMaskShapeFromStore || !window.setMaskDataInStore || !window.setUserMaskDataInStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for reset_mask');
+        throw new Error('React store required for reset mask');
     }
+    
+    const maskShape = window.getMaskShapeFromStore();
+    if (!maskShape) {
+        console.error('[IRIS] ❌ No mask shape available from store for reset_mask');
+        throw new Error('Mask shape not available');
+    }
+    
+    // Create new empty mask arrays
+    const newMaskData = new Uint8Array(maskShape[0] * maskShape[1]);
+    const newUserMaskData = new Uint8Array(maskShape[0] * maskShape[1]);
+    newMaskData.fill(0);
+    newUserMaskData.fill(0);
+    
+    // Update React store with reset mask data (ONLY source)
+    window.setMaskDataInStore(newMaskData, maskShape[0], maskShape[1]);
+    window.setUserMaskDataInStore(newUserMaskData);
+    
+    console.log('[IRIS] ✅ Reset mask using React store');
 
     reload_hidden_mask();
     render_mask();
@@ -2288,19 +2212,20 @@ async function legacyLoadMask(){
         userMaskData.fill(0);
     }
 
-    // CRITICAL: Always set legacy vars first as fallback, then try React store
-    vars.mask = maskData;
-    vars.user_mask = userMaskData;
-    vars.errors_mask = errorsMaskData;
-    
-    console.log('[IRIS Migration] ✅ Legacy vars mask data set:', {
-        maskLength: vars.mask ? vars.mask.length : 'null',
-        userMaskLength: vars.user_mask ? vars.user_mask.length : 'null',
-        errorsMaskLength: vars.errors_mask ? vars.errors_mask.length : 'null',
+    // Store only - no vars assignment (React store is single source of truth)
+    console.log('[IRIS] ✅ Mask data loaded:', {
+        maskLength: maskData.length,
+        userMaskLength: userMaskData.length,
+        errorsMaskLength: errorsMaskData.length,
         maskShape: maskShape
     });
 
-    // THEN try to update React store as well (but legacy vars are always available)
+    // Update React store (ONLY source)
+    if (!window.setMaskDataInStore || !window.setUserMaskDataInStore || !window.setErrorsMaskDataInStore) {
+        console.error('[IRIS] ❌ CRITICAL: Store not available for mask loading');
+        throw new Error('React store required for mask operations');
+    }
+    
     if (window.setMaskDataInStore && window.setUserMaskDataInStore && window.setErrorsMaskDataInStore) {
         try {
             window.setMaskDataInStore(maskData, maskShape[0], maskShape[1]);
@@ -2841,12 +2766,11 @@ async function legacyPredictMask(){
         newErrorsMask.fill(0);
         
         // Set errors mask through React store (primary source)
-        if (window.setErrorsMaskDataInStore) {
-            window.setErrorsMaskDataInStore(newErrorsMask);
-        } else {
-            console.warn('[IRIS Migration] legacyPredictMask: Using legacy vars.errors_mask fallback - React store not available');
-            vars.errors_mask = newErrorsMask;
+        if (!window.setErrorsMaskDataInStore) {
+            console.error('[IRIS] ❌ CRITICAL: Store not available for errors mask');
+            throw new Error('React store required for errors mask');
         }
+        window.setErrorsMaskDataInStore(newErrorsMask);
     } else {
         console.error('[IRIS Migration] legacyPredictMask: No mask data available for errors mask creation');
         return;
@@ -2862,8 +2786,8 @@ async function legacyPredictMask(){
     if (window.getErrorsMaskDataFromStore) {
         currentErrorsMask = window.getErrorsMaskDataFromStore();
     } else {
-        console.warn('[IRIS Migration] legacyPredictMask: Using legacy vars.errors_mask fallback for pixel setting');
-        currentErrorsMask = vars.errors_mask;
+        console.error('[IRIS] ❌ CRITICAL: Store not available for errors mask');
+        throw new Error('React store required for errors mask');
     }
     
     if (!currentErrorsMask) {
@@ -2892,8 +2816,8 @@ async function legacyPredictMask(){
     if (window.setErrorsMaskDataInStore) {
         window.setErrorsMaskDataInStore(updatedErrorsMask);
     } else {
-        console.warn('[IRIS Migration] legacyPredictMask: Using legacy vars.errors_mask fallback for update');
-        vars.errors_mask = updatedErrorsMask;
+        console.error('[IRIS] ❌ CRITICAL: Store not available for errors mask update');
+        throw new Error('React store required for errors mask');
     }
     let acc_prod = user_classes.length;
     let acc_sum = 0;
