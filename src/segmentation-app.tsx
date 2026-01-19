@@ -204,6 +204,22 @@ const SegmentationApp: React.FC = () => {
         await w.init_views();
         console.log('✅ React: Views and mask data initialized successfully');
         
+        // CRITICAL: Wait for ViewManager instance to be set in store
+        // This prevents "FALLBACK: Using legacy render_views" warning
+        const maxWait = 1000; // 1 second
+        const startTime = Date.now();
+        while (!useViewManagerStore.getState().legacyViewManagerInstance) {
+          if (Date.now() - startTime > maxWait) {
+            console.warn('⚠️ React: ViewManager instance not set after 1 second');
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        if (useViewManagerStore.getState().legacyViewManagerInstance) {
+          console.log('✅ React: ViewManager instance confirmed in store');
+        }
+        
         // CRITICAL: Set the image in viewManagerStore after init_views completes
         const imageLocation = useViewManagerStore.getState().imageLocation || [0, 0];
         useViewManagerStore.getState().setImage(currentImageId, imageLocation);
