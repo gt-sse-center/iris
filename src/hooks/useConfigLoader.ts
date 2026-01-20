@@ -43,6 +43,11 @@ export const useConfigLoader = (): ConfigLoaderResult => {
 
       // CRITICAL: Set current image ID from URL or initial vars (before other initialization)
       if (imageId) {
+        // CRITICAL: Clear any existing mask data before setting new image
+        // This prevents the previous image's mask from being displayed
+        segmentationStore.clearMask();
+        console.log('🔧 React: Cleared previous mask data before loading new image');
+        
         segmentationStore.setCurrentImage(imageId);
         console.log('🔧 React: Set current image ID:', imageId, 'from', imageIdFromUrl ? 'URL' : 'vars');
       } else {

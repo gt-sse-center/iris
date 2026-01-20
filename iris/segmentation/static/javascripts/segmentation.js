@@ -2620,27 +2620,25 @@ async function legacyPredictMask(){
 
     show_loader("Prepare training data...");
 
-    // Get mask data from React store (primary source) with fallback to legacy vars
-    let maskData, userMaskData;
+    // Get mask data from React store (ONLY source)
+    if (!window.getMaskDataFromStore || !window.getUserMaskDataFromStore) {
+        console.error('[IRIS] ❌ Mask data store not available for legacyPredictMask');
+        hide_loader();
+        return;
+    }
     
-    if (window.getMaskDataFromStore && window.getUserMaskDataFromStore) {
-        try {
-            maskData = window.getMaskDataFromStore();
-            userMaskData = window.getUserMaskDataFromStore();
-        } catch (error) {
-            console.error('[IRIS Migration] ❌ React store mask access failed in legacyPredictMask:', error);
-            console.warn('[IRIS Migration] Using legacy vars fallback');
-            maskData = vars.mask;
-            userMaskData = vars.user_mask;
-        }
-    } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available in legacyPredictMask, using legacy vars fallback');
-        maskData = vars.mask;
-        userMaskData = vars.user_mask;
+    let maskData, userMaskData;
+    try {
+        maskData = window.getMaskDataFromStore();
+        userMaskData = window.getUserMaskDataFromStore();
+    } catch (error) {
+        console.error('[IRIS] ❌ Failed to get mask data from store:', error);
+        hide_loader();
+        return;
     }
 
     if (!maskData || !userMaskData) {
-        console.error('[IRIS] legacyPredictMask: No mask data available');
+        console.error('[IRIS] ❌ No mask data available for legacyPredictMask');
         hide_loader();
         return;
     }
@@ -2773,22 +2771,26 @@ async function legacyPredictMask(){
     let cm = createArray(classCount, classCount);
     fill2DArray(cm, 0);
 
-    // Create errors mask through React store (primary source)
-    const maskLength = window.getMaskDataFromStore ? window.getMaskDataFromStore()?.length : vars.mask.length;
-    if (maskLength) {
-        const newErrorsMask = new Uint8Array(maskLength);
-        newErrorsMask.fill(0);
-        
-        // Set errors mask through React store (primary source)
-        if (!window.setErrorsMaskDataInStore) {
-            console.error('[IRIS] ❌ CRITICAL: Store not available for errors mask');
-            throw new Error('React store required for errors mask');
-        }
-        window.setErrorsMaskDataInStore(newErrorsMask);
-    } else {
-        console.error('[IRIS Migration] legacyPredictMask: No mask data available for errors mask creation');
+    // Create errors mask through React store (ONLY source)
+    // Reuse maskData from earlier in the function
+    const maskLength = maskData?.length;
+    
+    if (!maskLength) {
+        console.error('[IRIS] ❌ No mask data available for errors mask');
+        hide_loader();
         return;
     }
+    
+    const newErrorsMask = new Uint8Array(maskLength);
+    newErrorsMask.fill(0);
+    
+    // Set errors mask through React store (ONLY source)
+    if (!window.setErrorsMaskDataInStore) {
+        console.error('[IRIS] ❌ Store not available for errors mask');
+        hide_loader();
+        return;
+    }
+    window.setErrorsMaskDataInStore(newErrorsMask);
 
     let tp = {};
     for (let user_class of user_classes){
