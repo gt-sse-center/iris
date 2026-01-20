@@ -1949,6 +1949,10 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     set({ confusionMatrix: matrix });
   },
 
+  clearConfusionMatrix: () => {
+    set({ confusionMatrix: null });
+  },
+
   getAccuracyStats: () => {
     const { confusionMatrix } = get();
     return confusionMatrix ? confusionMatrix.accuracyStats : null;
@@ -2455,19 +2459,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     };
   },
 }));
-
-// Initialize store from legacy vars if available
-const initializeFiltersFromLegacy = () => {
-  const w = window as any;
-  const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
-  if (viewManager?.filters) {
-    const store = useSegmentationStore.getState();
-    store.setBrightness(viewManager.filters.brightness || 100);
-    store.setSaturation(viewManager.filters.saturation || 100);
-    store.setContrast(viewManager.filters.contrast || false);
-    store.setInvert(viewManager.filters.invert || false);
-  }
-};
 
 // Bridge for legacy JavaScript access during migration
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)

@@ -44,7 +44,7 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     
     const image = new Image();
     // Use the same URL pattern as legacy ViewManager
-    const baseUrl = segmentationStore.apiUrls?.main || '/';
+    const baseUrl = useSegmentationStore.getState().apiUrls?.main || '/';
     const imageUrl = `${baseUrl}image/${imageId}/${view.name}`;
     
     image.onload = () => {
@@ -173,7 +173,6 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
         // CRITICAL: Set the initial transformation matrix to match legacy system exactly
         // image_shape[0] = height, image_shape[1] = width
         // We need to scale canvas dimensions to image dimensions
-        const w = window as any;
         
         // Get image shape from React store
         const imageShape = (window as any).getImageShapeFromStore ? 

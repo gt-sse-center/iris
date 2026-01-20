@@ -93,7 +93,7 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
         }
 
         // Set current image from store
-        const currentImageId = segmentationStore.currentImageId;
+        const currentImageId = useSegmentationStore.getState().currentImageId;
         if (currentImageId) {
           const imageLocation = viewManagerStore.imageLocation || [0, 0];
           viewManagerStore.setImage(currentImageId, imageLocation);
