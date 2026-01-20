@@ -127,7 +127,8 @@ const SegmentationApp: React.FC = () => {
       if (!authChecked || !isAuthenticated) return;
 
       try {
-        console.log('🔧 React: Starting app initialization...');
+        const w = window as any;
+        if (w.IRIS_DEBUG) console.log('🔧 React: Starting app initialization...');
         
         // Load config directly (no polling, no legacy dependency)
         await loadConfig();
@@ -139,7 +140,7 @@ const SegmentationApp: React.FC = () => {
         // This handles ViewManager creation, so no separate service needed
         await initializeMaskData();
         
-        console.log('✅ React: App initialization complete');
+        if (w.IRIS_DEBUG) console.log('✅ React: App initialization complete');
       } catch (error) {
         console.error('❌ React: App initialization failed:', error);
         // You can set error state here if needed
@@ -155,7 +156,7 @@ const SegmentationApp: React.FC = () => {
       // Get current image ID from React store (primary source)
       const currentImageId = useSegmentationStore.getState().currentImageId;
       if (!currentImageId) {
-        console.warn('No current image ID found in store, skipping navigation initialization');
+        if ((window as any).IRIS_DEBUG) console.warn('No current image ID found in store, skipping navigation initialization');
         return;
       }
 
@@ -176,7 +177,7 @@ const SegmentationApp: React.FC = () => {
       // Set current image
       useSegmentationStore.getState().setCurrentImage(currentImageId);
       
-      console.log('✅ React: Navigation initialized');
+      if ((window as any).IRIS_DEBUG) console.log('✅ React: Navigation initialized');
     } catch (error) {
       console.error('❌ React: Navigation initialization failed:', error);
     }
@@ -188,16 +189,16 @@ const SegmentationApp: React.FC = () => {
       // Get current image ID from React store (primary source)
       const currentImageId = useSegmentationStore.getState().currentImageId;
       if (!currentImageId) {
-        console.warn('No current image ID found in store, skipping mask data initialization');
+        if ((window as any).IRIS_DEBUG) console.warn('No current image ID found in store, skipping mask data initialization');
         return;
       }
 
-      console.log('🔧 React: Initializing views and mask data for image:', currentImageId);
+      const w = window as any;
+      if (w.IRIS_DEBUG) console.log('🔧 React: Initializing views and mask data for image:', currentImageId);
       
       // CRITICAL: Wait for legacy scripts to be fully loaded
-      const w = window as any;
       if (!w.legacyScriptsReady) {
-        console.log('⏳ React: Waiting for legacy scripts to be ready...');
+        if (w.IRIS_DEBUG) console.log('⏳ React: Waiting for legacy scripts to be ready...');
         const maxWait = 5000; // 5 seconds
         const startTime = Date.now();
         while (!w.legacyScriptsReady) {
@@ -207,7 +208,7 @@ const SegmentationApp: React.FC = () => {
           }
           await new Promise(resolve => setTimeout(resolve, 50));
         }
-        console.log('✅ React: Legacy scripts ready');
+        if (w.IRIS_DEBUG) console.log('✅ React: Legacy scripts ready');
       }
       
       // Call the full init_views function which handles:
@@ -217,7 +218,7 @@ const SegmentationApp: React.FC = () => {
       // - Event initialization
       if (w.init_views) {
         await w.init_views();
-        console.log('✅ React: Views and mask data initialized successfully');
+        if (w.IRIS_DEBUG) console.log('✅ React: Views and mask data initialized successfully');
         
         // CRITICAL: Wait for ViewManager instance to be set in store
         // This prevents "FALLBACK: Using legacy render_views" warning
@@ -225,39 +226,41 @@ const SegmentationApp: React.FC = () => {
         const startTime = Date.now();
         while (!useViewManagerStore.getState().legacyViewManagerInstance) {
           if (Date.now() - startTime > maxWait) {
-            console.warn('⚠️ React: ViewManager instance not set after 1 second');
+            if (w.IRIS_DEBUG) console.warn('⚠️ React: ViewManager instance not set after 1 second');
             break;
           }
           await new Promise(resolve => setTimeout(resolve, 10));
         }
         
-        if (useViewManagerStore.getState().legacyViewManagerInstance) {
+        if (useViewManagerStore.getState().legacyViewManagerInstance && w.IRIS_DEBUG) {
           console.log('✅ React: ViewManager instance confirmed in store');
         }
         
         // CRITICAL: Set the image in viewManagerStore after init_views completes
         const imageLocation = useViewManagerStore.getState().imageLocation || [0, 0];
         useViewManagerStore.getState().setImage(currentImageId, imageLocation);
-        console.log('✅ React: Image set in viewManagerStore:', currentImageId);
+        if (w.IRIS_DEBUG) console.log('✅ React: Image set in viewManagerStore:', currentImageId);
         
-        // Verify critical components are available from store
-        const maskData = w.getMaskDataFromStore ? w.getMaskDataFromStore() : null;
-        const userMaskData = w.getUserMaskDataFromStore ? w.getUserMaskDataFromStore() : null;
-        const hiddenMaskContext = w.getHiddenMaskContextFromStore ? w.getHiddenMaskContextFromStore() : null;
-        
-        if (hiddenMaskContext && maskData && userMaskData) {
-          console.log('✅ React: All mask components verified from store:', {
-            hasHiddenMaskContext: !!hiddenMaskContext,
-            maskLength: maskData.length,
-            userMaskLength: userMaskData.length,
-            maskShape: w.getMaskShapeFromStore ? w.getMaskShapeFromStore() : null
-          });
-        } else {
-          console.warn('⚠️ React: Some mask components missing after init_views', {
-            hasHiddenMaskContext: !!hiddenMaskContext,
-            hasMaskData: !!maskData,
-            hasUserMaskData: !!userMaskData
-          });
+        // Verify critical components are available from store (debug only)
+        if (w.IRIS_DEBUG) {
+          const maskData = w.getMaskDataFromStore ? w.getMaskDataFromStore() : null;
+          const userMaskData = w.getUserMaskDataFromStore ? w.getUserMaskDataFromStore() : null;
+          const hiddenMaskContext = w.getHiddenMaskContextFromStore ? w.getHiddenMaskContextFromStore() : null;
+          
+          if (hiddenMaskContext && maskData && userMaskData) {
+            console.log('✅ React: All mask components verified from store:', {
+              hasHiddenMaskContext: !!hiddenMaskContext,
+              maskLength: maskData.length,
+              userMaskLength: userMaskData.length,
+              maskShape: w.getMaskShapeFromStore ? w.getMaskShapeFromStore() : null
+            });
+          } else {
+            console.warn('⚠️ React: Some mask components missing after init_views', {
+              hasHiddenMaskContext: !!hiddenMaskContext,
+              hasMaskData: !!maskData,
+              hasUserMaskData: !!userMaskData
+            });
+          }
         }
       } else {
         console.error('❌ React: init_views function not available');
@@ -288,10 +291,8 @@ const SegmentationApp: React.FC = () => {
               }
             }
           } catch (error) {
-            console.warn('Could not update mask layer visibility:', error);
+            // Silently handle - ViewManager may not be initialized yet
           }
-        } else {
-          console.warn('[IRIS Migration] ⚠️ ViewManager not available for mask layer visibility');
         }
       }
     );

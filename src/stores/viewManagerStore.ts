@@ -549,7 +549,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // Rendering methods (ONE-WAY SYNC: React store -> Legacy)
   render: () => {
-    console.log('[ViewManager] render: Triggering render (ONE-WAY SYNC)');
+    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] render: Triggering render (ONE-WAY SYNC)');
     
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
@@ -614,7 +614,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   updateViews: () => {
-    console.log('[ViewManager] updateViews: Triggering view update (ONE-WAY SYNC)');
+    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] updateViews: Triggering view update (ONE-WAY SYNC)');
     
     // Update canvas coordinates and trigger render
     const w = window as any;
@@ -700,7 +700,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   resetCanvas: () => {
-    console.log('[ViewManager] resetCanvas: Triggering reset (ONE-WAY SYNC)');
+    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] resetCanvas: Triggering reset (ONE-WAY SYNC)');
     
     // Update React store first (source of truth)
     get().resetView();

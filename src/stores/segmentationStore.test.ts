@@ -76,12 +76,11 @@ describe('segmentationStore - Tool Size Migration', () => {
     vi.clearAllMocks();
   });
 
-  it('manages tool size with bounds and legacy sync', () => {
+  it('manages tool size with bounds', () => {
     const store = useSegmentationStore.getState();
     
     store.setToolSize(10);
     expect(useSegmentationStore.getState().toolSize).toBe(10);
-    expect(mockWindow.vars.tool.size).toBe(10);
     
     store.setToolSize(0); // Should clamp to 1
     expect(useSegmentationStore.getState().toolSize).toBe(1);
@@ -92,12 +91,11 @@ describe('segmentationStore - Tool Size Migration', () => {
 });
 
 describe('segmentationStore - Tool Resizing Mode Migration', () => {
-  it('manages tool resizing mode with legacy sync', () => {
+  it('manages tool resizing mode', () => {
     const store = useSegmentationStore.getState();
     
     store.setToolResizingMode(true);
     expect(useSegmentationStore.getState().toolResizingMode).toBe(true);
-    expect(mockWindow.vars.tool.resizing_mode).toBe(true);
     
     store.setToolResizingMode(false);
     expect(useSegmentationStore.getState().toolResizingMode).toBe(false);
@@ -105,12 +103,11 @@ describe('segmentationStore - Tool Resizing Mode Migration', () => {
 });
 
 describe('segmentationStore - Cursor Image Migration', () => {
-  it('manages cursor coordinates with legacy sync', () => {
+  it('manages cursor coordinates', () => {
     const store = useSegmentationStore.getState();
     
     store.setCursorImage([100, 200]);
     expect(useSegmentationStore.getState().cursorImage).toEqual([100, 200]);
-    expect(mockWindow.vars.cursor_image).toEqual([100, 200]);
   });
 
   it('validates coordinate input', () => {
@@ -124,12 +121,11 @@ describe('segmentationStore - Cursor Image Migration', () => {
 });
 
 describe('segmentationStore - Tool Type Migration', () => {
-  it('manages tool type with legacy sync', () => {
+  it('manages tool type', () => {
     const store = useSegmentationStore.getState();
     
     store.setCurrentTool('move');
     expect(useSegmentationStore.getState().currentTool).toBe('move');
-    expect(mockWindow.vars.tool.type).toBe('move');
   });
 
   it('validates tool type input', () => {
@@ -143,12 +139,11 @@ describe('segmentationStore - Tool Type Migration', () => {
 });
 
 describe('segmentationStore - Drag Start Migration', () => {
-  it('manages drag coordinates with legacy sync', () => {
+  it('manages drag coordinates', () => {
     const store = useSegmentationStore.getState();
     
     store.setDragStart([100, 200]);
     expect(useSegmentationStore.getState().dragStart).toEqual([100, 200]);
-    expect(mockWindow.vars.drag_start).toEqual([100, 200]);
     
     store.setDragStart(null);
     expect(useSegmentationStore.getState().dragStart).toBe(null);

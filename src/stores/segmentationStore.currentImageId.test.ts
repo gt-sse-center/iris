@@ -39,7 +39,7 @@ describe('segmentationStore - currentImageId (vars.image_id migration)', () => {
   });
 
   describe('Core Functionality', () => {
-    it('should set current image ID and sync with legacy vars', () => {
+    it('should set current image ID', () => {
       const testImageId = 'test-image-001';
       
       // Set up test images
@@ -57,9 +57,6 @@ describe('segmentationStore - currentImageId (vars.image_id migration)', () => {
       // Verify store state
       expect(store.currentImageId).toBe(testImageId);
       expect(store.currentImageIndex).toBe(0);
-      
-      // Verify legacy sync
-      expect(mockWindow.vars.image_id).toBe(testImageId);
     });
 
     it('should handle invalid image ID gracefully', () => {

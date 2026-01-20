@@ -66,13 +66,15 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
       return;
     }
     
-    console.log('[ReactMaskLayer] renderMask: Rendering mask', {
-      bbox,
-      hiddenMaskSize: [hiddenMask.width, hiddenMask.height],
-      maskArea: maskArea,
-      imageShape: imageShape,
-      canvasSize: [canvas.width, canvas.height]
-    });
+    if ((window as any).IRIS_DEBUG) {
+      console.log('[ReactMaskLayer] renderMask: Rendering mask', {
+        bbox,
+        hiddenMaskSize: [hiddenMask.width, hiddenMask.height],
+        maskArea: maskArea,
+        imageShape: imageShape,
+        canvasSize: [canvas.width, canvas.height]
+      });
+    }
     
     // Use image coordinates exactly like legacy - let canvas transform handle scaling
     if (bbox === undefined) {
@@ -179,7 +181,7 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     if (canvas) {
       const shouldShow = showMask;
       canvas.style.display = shouldShow ? 'block' : 'none';
-      console.log('[ReactMaskLayer] Mask visibility changed:', shouldShow);
+      if ((window as any).IRIS_DEBUG) console.log('[ReactMaskLayer] Mask visibility changed:', shouldShow);
       
       // If mask is now visible, trigger a render
       if (shouldShow) {
@@ -249,21 +251,23 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
     
     if (hiddenMask && maskArea && imageShape) {
-      console.log('[ReactMaskLayer] Initial render with mask data available');
+      if ((window as any).IRIS_DEBUG) console.log('[ReactMaskLayer] Initial render with mask data available');
       renderMask();
     } else {
-      console.log('[ReactMaskLayer] Waiting for mask data to become available', {
-        hasHiddenMask: !!hiddenMask,
-        hasMaskArea: !!maskArea,
-        hasImageShape: !!imageShape
-      });
+      if ((window as any).IRIS_DEBUG) {
+        console.log('[ReactMaskLayer] Waiting for mask data to become available', {
+          hasHiddenMask: !!hiddenMask,
+          hasMaskArea: !!maskArea,
+          hasImageShape: !!imageShape
+        });
+      }
     }
   }, [renderMask]);
   
   // Listen for mask data loading events
   useEffect(() => {
     const handleMaskLoaded = () => {
-      console.log('[ReactMaskLayer] Mask data loaded event received');
+      if ((window as any).IRIS_DEBUG) console.log('[ReactMaskLayer] Mask data loaded event received');
       renderMask();
     };
     

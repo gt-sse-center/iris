@@ -2031,29 +2031,6 @@ function reset_filters(){
     throw new Error('React store not available for filter operations');
 }
 
-// TODO: how to get the action_id without sending an additional request?
-// async function activate_action(activate){
-//     vars.activate_action = activate;
-//
-//     show_message("Mask is being activated...");
-//
-//     action_info = {
-//         "active": activate
-//     }
-//
-//     fetch(`${vars.url.main}set_action_info/${action_id}`, {
-//         method: "POST",
-//         body: JSON.stringify(action_info)
-//     })
-//
-//     if (vars.activate_action){
-//         get_object("tb_activate_action").classList.add("checked");
-//     } else {
-//         get_object("tb_activate_action").classList.remove("checked");
-//     }
-//     hide_message();
-// }
-
 function show_mask(visible){
     // MIGRATION COMPLETE: Use React store as source of truth
     // The store syncs to DOM via React effect in segmentation-app.tsx

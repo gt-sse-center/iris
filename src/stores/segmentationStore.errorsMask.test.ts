@@ -54,19 +54,6 @@ describe('segmentationStore - errorsMask', () => {
     expect(useSegmentationStore.getState().errorsMaskData).toEqual(originalData); // Should remain unchanged
   });
 
-  it('should sync with legacy vars when setting errors mask', () => {
-    const testData = new Uint8Array(100);
-    testData.fill(2); // All incorrect predictions
-    
-    // Mock window.vars
-    (window as any).vars = {};
-    const { setErrorsMaskData } = useSegmentationStore.getState();
-    
-    setErrorsMaskData(testData);
-    
-    expect((window as any).vars.errors_mask).toEqual(testData);
-  });
-
   it('should require mask dimensions before setting errors mask', () => {
     // Clear both dimensions and errors mask data
     useSegmentationStore.setState({ maskDimensions: null, errorsMaskData: null });

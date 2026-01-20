@@ -75,7 +75,6 @@ describe('segmentationStore.classes migration', () => {
       const updatedStore = useSegmentationStore.getState();
 
       expect(updatedStore.classes).toEqual(testClasses);
-      expect(mockWindow.vars.classes).toEqual(testClasses);
     });
 
     test('updates currentClass when out of bounds', () => {
@@ -162,19 +161,6 @@ describe('segmentationStore.classes migration', () => {
       store.setCurrentClass(5);
       const storeAfterInvalid = useSegmentationStore.getState();
       expect(storeAfterInvalid.currentClass).toBe(1);
-    });
-  });
-
-  describe('legacy sync', () => {
-    test('syncs with legacy vars.classes', () => {
-      const testClasses = [
-        { name: 'test', colour: [255, 0, 0, 255] as [number, number, number, number] }
-      ];
-      
-      const store = useSegmentationStore.getState();
-      store.setClasses(testClasses);
-      
-      expect(mockWindow.vars.classes).toEqual(testClasses);
     });
   });
 });

@@ -226,10 +226,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     };
     
     if (!waitForLegacyFunctions()) {
-      console.log('[ReactPreviewLayer] Waiting for legacy functions to load...');
+      if ((window as any).IRIS_DEBUG) console.log('[ReactPreviewLayer] Waiting for legacy functions to load...');
       const checkInterval = setInterval(() => {
         if (waitForLegacyFunctions()) {
-          console.log('[ReactPreviewLayer] Legacy functions now available, setting up event handlers');
+          if ((window as any).IRIS_DEBUG) console.log('[ReactPreviewLayer] Legacy functions now available, setting up event handlers');
           clearInterval(checkInterval);
           setupEventHandlers();
         }
@@ -238,7 +238,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       // Cleanup interval if component unmounts
       return () => clearInterval(checkInterval);
     } else {
-      console.log('[ReactPreviewLayer] Legacy functions already available, setting up event handlers');
+      if ((window as any).IRIS_DEBUG) console.log('[ReactPreviewLayer] Legacy functions already available, setting up event handlers');
       setupEventHandlers();
     }
     
@@ -268,10 +268,12 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
             updateCursorCoords(canvas, event);
           }
           
-          console.log('[ReactPreviewLayer] Mouse down event:', {
-            buttons: event.buttons,
-            hasLegacyMouseDown: !!(window as any).mouse_down
-          });
+          if ((window as any).IRIS_DEBUG) {
+            console.log('[ReactPreviewLayer] Mouse down event:', {
+              buttons: event.buttons,
+              hasLegacyMouseDown: !!(window as any).mouse_down
+            });
+          }
           
           // Call legacy mouse_down handler
           const w = window as any;
@@ -310,11 +312,13 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       };
       
       const handleMouseWheel = (event: WheelEvent) => {
-        console.log('[ReactPreviewLayer] Mouse wheel event:', {
-          deltaY: event.deltaY,
-          wheelDelta: (event as any).wheelDelta,
-          hasLegacyMouseWheel: !!(window as any).mouse_wheel
-        });
+        if ((window as any).IRIS_DEBUG) {
+          console.log('[ReactPreviewLayer] Mouse wheel event:', {
+            deltaY: event.deltaY,
+            wheelDelta: (event as any).wheelDelta,
+            hasLegacyMouseWheel: !!(window as any).mouse_wheel
+          });
+        }
         
         // Call legacy mouse_wheel handler
         const w = window as any;

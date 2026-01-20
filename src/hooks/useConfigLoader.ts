@@ -11,7 +11,8 @@ export interface ConfigLoaderResult {
 export const useConfigLoader = (): ConfigLoaderResult => {
   const loadConfig = useCallback(async () => {
     try {
-      console.log('🔧 React: Loading config directly from APIs...');
+      const w = window as any;
+      if (w.IRIS_DEBUG) console.log('🔧 React: Loading config directly from APIs...');
       
       // Extract image_id from URL parameters OR from initial vars (set by backend template)
       const urlParams = new URLSearchParams(window.location.search);
@@ -35,7 +36,7 @@ export const useConfigLoader = (): ConfigLoaderResult => {
       const config = await configResponse.json();
       const user = await userResponse.json();
       
-      console.log('✅ React: Config and user data loaded successfully');
+      if (w.IRIS_DEBUG) console.log('✅ React: Config and user data loaded successfully');
 
       // Get stores directly to avoid dependency issues
       const segmentationStore = useSegmentationStore.getState();
@@ -46,10 +47,10 @@ export const useConfigLoader = (): ConfigLoaderResult => {
         // CRITICAL: Clear any existing mask data before setting new image
         // This prevents the previous image's mask from being displayed
         segmentationStore.clearMask();
-        console.log('🔧 React: Cleared previous mask data before loading new image');
+        if (w.IRIS_DEBUG) console.log('🔧 React: Cleared previous mask data before loading new image');
         
         segmentationStore.setCurrentImage(imageId);
-        console.log('🔧 React: Set current image ID:', imageId, 'from', imageIdFromUrl ? 'URL' : 'vars');
+        if (w.IRIS_DEBUG) console.log('🔧 React: Set current image ID:', imageId, 'from', imageIdFromUrl ? 'URL' : 'vars');
       } else {
         console.warn('⚠️ React: No image ID found in URL or vars');
       }
@@ -132,7 +133,8 @@ export const useConfigLoader = (): ConfigLoaderResult => {
           const maskWidth = x2 - x;
           const maskHeight = y2 - y;
           segmentationStore.setMaskDimensions({ width: maskWidth, height: maskHeight });
-          console.log('🔧 React: Set mask area and dimensions:', maskArea, '->', [maskWidth, maskHeight]);
+          const w = window as any;
+          if (w.IRIS_DEBUG) console.log('🔧 React: Set mask area and dimensions:', maskArea, '->', [maskWidth, maskHeight]);
         }
       }
 
@@ -144,7 +146,7 @@ export const useConfigLoader = (): ConfigLoaderResult => {
         viewManagerStore.setImage(currentImageId, imageLocation);
       }
 
-      console.log('✅ React: All stores initialized successfully');
+      if (w.IRIS_DEBUG) console.log('✅ React: All stores initialized successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ React: Config loading failed:', errorMessage);

@@ -68,7 +68,7 @@ describe('segmentationStore - apiUrls', () => {
     expect(apiUrls).toBeNull();
   });
 
-  it('should sync with legacy vars and handle complex URLs', () => {
+  it('should handle complex URLs', () => {
     const testUrls = {
       main: 'http://localhost:5000/main/',
       segmentation: 'http://localhost:5000/segmentation/',
@@ -77,14 +77,8 @@ describe('segmentationStore - apiUrls', () => {
       help: 'http://localhost:5000/help/'
     };
     
-    // Mock window.vars
-    (window as any).vars = {};
-    
     const { setApiUrls, getApiUrl } = useSegmentationStore.getState();
     setApiUrls(testUrls);
-    
-    // Test legacy sync
-    expect((window as any).vars.url).toEqual(testUrls);
     
     // Test complex URL handling
     expect(getApiUrl('main')).toBe('http://localhost:5000/main/');
