@@ -130,8 +130,15 @@ interface SegmentationState {
   historyCurrentEpoch: number;
   historyMaxEpochs: number;
   
+  // Debounced History State
+  historyDebounceMs: number;
+  historyDebounceTimer: NodeJS.Timeout | null;
+  hasPendingHistoryUpdate: boolean;
+  
   // History Actions
   updateHistory: () => void;
+  scheduleHistoryUpdate: () => void;
+  flushPendingHistory: () => void;
   undo: () => void;
   redo: () => void;
   discardFuture: () => void;
@@ -846,6 +853,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   userMaskHistory: [],
   historyCurrentEpoch: 0,
   historyMaxEpochs: 30,
+  
+  // Debounced History State
+  historyDebounceMs: 375,
+  historyDebounceTimer: null,
+  hasPendingHistoryUpdate: false,
 
   // CRITICAL: Core Mask Data Actions (replaces vars.mask, vars.user_mask, vars.errors_mask)
   setMaskData: (data: Uint8Array, width: number, height: number) => {
@@ -1138,6 +1150,44 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
   },
 
+  scheduleHistoryUpdate: () => {
+    const { historyDebounceTimer, historyDebounceMs } = get();
+    
+    // Clear existing timer
+    if (historyDebounceTimer) {
+      clearTimeout(historyDebounceTimer);
+    }
+    
+    // Set pending flag
+    set({ hasPendingHistoryUpdate: true });
+    
+    // Schedule new update
+    const newTimer = setTimeout(() => {
+      get().updateHistory();
+      // Always clear the pending flag, even if updateHistory returned early
+      set({ 
+        historyDebounceTimer: null, 
+        hasPendingHistoryUpdate: false 
+      });
+    }, historyDebounceMs);
+    
+    set({ historyDebounceTimer: newTimer });
+  },
+
+  flushPendingHistory: () => {
+    const { historyDebounceTimer, hasPendingHistoryUpdate } = get();
+    
+    if (historyDebounceTimer) {
+      clearTimeout(historyDebounceTimer);
+      set({ historyDebounceTimer: null });
+    }
+    
+    if (hasPendingHistoryUpdate) {
+      get().updateHistory();
+      set({ hasPendingHistoryUpdate: false });
+    }
+  },
+
   discardFuture: () => {
     const { maskHistory, userMaskHistory, historyCurrentEpoch } = get();
     
@@ -1158,6 +1208,16 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   },
 
   undo: () => {
+    // Discard any pending history updates (don't save them)
+    const { historyDebounceTimer } = get();
+    if (historyDebounceTimer) {
+      clearTimeout(historyDebounceTimer);
+      set({ 
+        historyDebounceTimer: null, 
+        hasPendingHistoryUpdate: false 
+      });
+    }
+    
     const { maskHistory, userMaskHistory, historyCurrentEpoch, maskDimensions } = get();
     
     if (historyCurrentEpoch <= 0 || !maskDimensions) return;
@@ -2770,6 +2830,8 @@ if (typeof window !== 'undefined') {
   
   // Export history system helper functions
   (window as any).updateHistoryInStore = updateHistoryInStore;
+  (window as any).scheduleHistoryUpdateInStore = () => useSegmentationStore.getState().scheduleHistoryUpdate();
+  (window as any).flushPendingHistoryInStore = () => useSegmentationStore.getState().flushPendingHistory();
   (window as any).undoInStore = undoInStore;
   (window as any).redoInStore = redoInStore;
   (window as any).discardFutureInStore = discardFutureInStore;

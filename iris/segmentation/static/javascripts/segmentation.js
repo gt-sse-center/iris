@@ -1914,9 +1914,16 @@ function user_draws_on_mask(){
 
     // Part of the history (undo-redo) system. When new pixels are drawn, we
     // delete all saved future elements in the history stack and add the
-    // current masks to the history
+    // current masks to the history (DEBOUNCED for smooth drawing)
     discard_future();
-    update_history();
+    
+    // Use debounced history update for drawing operations
+    if (window.scheduleHistoryUpdateInStore) {
+        window.scheduleHistoryUpdateInStore();
+    } else {
+        console.warn('[IRIS Migration] ⚠️ scheduleHistoryUpdateInStore not available, using immediate update');
+        update_history();
+    }
 
     // Set flag to show confirmation dialog before navigating away
     if (window.segmentationStore) {
@@ -2427,7 +2434,7 @@ async function legacyLoadMask(){
 
     // Part of the history (undo-redo) system. When new pixels are drawn, we
     // delete all saved future elements in the history stack and add the
-    // current masks to the history
+    // current masks to the history (IMMEDIATE for mask loading)
     discard_future();
     update_history();
 }
@@ -3070,7 +3077,7 @@ async function legacyPredictMask(){
 
     // Part of the history (undo-redo) system. When new pixels are drawn, we
     // delete all saved future elements in the history stack and add the
-    // current masks to the history
+    // current masks to the history (IMMEDIATE for AI predictions)
     discard_future();
     update_history();
 
