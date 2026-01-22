@@ -67,11 +67,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       return;
     }
     
-    // CRITICAL FIX: Save current transformation before clearing
-    // const currentTransform = ctx.getTransform();
-    ctx.getTransform();
-    // console.log('[ReactPreviewLayer] Preserving transform:', currentTransform);
-    
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for clearing
@@ -193,11 +188,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
           // CRITICAL: Only set base transformation on canvas initialization, not on every render
           // Check if this canvas already has a transformation applied by legacy zoom
           const currentTransform = ctx.getTransform();
-          const isIdentityTransform = (
-            currentTransform.a === 1 && currentTransform.b === 0 &&
-            currentTransform.c === 0 && currentTransform.d === 1 &&
-            currentTransform.e === 0 && currentTransform.f === 0
-          );
+          const isIdentityTransform = [
+            currentTransform.a, currentTransform.b, currentTransform.c,
+            currentTransform.d, currentTransform.e, currentTransform.f
+          ].every((val, idx) => val === [1, 0, 0, 1, 0, 0][idx]);
           
           // Only set base transformation if no zoom/pan has been applied yet
           if (isIdentityTransform) {
@@ -425,7 +419,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     width: '100%',
     height: '100%',
     display: 'block',
-    // border: '1px solid black', // Temporarily remove border to test positioning
     backgroundColor: 'transparent',
     cursor: 'crosshair',
     pointerEvents: 'auto', // Allow mouse interactions

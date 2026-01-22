@@ -182,11 +182,10 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
           // CRITICAL: Only set base transformation on canvas initialization, not on every render
           // Check if this canvas already has a transformation applied by legacy zoom
           const currentTransform = ctx.getTransform();
-          const isIdentityTransform = (
-            currentTransform.a === 1 && currentTransform.b === 0 &&
-            currentTransform.c === 0 && currentTransform.d === 1 &&
-            currentTransform.e === 0 && currentTransform.f === 0
-          );
+          const isIdentityTransform = [
+            currentTransform.a, currentTransform.b, currentTransform.c,
+            currentTransform.d, currentTransform.e, currentTransform.f
+          ].every((val, idx) => val === [1, 0, 0, 1, 0, 0][idx]);
           
           // Only set base transformation if no zoom/pan has been applied yet
           if (isIdentityTransform) {
