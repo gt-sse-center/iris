@@ -73,7 +73,6 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     if (!ctx) return;
     
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
-    // Get image shape from React store with fallback to legacy vars
     const w = window as any;
     const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
     

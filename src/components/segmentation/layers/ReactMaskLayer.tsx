@@ -145,7 +145,6 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
         // We need to scale canvas dimensions to image dimensions
         const w = window as any;
         
-        // Get image shape from React store with fallback to legacy vars
         const imageShape = (window as any).getImageShapeFromStore ? 
           (window as any).getImageShapeFromStore() : w.vars?.image_shape;
         

@@ -563,8 +563,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       console.log('[ViewManager] render: Using legacy ViewManager instance');
       legacyViewManagerInstance.render();
     } else {
-      // FALLBACK: Direct legacy call
-      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_views - React store ViewManager not available');
+      console.warn('[IRIS Migration] ⚠️ Using render_views fallback - React store ViewManager not available');
     }
     
     // Notify React components
@@ -580,8 +579,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       const layers = legacyViewManagerInstance.getLayers("mask");
       layers.forEach((layer: any) => layer.render(bbox));
     } else {
-      // FALLBACK: Direct legacy call
-      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_mask - React store ViewManager not available');
+      console.warn('[IRIS Migration] ⚠️ Using render_mask fallback - React store ViewManager not available');
       const w = window as any;
       if (w.render_mask) {
         w.render_mask(bbox);
@@ -601,8 +599,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       const layers = legacyViewManagerInstance.getLayers("preview");
       layers.forEach((layer: any) => layer.render());
     } else {
-      // FALLBACK: Direct legacy call
-      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_preview - React store ViewManager not available');
+      console.warn('[IRIS Migration] ⚠️ Using render_preview fallback - React store ViewManager not available');
       const w = window as any;
       if (w.render_preview) {
         w.render_preview();

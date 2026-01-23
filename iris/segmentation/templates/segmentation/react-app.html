@@ -98,7 +98,6 @@
         // Bridge functions must be available immediately when legacy scripts run
         // This prevents the timing issue where init_segmentation runs before React finishes loading
         
-        // Early bridge function - will be replaced when React store loads
         window.setViewManagerInStore = function(instance) {
             window._pendingViewManagerInstance = instance;
             
@@ -109,7 +108,6 @@
             }
         };
         
-        // Early bridge function for other store operations
         window.setCurrentImageIdInStore = function(imageId) {
             window._pendingImageId = imageId;
             

@@ -43,7 +43,6 @@ class ViewManager{
         this.source = {};
     }
     setImageLocation(location){
-        // Primary source: React store, fallback: legacy vars
         const validatedLocation = window.validateImageLocation && window.validateImageLocation(location) ? 
             location : (() => {
                 console.warn('[IRIS Migration] ⚠️ Invalid image location coordinates:', location);

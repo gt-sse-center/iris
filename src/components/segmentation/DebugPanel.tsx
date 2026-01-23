@@ -26,7 +26,6 @@ const DebugPanel: React.FC = () => {
     const updateLegacyVars = () => {
       const w = window as any;
       
-      // Primary source: React store, fallback: legacy vars
       const views = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('views') : null;
       const viewGroups = w.getConfigSectionFromStore ? w.getConfigSectionFromStore('view_groups') : null;
       

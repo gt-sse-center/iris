@@ -49,11 +49,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     // Get legacy vars for cursor and tool data
     const w = window as any;
     
-    // Get cursor image from React store with fallback to legacy vars
     const cursorImage = (window as any).getCursorImageFromStore ? 
       (window as any).getCursorImageFromStore() : w.vars?.cursor_image;
     
-    // Get image shape from React store with fallback to legacy vars
     const imageShape = (window as any).getImageShapeFromStore ? 
       (window as any).getImageShapeFromStore() : w.vars?.image_shape;
     
@@ -112,7 +110,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.beginPath();
       
       // Line width depends on number of views
-      // Primary source: React store, fallback: legacy vars
       const views = (window as any).getConfigSectionFromStore ? 
         (window as any).getConfigSectionFromStore('views') : (() => {
           console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for line width - React store not available');
@@ -141,10 +138,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       console.warn('[IRIS Migration] ReactPreviewLayer: No mask area or mask shape available for rendering');
     }
     
-    // Add warning when falling back to legacy vars
-    if (!window.getMaskAreaFromStore && w.vars?.mask_area) {
-      console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: Using legacy vars.mask_area fallback - React store not available');
-    }
   }, [toolSize, toolShape, cursorImage]); // Re-render when toolSize, toolShape, or cursorImage changes
   
   // Handle canvas size changes and coordinate transformation
@@ -158,7 +151,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       
       const w = window as any;
       
-      // Get image shape from React store with fallback to legacy vars
       const imageShape = (window as any).getImageShapeFromStore ? 
         (window as any).getImageShapeFromStore() : w.vars?.image_shape;
       

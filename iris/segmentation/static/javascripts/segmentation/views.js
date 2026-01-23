@@ -7,7 +7,6 @@ class MaskLayer extends CanvasLayer{
     render(bbox=null){
         let ctx = this.container.getContext("2d");
         
-        // Get hidden canvas from React store or fallback to legacy
         const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? window.getHiddenMaskCanvasFromStore() : null;
         
         if (!hiddenCanvas) {
@@ -17,7 +16,6 @@ class MaskLayer extends CanvasLayer{
         
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
-            // Get image shape from React store with fallback to legacy vars
             const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
             
             if (imageShape) {
@@ -27,7 +25,6 @@ class MaskLayer extends CanvasLayer{
                 return;
             }
             
-            // Get mask area from React store or fallback to legacy
             const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
@@ -42,7 +39,6 @@ class MaskLayer extends CanvasLayer{
                 maskArea[0], maskArea[1]
             );
         } else {
-            // Get mask area from React store or fallback to legacy
             const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
@@ -76,7 +72,6 @@ class SuperpixelsLayer extends CanvasLayer{
     render(bbox=null){
         let ctx = this.container.getContext("2d");
         
-        // Get hidden canvas from React store or fallback to legacy
         const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? window.getHiddenMaskCanvasFromStore() : null;
         
         if (!hiddenCanvas) {
@@ -86,7 +81,6 @@ class SuperpixelsLayer extends CanvasLayer{
         
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
-            // Get image shape from React store with fallback to legacy vars
             const imageShape = window.getImageShapeFromStore();
             
             if (!imageShape) {
@@ -96,7 +90,6 @@ class SuperpixelsLayer extends CanvasLayer{
             
             ctx.clearRect(0, 0, ...imageShape);
             
-            // Get mask area from React store (ONLY source)
             const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
@@ -109,7 +102,6 @@ class SuperpixelsLayer extends CanvasLayer{
                 maskArea[0], maskArea[1]
             );
         } else {
-            // Get mask area from React store or fallback to legacy
             const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
@@ -148,7 +140,6 @@ class PreviewLayer extends CanvasLayer{
 
         let ctx = this.container.getContext("2d");
         
-        // Get image shape from React store (ONLY source)
         const imageShape = window.getImageShapeFromStore();
         
         if (!imageShape) {
@@ -159,21 +150,18 @@ class PreviewLayer extends CanvasLayer{
         ctx.clearRect(0, 0, ...imageShape);
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
         
-        // Get tool size from React store (ONLY source)
         const toolSize = window.getToolSizeFromStore ? window.getToolSizeFromStore() : 1;
         
         if (!window.getToolSizeFromStore) {
             console.error('[IRIS] ❌ Tool size not available from store');
         }
         
-        // Get cursor image from React store (ONLY source)
         const cursorImage = window.getCursorImageFromStore ? window.getCursorImageFromStore() : [0, 0];
         
         if (!window.getCursorImageFromStore) {
             console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
-        // Get tool shape from React store (ONLY source)
         const toolShape = window.getToolShapeFromStore ? window.getToolShapeFromStore() : 'square';
         
         if (!window.getToolShapeFromStore) {
@@ -202,7 +190,6 @@ class PreviewLayer extends CanvasLayer{
         // Draw the boundaries of the masking area
         ctx.beginPath();
         
-        // Get views from React store (ONLY source)
         const views = window.getConfigSectionFromStore ? 
             window.getConfigSectionFromStore('views') : null;
         

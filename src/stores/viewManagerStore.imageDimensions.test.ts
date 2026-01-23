@@ -78,7 +78,7 @@ describe('ViewManagerStore Image Dimensions', () => {
     });
   });
 
-  describe('Legacy Integration', () => {
+  describe('Store Integration', () => {
     test('no longer syncs with legacy vars.image_shape (vars removed)', () => {
       const store = useViewManagerStore.getState();
       
