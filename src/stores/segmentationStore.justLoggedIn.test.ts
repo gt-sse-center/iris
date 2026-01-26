@@ -21,14 +21,6 @@ describe('SegmentationStore - Just Logged In Migration', () => {
     expect(useSegmentationStore.getState().justLoggedIn).toBe(false);
   });
 
-  it('should sync with legacy vars', () => {
-    const w = window as any;
-    w.vars = { just_logged_in: false };
-    
-    useSegmentationStore.getState().setJustLoggedIn(true);
-    expect(w.vars.just_logged_in).toBe(true);
-  });
-
   it('should provide helper functions', () => {
     const w = window as any;
     

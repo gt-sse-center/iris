@@ -7,9 +7,7 @@ class MaskLayer extends CanvasLayer{
     render(bbox=null){
         let ctx = this.container.getContext("2d");
         
-        // Get hidden canvas from React store or fallback to legacy
-        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
-            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? window.getHiddenMaskCanvasFromStore() : null;
         
         if (!hiddenCanvas) {
             console.error('[IRIS] Hidden mask canvas not available for MaskLayer render');
@@ -18,9 +16,7 @@ class MaskLayer extends CanvasLayer{
         
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
-            // Get image shape from React store with fallback to legacy vars
-            const imageShape = window.getImageShapeFromStore ? 
-                window.getImageShapeFromStore() : vars.image_shape;
+            const imageShape = window.getImageShapeFromStore ? window.getImageShapeFromStore() : null;
             
             if (imageShape) {
                 ctx.clearRect(0, 0, ...imageShape);
@@ -29,30 +25,21 @@ class MaskLayer extends CanvasLayer{
                 return;
             }
             
-            // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for MaskLayer render');
                 return;
             }
             
-            // Warn if falling back to legacy vars
-            if (!window.getImageShapeFromStore && vars.image_shape) {
-                console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.image_shape fallback - React store not available');
-            }
-            
-            if (!window.getMaskAreaFromStore && vars.mask_area) {
-                console.warn('⚠️ [IRIS Migration] MaskLayer.render: Using legacy vars.mask_area fallback - React store not available');
-            }
+            // Store-based mask rendering
             
             ctx.drawImage(
                 hiddenCanvas,
                 maskArea[0], maskArea[1]
             );
         } else {
-            // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for MaskLayer render');
@@ -85,9 +72,7 @@ class SuperpixelsLayer extends CanvasLayer{
     render(bbox=null){
         let ctx = this.container.getContext("2d");
         
-        // Get hidden canvas from React store or fallback to legacy
-        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? 
-            window.getHiddenMaskCanvasFromStore() : vars.hidden_mask;
+        const hiddenCanvas = window.getHiddenMaskCanvasFromStore ? window.getHiddenMaskCanvasFromStore() : null;
         
         if (!hiddenCanvas) {
             console.error('[IRIS] Hidden mask canvas not available for SuperpixelsLayer render');
@@ -96,32 +81,20 @@ class SuperpixelsLayer extends CanvasLayer{
         
         if (bbox === null){
             // No specific coordinates are given, i.e. we redraw the whole mask:
-            // Get image shape from React store with fallback to legacy vars
-            const imageShape = window.getImageShapeFromStore ? 
-                window.getImageShapeFromStore() : vars.image_shape;
+            const imageShape = window.getImageShapeFromStore();
             
-            if (imageShape) {
-                ctx.clearRect(0, 0, ...imageShape);
-            } else {
-                console.warn('[IRIS Migration] SuperpixelsLayer.render: No image shape available');
+            if (!imageShape) {
+                console.error('[IRIS] ❌ No image shape available for SuperpixelsLayer.render');
                 return;
             }
             
-            // Warn if falling back to legacy vars
-            if (!window.getImageShapeFromStore && vars.image_shape) {
-                console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.image_shape fallback - React store not available');
-            }
+            ctx.clearRect(0, 0, ...imageShape);
             
-            // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
-                console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
+                console.error('[IRIS] ❌ Mask area not available for SuperpixelsLayer render');
                 return;
-            }
-            
-            if (!window.getMaskAreaFromStore && vars.mask_area) {
-                console.warn('⚠️ [IRIS Migration] SuperpixelsLayer.render: Using legacy vars.mask_area fallback - React store not available');
             }
             
             ctx.drawImage(
@@ -129,8 +102,7 @@ class SuperpixelsLayer extends CanvasLayer{
                 maskArea[0], maskArea[1]
             );
         } else {
-            // Get mask area from React store or fallback to legacy
-            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+            const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
             
             if (!maskArea) {
                 console.error('[IRIS] Mask area not available for SuperpixelsLayer render');
@@ -168,48 +140,32 @@ class PreviewLayer extends CanvasLayer{
 
         let ctx = this.container.getContext("2d");
         
-        // Get image shape from React store with fallback to legacy vars
-        const imageShape = window.getImageShapeFromStore ? 
-            window.getImageShapeFromStore() : vars.image_shape;
+        const imageShape = window.getImageShapeFromStore();
         
-        if (imageShape) {
-            ctx.clearRect(0, 0, ...imageShape);
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: No image shape available');
+        if (!imageShape) {
+            console.error('[IRIS] ❌ No image shape available for PreviewLayer.render');
             return;
         }
         
-        // Warn if falling back to legacy vars
-        if (!window.getImageShapeFromStore && vars.image_shape) {
-            console.warn('⚠️ [IRIS Migration] PreviewLayer.render: Using legacy vars.image_shape fallback - React store not available');
-        }
+        ctx.clearRect(0, 0, ...imageShape);
         ctx.fillStyle = "rgba(150, 150, 150, 0.5)";
         
-        // Get tool size from React store (primary source) with fallback to legacy vars
-        let toolSize;
-        if (window.getToolSizeFromStore) {
-            toolSize = window.getToolSizeFromStore();
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.size fallback - React store not available yet');
-            toolSize = vars.tool.size; // Fallback during initialization
+        const toolSize = window.getToolSizeFromStore ? window.getToolSizeFromStore() : 1;
+        
+        if (!window.getToolSizeFromStore) {
+            console.error('[IRIS] ❌ Tool size not available from store');
         }
         
-        // Get cursor image from React store (primary source) with fallback to legacy vars
-        let cursorImage;
-        if (window.getCursorImageFromStore) {
-            cursorImage = window.getCursorImageFromStore();
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.cursor_image fallback - React store not available yet');
-            cursorImage = vars.cursor_image; // Fallback during initialization
+        const cursorImage = window.getCursorImageFromStore ? window.getCursorImageFromStore() : [0, 0];
+        
+        if (!window.getCursorImageFromStore) {
+            console.error('[IRIS] ❌ Cursor image not available from store');
         }
         
-        // Get tool shape from React store (primary source) with fallback to legacy vars
-        let toolShape;
-        if (window.getToolShapeFromStore) {
-            toolShape = window.getToolShapeFromStore();
-        } else {
-            console.warn('[IRIS Migration] PreviewLayer.render: Using legacy vars.tool.shape fallback - React store not available yet');
-            toolShape = vars.tool.shape || 'square'; // Fallback during initialization
+        const toolShape = window.getToolShapeFromStore ? window.getToolShapeFromStore() : 'square';
+        
+        if (!window.getToolShapeFromStore) {
+            console.error('[IRIS] ❌ Tool shape not available from store');
         }
         
         // Draw tool cursor preview based on shape
@@ -234,11 +190,12 @@ class PreviewLayer extends CanvasLayer{
         // Draw the boundaries of the masking area
         ctx.beginPath();
         
-        // Primary source: React store, fallback: legacy vars
-        const views = window.getConfigSectionFromStore ? window.getConfigSectionFromStore('views') : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for line width - React store not available');
-            return vars.config.views;
-        })();
+        const views = window.getConfigSectionFromStore ? 
+            window.getConfigSectionFromStore('views') : null;
+        
+        if (!window.getConfigSectionFromStore) {
+            console.error('[IRIS] ❌ Config store not available for views');
+        }
         
         const viewCount = views ? (Array.isArray(views) ? views.length : Object.keys(views).length) : 0;
         if (viewCount < 2){
@@ -249,8 +206,13 @@ class PreviewLayer extends CanvasLayer{
 
         ctx.strokeStyle = "red";
         ctx.setLineDash([5, 15]);
-        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : vars.mask_shape;
-        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : vars.mask_area;
+        const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+        
+        if (!window.getMaskShapeFromStore) {
+            console.error('[IRIS] ❌ Mask shape store not available');
+        }
+        
+        const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
         
         if (maskShape && maskArea) {
             ctx.rect(
@@ -259,7 +221,7 @@ class PreviewLayer extends CanvasLayer{
             );
             ctx.stroke();
         } else {
-            console.warn('[IRIS Migration] No mask shape or mask area available for ViewLayer rendering');
+            console.warn('[IRIS] No mask shape or mask area available for ViewLayer rendering');
         }
     }
 }

@@ -254,12 +254,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
 
     const locationCopy: [number, number] = [lat, lon];
     set({ imageLocation: locationCopy });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.image_location = locationCopy;
-    }
   },
 
   validateImageLocation: (location) => {
@@ -316,12 +310,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       imageDimensions: { width, height },
       imageAspectRatio: aspectRatio
     });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.image_shape = [width, height];
-    }
 
     // Update view dimensions when image dimensions change
     get().updateViewDimensions();
@@ -433,12 +421,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
 
     const coordsCopy: [number, number] = [coords[0], coords[1]];
     set({ canvasMousePosition: coordsCopy });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.cursor_canvas = coordsCopy;
-    }
   },
   
   setMouseDown: (isMouseDown) => {
@@ -567,7 +549,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // Rendering methods (ONE-WAY SYNC: React store -> Legacy)
   render: () => {
-    console.log('[ViewManager] render: Triggering render (ONE-WAY SYNC)');
+    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] render: Triggering render (ONE-WAY SYNC)');
     
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
@@ -581,8 +563,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       console.log('[ViewManager] render: Using legacy ViewManager instance');
       legacyViewManagerInstance.render();
     } else {
-      // FALLBACK: Direct legacy call
-      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_views - React store ViewManager not available');
+      console.warn('[IRIS Migration] ⚠️ Using render_views fallback - React store ViewManager not available');
     }
     
     // Notify React components
@@ -598,8 +579,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       const layers = legacyViewManagerInstance.getLayers("mask");
       layers.forEach((layer: any) => layer.render(bbox));
     } else {
-      // FALLBACK: Direct legacy call
-      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_mask - React store ViewManager not available');
+      console.warn('[IRIS Migration] ⚠️ Using render_mask fallback - React store ViewManager not available');
       const w = window as any;
       if (w.render_mask) {
         w.render_mask(bbox);
@@ -619,8 +599,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       const layers = legacyViewManagerInstance.getLayers("preview");
       layers.forEach((layer: any) => layer.render());
     } else {
-      // FALLBACK: Direct legacy call
-      console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy render_preview - React store ViewManager not available');
+      console.warn('[IRIS Migration] ⚠️ Using render_preview fallback - React store ViewManager not available');
       const w = window as any;
       if (w.render_preview) {
         w.render_preview();
@@ -632,7 +611,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   updateViews: () => {
-    console.log('[ViewManager] updateViews: Triggering view update (ONE-WAY SYNC)');
+    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] updateViews: Triggering view update (ONE-WAY SYNC)');
     
     // Update canvas coordinates and trigger render
     const w = window as any;
@@ -718,7 +697,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   resetCanvas: () => {
-    console.log('[ViewManager] resetCanvas: Triggering reset (ONE-WAY SYNC)');
+    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] resetCanvas: Triggering reset (ONE-WAY SYNC)');
     
     // Update React store first (source of truth)
     get().resetView();

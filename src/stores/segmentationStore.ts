@@ -776,12 +776,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setNextAction: (action: (() => Promise<void>) | null) => {
     set({ nextAction: action });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.next_action = action;
-    }
   },
 
   // New User Experience State (replaces vars.just_logged_in)
@@ -789,12 +783,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setJustLoggedIn: (loggedIn: boolean) => {
     set({ justLoggedIn: loggedIn });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.just_logged_in = loggedIn;
-    }
   },
 
   // CRITICAL: API URLs State (replaces vars.url)
@@ -817,12 +805,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
 
     set({ apiUrls: urls });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.url = urls;
-    }
 
     console.log('[IRIS] API URLs initialized:', urls);
   },
@@ -885,13 +867,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskDimensions: { width, height }
     });
 
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.mask = dataCopy;
-      w.vars.mask_shape = [width, height];
-    }
-
     // Trigger mask-related updates (only if classes are set)
     const { classes } = get();
     if (classes && classes.length > 0) {
@@ -918,12 +893,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const dataCopy = new Uint8Array(data);
     set({ userMaskData: dataCopy });
 
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.user_mask = dataCopy;
-    }
-
     // Update pixel counts when user mask changes (only if classes are set)
     const { classes } = get();
     if (classes && classes.length > 0) {
@@ -949,12 +918,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
     const dataCopy = new Uint8Array(data);
     set({ errorsMaskData: dataCopy });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.errors_mask = dataCopy;
-    }
   },
 
   getMaskPixel: (x: number, y: number) => {
@@ -1016,57 +979,50 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       historyCurrentEpoch: 0,
       userPixelCounts: { total: 0 } // Reset pixel counts when clearing mask
     });
-
-    // Sync with legacy vars
-    const w = window as any;
-    if (w.vars) {
-      w.vars.mask = null;
-      w.vars.user_mask = null;
-      w.vars.errors_mask = null;
-      w.vars.mask_shape = null;
-      w.vars.n_user_pixels = { total: 0 }; // Reset legacy pixel counts too
-      w.vars.history = {
-        mask: [],
-        user_mask: [],
-        current_epoch: 0,
-        max_epochs: 30
-      };
-    }
-  },
-
-  copyMask: () => {
-    const { maskData } = get();
-    return maskData ? new Uint8Array(maskData) : null;
-  },
-
-  copyUserMask: () => {
-    const { userMaskData } = get();
-    return userMaskData ? new Uint8Array(userMaskData) : null;
-  },
-
-  // Mask Shape Actions (replaces vars.mask_shape)
-  setMaskDimensions: (dimensions: { width: number; height: number }) => {
-    // Validate input
-    if (!dimensions || typeof dimensions.width !== 'number' || typeof dimensions.height !== 'number' || 
-        dimensions.width <= 0 || dimensions.height <= 0) {
-      console.error('[IRIS] setMaskDimensions: Invalid dimensions', dimensions);
-      return;
-    }
-
-    set({ maskDimensions: dimensions });
-    
-    // Sync with legacy vars during migration (only in browser environment)
-    if (typeof window !== 'undefined') {
-      const w = window as any;
-      if (w.vars) {
-        w.vars.mask_shape = [dimensions.width, dimensions.height];
-      }
-    }
   },
 
   getMaskShape: () => {
     const { maskDimensions } = get();
     return maskDimensions ? [maskDimensions.width, maskDimensions.height] : null;
+  },
+
+  setMaskDimensions: (dimensions: { width: number; height: number }) => {
+    // Validate input
+    if (!dimensions || typeof dimensions !== 'object') {
+      console.error('[IRIS] setMaskDimensions: Invalid dimensions object', dimensions);
+      return;
+    }
+    
+    const { width, height } = dimensions;
+    
+    if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
+      console.error('[IRIS] setMaskDimensions: Invalid dimensions', { width, height });
+      return;
+    }
+
+    // If we have existing mask data, validate dimensions match
+    const currentMask = get().maskData;
+    if (currentMask && currentMask.length !== width * height) {
+      console.warn('[IRIS] setMaskDimensions: Dimension mismatch with existing mask data', {
+        currentLength: currentMask.length,
+        expectedLength: width * height
+      });
+    }
+
+    // Update dimensions
+    set({ maskDimensions: { width, height } });
+  },
+
+  copyMask: () => {
+    const { maskData } = get();
+    if (!maskData) return null;
+    return new Uint8Array(maskData);
+  },
+
+  copyUserMask: () => {
+    const { userMaskData } = get();
+    if (!userMaskData) return null;
+    return new Uint8Array(userMaskData);
   },
 
   // Batch Updates for Performance
@@ -1140,14 +1096,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       userMaskHistory: newUserMaskHistory,
       historyCurrentEpoch: newEpoch
     });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.history) {
-      w.vars.history.mask = newMaskHistory.map(arr => Array.from(arr));
-      w.vars.history.user_mask = newUserMaskHistory.map(arr => Array.from(arr));
-      w.vars.history.current_epoch = get().historyCurrentEpoch;
-    }
   },
 
   scheduleHistoryUpdate: () => {
@@ -1198,13 +1146,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       maskHistory: newMaskHistory,
       userMaskHistory: newUserMaskHistory
     });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.history) {
-      w.vars.history.mask = newMaskHistory.map(arr => Array.from(arr));
-      w.vars.history.user_mask = newUserMaskHistory.map(arr => Array.from(arr));
-    }
   },
 
   undo: () => {
@@ -1233,14 +1174,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
         historyCurrentEpoch: newEpoch
       });
 
-      // Sync with legacy vars during migration
-      const w = window as any;
-      if (w.vars) {
-        w.vars.mask = new Uint8Array(historicalMask);
-        w.vars.user_mask = new Uint8Array(historicalUserMask);
-        w.vars.history.current_epoch = newEpoch;
-      }
-
       // Update pixel counts and trigger re-render (only if classes are set)
       const { classes } = get();
       if (classes && classes.length > 0) {
@@ -1264,14 +1197,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
         userMaskData: new Uint8Array(historicalUserMask),
         historyCurrentEpoch: newEpoch
       });
-
-      // Sync with legacy vars during migration
-      const w = window as any;
-      if (w.vars) {
-        w.vars.mask = new Uint8Array(historicalMask);
-        w.vars.user_mask = new Uint8Array(historicalUserMask);
-        w.vars.history.current_epoch = newEpoch;
-      }
 
       // Update pixel counts and trigger re-render (only if classes are set)
       const { classes } = get();
@@ -1459,12 +1384,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Create a copy to ensure immutability
     const coordsCopy: [number, number] = [coords[0], coords[1]];
     set({ cursorImage: coordsCopy });
-    
-    // Sync with legacy vars during migration for backward compatibility
-    const w = window as any;
-    if (w.vars) {
-      w.vars.cursor_image = coordsCopy;
-    }
   },
 
   setDragStart: (coords: [number, number] | null) => {
@@ -1481,23 +1400,11 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     } else {
       set({ dragStart: null });
     }
-    
-    // Sync with legacy vars during migration for backward compatibility
-    const w = window as any;
-    if (w.vars) {
-      w.vars.drag_start = coords;
-    }
   },
 
   // Hidden Mask Canvas Actions (replaces vars.hidden_mask)
   setHiddenMaskCanvas: (canvas: HTMLCanvasElement | null) => {
     set({ hiddenMaskCanvas: canvas });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.hidden_mask = canvas;
-    }
   },
 
   createHiddenMaskCanvas: (width: number, height: number) => {
@@ -1562,12 +1469,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
 
     set({ maskArea: area });
-
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.mask_area = area;
-    }
   },
 
   getMaskArea: () => {
@@ -1585,13 +1486,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     
     set({ currentTool: tool });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars?.tool) {
-      w.vars.tool.type = tool;
-    }
-    
     // Update legacy DOM elements
+    const w = window as any;
     if (w.get_object) {
       // Remove checked class from all tool buttons
       const tools = ['move', 'draw', 'eraser'];
@@ -1618,13 +1514,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const clampedSize = Math.max(1, Math.min(size, 100)); // Reasonable bounds: 1-100 pixels
     set({ toolSize: clampedSize });
     
-    // Sync with legacy vars during migration for backward compatibility
-    const w = window as any;
-    if (w.vars?.tool) {
-      w.vars.tool.size = clampedSize;
-    }
-    
     // Trigger legacy preview render via store ViewManager
+    const w = window as any;
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
     if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
@@ -1638,12 +1529,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setToolResizingMode: (resizing: boolean) => {
     set({ toolResizingMode: resizing });
-    
-    // Sync with legacy vars during migration for backward compatibility
-    const w = window as any;
-    if (w.vars?.tool) {
-      w.vars.tool.resizing_mode = resizing;
-    }
   },
 
   setToolShape: (shape: 'square' | 'round') => {
@@ -1656,13 +1541,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     
     set({ toolShape: shape });
     
-    // Sync with legacy vars during migration for backward compatibility
-    const w = window as any;
-    if (w.vars?.tool) {
-      w.vars.tool.shape = shape;
-    }
-    
     // Trigger legacy preview render via store ViewManager
+    const w = window as any;
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
     if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
@@ -1689,12 +1569,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (classes.length === 0) {
       console.log(`[IRIS] setCurrentClass: No classes available yet, setting class ${classId} for later validation`);
       set({ currentClass: classId });
-      
-      // Sync with legacy vars during migration
-      const w = window as any;
-      if (w.vars) {
-        w.vars.current_class = classId;
-      }
       return;
     }
     
@@ -1705,13 +1579,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     
     set({ currentClass: classId });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.current_class = classId;
-    }
-    
     // Update legacy DOM elements
+    const w = window as any;
     if (w.get_object && classes[classId]) {
       const classInfo = classes[classId];
       const nameElement = w.get_object('tb_current_class');
@@ -1735,13 +1604,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const { maskType: currentType } = get();
     set({ maskType: type });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.mask_type = type;
-    }
-    
     // Update legacy DOM elements
+    const w = window as any;
     if (w.get_object) {
       // Remove checked class from current mask type button
       const currentBtn = w.get_object(`tb_mask_${currentType}`);
@@ -1801,12 +1665,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
     set({ classes: validClasses });
 
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.classes = validClasses;
-    }
-
     // Update current class if it's now out of bounds
     const { currentClass } = get();
     if (currentClass >= validClasses.length) {
@@ -1817,13 +1675,8 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   updateUserPixelCounts: (counts: { [classId: number]: number; total: number }) => {
     set({ userPixelCounts: counts });
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.n_user_pixels = counts;
-    }
-    
     // Update legacy DOM elements
+    const w = window as any;
     if (w.get_object && w.nice_number) {
       const drawnPixelsElement = w.get_object('drawn-pixels');
       if (drawnPixelsElement) {
@@ -2094,30 +1947,10 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
     
     set({ confusionMatrix: matrix });
-    
-    // Sync with legacy vars during migration (sync the raw matrix for backward compatibility)
-    const w = window as any;
-    if (w.vars) {
-      w.vars.confusion_matrix = matrix.matrix; // Legacy code expects just the 2D array
-    }
-    
-    console.log('[IRIS] Confusion matrix updated:', {
-      classCount: matrix.classCount,
-      totalSamples: matrix.totalSamples,
-      overallAccuracy: matrix.accuracyStats.overall,
-      worstClass: matrix.accuracyStats.worstClass,
-      worstAccuracy: matrix.accuracyStats.worstAccuracy
-    });
   },
 
   clearConfusionMatrix: () => {
     set({ confusionMatrix: null });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.confusion_matrix = null;
-    }
   },
 
   getAccuracyStats: () => {
@@ -2237,18 +2070,13 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       });
     }
     
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.config = config;
-    }
-    
     // Sync related data with legacy functions
-    if ((w as any).setClassesInStore && config.classes) {
-      (w as any).setClassesInStore(config.classes);
+    const w = window as any;
+    if (w.setClassesInStore && config.classes) {
+      w.setClassesInStore(config.classes);
     }
-    if ((w as any).setMaskAreaInStore && config.segmentation?.mask_area) {
-      (w as any).setMaskAreaInStore(config.segmentation.mask_area);
+    if (w.setMaskAreaInStore && config.segmentation?.mask_area) {
+      w.setMaskAreaInStore(config.segmentation.mask_area);
     }
     
     console.log('[IRIS] Project config updated:', config.name);
@@ -2267,12 +2095,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
     
     set({ user });
-    
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.user = user;
-    }
     
     console.log('[IRIS] User updated:', user.name, `(${user.segmentation.n_masks} masks)`);
   },
@@ -2543,12 +2365,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Update store state
     set({ currentImageId: imageId, currentImageIndex: index });
 
-    // Sync with legacy vars during migration
-    const w = window as any;
-    if (w.vars) {
-      w.vars.image_id = imageId;
-    }
-
     console.log('[IRIS] Current image set:', imageId, 'index:', index);
   },
 
@@ -2643,112 +2459,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     };
   },
 }));
-
-// Initialize store from legacy vars if available
-const initializeFiltersFromLegacy = () => {
-  const w = window as any;
-  const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
-  if (viewManager?.filters) {
-    const store = useSegmentationStore.getState();
-    store.setBrightness(viewManager.filters.brightness || 100);
-    store.setSaturation(viewManager.filters.saturation || 100);
-    store.setContrast(viewManager.filters.contrast || false);
-    store.setInvert(viewManager.filters.invert || false);
-  }
-};
-
-// PHASE 1: Initialize core drawing state from legacy vars
-const initializeCoreDrawingStateFromLegacy = () => {
-  const w = window as any;
-  if (w.vars) {
-    const store = useSegmentationStore.getState();
-    
-    // Initialize tool state
-    if (w.vars.tool) {
-      if (w.vars.tool.type) {
-        store.setCurrentTool(w.vars.tool.type);
-      }
-      if (w.vars.tool.size) {
-        store.setToolSize(w.vars.tool.size);
-      }
-      if (typeof w.vars.tool.resizing_mode === 'boolean') {
-        store.setToolResizingMode(w.vars.tool.resizing_mode);
-      }
-    }
-    
-    // Initialize classes first (needed for current_class validation)
-    if (w.vars.classes && Array.isArray(w.vars.classes)) {
-      store.setClasses(w.vars.classes);
-    }
-    
-    // Initialize current class (after classes are set)
-    if (typeof w.vars.current_class === 'number' && w.vars.classes && w.vars.classes.length > 0) {
-      store.setCurrentClass(w.vars.current_class);
-    }
-    
-    // Initialize mask type
-    if (w.vars.mask_type) {
-      store.setMaskType(w.vars.mask_type);
-    }
-    
-    // Initialize user pixel counts
-    if (w.vars.n_user_pixels) {
-      store.updateUserPixelCounts(w.vars.n_user_pixels);
-    }
-  }
-};
-
-// PHASE 2: Initialize navigation & actions state from legacy vars
-const initializeNavigationActionsStateFromLegacy = () => {
-  const w = window as any;
-  if (w.vars) {
-    const store = useSegmentationStore.getState();
-    
-    // Initialize project configuration
-    if (w.vars.config) {
-      store.setConfig(w.vars.config);
-    }
-    
-    // Initialize user information
-    if (w.vars.user) {
-      store.setUser(w.vars.user);
-    }
-    
-    // Initialize confusion matrix - NOTE: confusion_matrix is now managed by React store
-    // Legacy vars.confusion_matrix is only used as fallback during migration
-    if (w.vars.confusion_matrix && Array.isArray(w.vars.confusion_matrix)) {
-      // Handle legacy 2D array format - convert to structured format
-      console.warn('[IRIS Migration] Found legacy confusion_matrix format, converting to React store format');
-      const matrix = w.vars.confusion_matrix;
-      const classCount = matrix.length;
-      const classNames = w.vars.classes ? w.vars.classes.map((cls: any) => cls.name) : 
-                        Array.from({length: classCount}, (_, i) => `Class ${i}`);
-      
-      // Create structured confusion matrix (without accuracy stats since we don't have tp data)
-      const structuredMatrix = {
-        matrix,
-        classCount,
-        totalSamples: matrix.flat().reduce((sum: number, val: number) => sum + val, 0),
-        accuracyStats: {
-          overall: 0,
-          perClass: [],
-          worstClass: null,
-          worstAccuracy: 0,
-          truePositives: {}
-        },
-        timestamp: new Date(),
-        classes: classNames
-      };
-      
-      store.updateConfusionMatrix(structuredMatrix);
-    }
-    
-    // Initialize mask changed state
-    if (typeof w.vars.mask_changed === 'boolean') {
-      store.setMaskChanged(w.vars.mask_changed);
-    }
-  }
-};
 
 // Bridge for legacy JavaScript access during migration
 // Legacy JS can call: window.segmentationStore.getState().setShowMask(true)
@@ -2863,65 +2573,8 @@ if (typeof window !== 'undefined') {
   (window as any).getConfusionMatrixDataFromStore = getConfusionMatrixDataFromStore;
   (window as any).createConfusionMatrixFromStore = createConfusionMatrixFromStore;
   
-  // Initialize from legacy vars when available
-  (window as any).initializeFiltersFromLegacy = initializeFiltersFromLegacy;
-  (window as any).initializeCoreDrawingStateFromLegacy = initializeCoreDrawingStateFromLegacy;
-  (window as any).initializeNavigationActionsStateFromLegacy = initializeNavigationActionsStateFromLegacy;
-  
-  // Migration tracking - only log when store is available (no need to spam console)
-  console.log('[IRIS Migration] API URLs Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Next Action Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Just Logged In Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Tool Size Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Tool Resizing Mode Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Cursor Image Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Tool Type Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Drag Start Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] Hidden Mask Canvas Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] 🚨 CRITICAL: Mask Data Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] 🚨 CRITICAL: User Mask Data Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  console.log('[IRIS Migration] 🚨 CRITICAL: History System Migration: React store ready. Watch for warnings if legacy fallbacks are used.');
-  
-  // Initialize debug mode from legacy vars
-  const w = window as any;
-  if (w.vars?.debug_mode) {
-    useSegmentationStore.getState().setDebugMode(true);
-  }
-
-  // Check for legacy vars periodically and initialize store state
-  let coreDrawingInitialized = false;
-  let navigationActionsInitialized = false;
-
-  const checkForLegacyVars = () => {
-    // Initialize core drawing state from legacy vars (once)
-    if (!coreDrawingInitialized && w.vars) {
-      initializeCoreDrawingStateFromLegacy();
-      coreDrawingInitialized = true;
-    }
-    
-    // Initialize navigation & actions state from legacy vars (once)
-    if (!navigationActionsInitialized && w.vars?.config) {
-      initializeNavigationActionsStateFromLegacy();
-      navigationActionsInitialized = true;
-    }
-  };
-
-  // Initial check
-  checkForLegacyVars();
-
-  // Periodic check for legacy vars (in case they're loaded later)
-  const checkInterval = setInterval(() => {
-    if (!coreDrawingInitialized || !navigationActionsInitialized) {
-      checkForLegacyVars();
-    }
-    
-    // Stop checking if both are initialized
-    if (coreDrawingInitialized && navigationActionsInitialized) {
-      clearInterval(checkInterval);
-    }
-  }, 500);
-  
-  setTimeout(() => clearInterval(checkInterval), 10000);
+  // Migration tracking
+  console.log('[IRIS Migration] Segmentation store initialized - all data now managed by React stores');
 }
 
 // Export helper functions for testing and external use

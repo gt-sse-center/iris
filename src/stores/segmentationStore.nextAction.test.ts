@@ -27,15 +27,6 @@ describe('SegmentationStore - Next Action Migration', () => {
     expect(useSegmentationStore.getState().nextAction).toBeNull();
   });
 
-  it('should sync with legacy vars', () => {
-    const w = window as any;
-    w.vars = { next_action: null };
-    
-    const mockCallback = vi.fn().mockResolvedValue(undefined);
-    useSegmentationStore.getState().setNextAction(mockCallback);
-    expect(w.vars.next_action).toBe(mockCallback);
-  });
-
   it('should provide helper functions', () => {
     const w = window as any;
     const mockCallback = vi.fn().mockResolvedValue(undefined);

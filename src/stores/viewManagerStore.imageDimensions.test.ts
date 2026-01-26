@@ -78,16 +78,14 @@ describe('ViewManagerStore Image Dimensions', () => {
     });
   });
 
-  describe('Legacy Integration', () => {
-    test('syncs with legacy vars.image_shape', () => {
+  describe('Store Integration', () => {
+    test('no longer syncs with legacy vars.image_shape (vars removed)', () => {
       const store = useViewManagerStore.getState();
-      
-      // Mock window.vars
-      (global.window as any).vars = { image_shape: null };
       
       store.setImageDimensions(2048, 1536);
       
-      expect((global.window as any).vars.image_shape).toEqual([2048, 1536]);
+      // Verify store has the value - vars sync has been removed
+      expect(useViewManagerStore.getState().imageDimensions).toEqual({ width: 2048, height: 1536 });
     });
 
     test('provides helper functions for legacy JavaScript access', () => {

@@ -49,11 +49,9 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     // Get legacy vars for cursor and tool data
     const w = window as any;
     
-    // Get cursor image from React store with fallback to legacy vars
     const cursorImage = (window as any).getCursorImageFromStore ? 
       (window as any).getCursorImageFromStore() : w.vars?.cursor_image;
     
-    // Get image shape from React store with fallback to legacy vars
     const imageShape = (window as any).getImageShapeFromStore ? 
       (window as any).getImageShapeFromStore() : w.vars?.image_shape;
     
@@ -66,11 +64,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: No image shape available from React store or legacy vars');
       return;
     }
-    
-    // CRITICAL FIX: Save current transformation before clearing
-    // const currentTransform = ctx.getTransform();
-    ctx.getTransform();
-    // console.log('[ReactPreviewLayer] Preserving transform:', currentTransform);
     
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
     ctx.save();
@@ -117,7 +110,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       ctx.beginPath();
       
       // Line width depends on number of views
-      // Primary source: React store, fallback: legacy vars
       const views = (window as any).getConfigSectionFromStore ? 
         (window as any).getConfigSectionFromStore('views') : (() => {
           console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config.views for line width - React store not available');
@@ -146,10 +138,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       console.warn('[IRIS Migration] ReactPreviewLayer: No mask area or mask shape available for rendering');
     }
     
-    // Add warning when falling back to legacy vars
-    if (!window.getMaskAreaFromStore && w.vars?.mask_area) {
-      console.warn('⚠️ [IRIS Migration] ReactPreviewLayer: Using legacy vars.mask_area fallback - React store not available');
-    }
   }, [toolSize, toolShape, cursorImage]); // Re-render when toolSize, toolShape, or cursorImage changes
   
   // Handle canvas size changes and coordinate transformation
@@ -163,7 +151,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       
       const w = window as any;
       
-      // Get image shape from React store with fallback to legacy vars
       const imageShape = (window as any).getImageShapeFromStore ? 
         (window as any).getImageShapeFromStore() : w.vars?.image_shape;
       
@@ -193,11 +180,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
           // CRITICAL: Only set base transformation on canvas initialization, not on every render
           // Check if this canvas already has a transformation applied by legacy zoom
           const currentTransform = ctx.getTransform();
-          const isIdentityTransform = (
-            currentTransform.a === 1 && currentTransform.b === 0 &&
-            currentTransform.c === 0 && currentTransform.d === 1 &&
-            currentTransform.e === 0 && currentTransform.f === 0
-          );
+          const isIdentityTransform = [
+            currentTransform.a, currentTransform.b, currentTransform.c,
+            currentTransform.d, currentTransform.e, currentTransform.f
+          ].every((val, idx) => val === [1, 0, 0, 1, 0, 0][idx]);
           
           // Only set base transformation if no zoom/pan has been applied yet
           if (isIdentityTransform) {
@@ -226,10 +212,10 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     };
     
     if (!waitForLegacyFunctions()) {
-      console.log('[ReactPreviewLayer] Waiting for legacy functions to load...');
+      if ((window as any).IRIS_DEBUG) console.log('[ReactPreviewLayer] Waiting for legacy functions to load...');
       const checkInterval = setInterval(() => {
         if (waitForLegacyFunctions()) {
-          console.log('[ReactPreviewLayer] Legacy functions now available, setting up event handlers');
+          if ((window as any).IRIS_DEBUG) console.log('[ReactPreviewLayer] Legacy functions now available, setting up event handlers');
           clearInterval(checkInterval);
           setupEventHandlers();
         }
@@ -238,7 +224,7 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       // Cleanup interval if component unmounts
       return () => clearInterval(checkInterval);
     } else {
-      console.log('[ReactPreviewLayer] Legacy functions already available, setting up event handlers');
+      if ((window as any).IRIS_DEBUG) console.log('[ReactPreviewLayer] Legacy functions already available, setting up event handlers');
       setupEventHandlers();
     }
     
@@ -268,10 +254,12 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
             updateCursorCoords(canvas, event);
           }
           
-          console.log('[ReactPreviewLayer] Mouse down event:', {
-            buttons: event.buttons,
-            hasLegacyMouseDown: !!(window as any).mouse_down
-          });
+          if ((window as any).IRIS_DEBUG) {
+            console.log('[ReactPreviewLayer] Mouse down event:', {
+              buttons: event.buttons,
+              hasLegacyMouseDown: !!(window as any).mouse_down
+            });
+          }
           
           // Call legacy mouse_down handler
           const w = window as any;
@@ -310,11 +298,13 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
       };
       
       const handleMouseWheel = (event: WheelEvent) => {
-        console.log('[ReactPreviewLayer] Mouse wheel event:', {
-          deltaY: event.deltaY,
-          wheelDelta: (event as any).wheelDelta,
-          hasLegacyMouseWheel: !!(window as any).mouse_wheel
-        });
+        if ((window as any).IRIS_DEBUG) {
+          console.log('[ReactPreviewLayer] Mouse wheel event:', {
+            deltaY: event.deltaY,
+            wheelDelta: (event as any).wheelDelta,
+            hasLegacyMouseWheel: !!(window as any).mouse_wheel
+          });
+        }
         
         // Call legacy mouse_wheel handler
         const w = window as any;
@@ -421,7 +411,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     width: '100%',
     height: '100%',
     display: 'block',
-    // border: '1px solid black', // Temporarily remove border to test positioning
     backgroundColor: 'transparent',
     cursor: 'crosshair',
     pointerEvents: 'auto', // Allow mouse interactions

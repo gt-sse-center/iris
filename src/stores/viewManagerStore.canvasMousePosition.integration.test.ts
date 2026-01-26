@@ -92,8 +92,5 @@ describe('canvas mouse position integration', () => {
     // Test getting through legacy bridge
     const coords = mockWindow.getCanvasMousePositionFromStore();
     expect(coords).toEqual([300, 400]);
-    
-    // Verify legacy vars are synced
-    expect(mockWindow.vars.cursor_canvas).toEqual([300, 400]);
   });
 });

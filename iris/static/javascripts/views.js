@@ -25,11 +25,13 @@ class ViewManager{
         this.clear();
         this.image_id = image_id;
         
-        // Primary source: React store, fallback: legacy vars
-        const location = window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.image_location - React store not available');
-            return image_location;
-        })();
+        // Get location from React store (ONLY source)
+        const location = window.getImageLocationFromStore ? 
+            window.getImageLocationFromStore() : image_location;
+        
+        if (!window.getImageLocationFromStore) {
+            console.warn('[IRIS] ⚠️ Image location store not available, using parameter fallback');
+        }
         
         this.image_location = location;
         
@@ -41,7 +43,6 @@ class ViewManager{
         this.source = {};
     }
     setImageLocation(location){
-        // Primary source: React store, fallback: legacy vars
         const validatedLocation = window.validateImageLocation && window.validateImageLocation(location) ? 
             location : (() => {
                 console.warn('[IRIS Migration] ⚠️ Invalid image location coordinates:', location);
@@ -122,24 +123,25 @@ class ViewManager{
         this.render();
         this.showControls(this.show_controls);
 
-        // Primary destination: React store, fallback: legacy vars
-        if (window.updateConfigSectionInStore) {
-            window.updateConfigSectionInStore('view_groups', this.view_groups);
-        } else {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config - React store not available');
-            vars.config.view_groups = this.view_groups;
+        // Update view_groups in React store (ONLY destination)
+        if (!window.updateConfigSectionInStore) {
+            console.error('[IRIS] ❌ Config store not available for view_groups update');
+            return;
         }
+        
+        window.updateConfigSectionInStore('view_groups', this.view_groups);
 
         // Get current config for saving
-        const config = window.getConfigFromStore ? window.getConfigFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy vars.config for save_config - React store not available');
-            return vars.config;
-        })();
+        const config = window.getConfigFromStore ? window.getConfigFromStore() : null;
+        
+        if (!window.getConfigFromStore) {
+            console.error('[IRIS] ❌ Config store not available for save_config');
+        }
 
         if (config) {
             save_config(config);
         } else {
-            console.error('[IRIS Migration] ❌ No config available for save_config in ViewManager');
+            console.error('[IRIS] ❌ No config available for save_config in ViewManager');
         }
     }
 
@@ -493,11 +495,13 @@ class BingLayer extends ViewLayer{
         this.update();
     }
     update(){
-        // Primary source: React store, fallback: legacy vars
-        const imageLocation = window.getImageLocationFromStore ? window.getImageLocationFromStore() : (() => {
-            console.warn('[IRIS Migration] ⚠️ FALLBACK: Using legacy this.vm.image_location - React store not available');
-            return this.vm.image_location;
-        })();
+        // Get image location from React store (ONLY source)
+        const imageLocation = window.getImageLocationFromStore ? 
+            window.getImageLocationFromStore() : this.vm.image_location;
+        
+        if (!window.getImageLocationFromStore) {
+            console.warn('[IRIS] ⚠️ Image location store not available, using ViewManager fallback');
+        }
         
         // Default location
         let location = imageLocation[0]+"~"+imageLocation[1];

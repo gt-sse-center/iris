@@ -114,7 +114,6 @@ describe('Config State Management', () => {
     // Get fresh state reference after setConfig
     const updatedStore = useSegmentationStore.getState();
     expect(updatedStore.config).toEqual(validConfig);
-    expect(mockWindow.vars.config).toEqual(validConfig);
   });
 
   it('should reject invalid config', () => {

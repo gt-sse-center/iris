@@ -43,9 +43,8 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     setHasError(false);
     
     const image = new Image();
-    // Use the same URL pattern as legacy ViewManager: vars.url.main + "image/" + imageId + "/" + viewName
-    const w = window as any;
-    const baseUrl = w.vars?.url?.main || '/';
+    // Use the same URL pattern as legacy ViewManager
+    const baseUrl = useSegmentationStore.getState().apiUrls?.main || '/';
     const imageUrl = `${baseUrl}image/${imageId}/${view.name}`;
     
     image.onload = () => {
@@ -74,10 +73,8 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     if (!ctx) return;
     
     // Clear canvas using canvas dimensions (not image dimensions) to respect current zoom/pan
-    // Get image shape from React store with fallback to legacy vars
     const w = window as any;
-    const imageShape = (window as any).getImageShapeFromStore ? 
-      (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+    const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
     
     // CRITICAL FIX: Save current transformation before clearing
     ctx.save();
@@ -175,21 +172,19 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
         // CRITICAL: Set the initial transformation matrix to match legacy system exactly
         // image_shape[0] = height, image_shape[1] = width
         // We need to scale canvas dimensions to image dimensions
-        const w = window as any;
         
-        // Get image shape from React store with fallback to legacy vars
+        // Get image shape from React store
         const imageShape = (window as any).getImageShapeFromStore ? 
-          (window as any).getImageShapeFromStore() : w.vars?.image_shape;
+          (window as any).getImageShapeFromStore() : null;
         
         if (imageShape) {
           // CRITICAL: Only set base transformation on canvas initialization, not on every render
           // Check if this canvas already has a transformation applied by legacy zoom
           const currentTransform = ctx.getTransform();
-          const isIdentityTransform = (
-            currentTransform.a === 1 && currentTransform.b === 0 &&
-            currentTransform.c === 0 && currentTransform.d === 1 &&
-            currentTransform.e === 0 && currentTransform.f === 0
-          );
+          const isIdentityTransform = [
+            currentTransform.a, currentTransform.b, currentTransform.c,
+            currentTransform.d, currentTransform.e, currentTransform.f
+          ].every((val, idx) => val === [1, 0, 0, 1, 0, 0][idx]);
           
           // Only set base transformation if no zoom/pan has been applied yet
           if (isIdentityTransform) {

@@ -326,7 +326,5 @@ declare global {
     
     // Initialization Functions
     initializeFiltersFromLegacy?: () => void;
-    initializeCoreDrawingStateFromLegacy?: () => void;
-    initializeNavigationActionsStateFromLegacy?: () => void;
   }
 }

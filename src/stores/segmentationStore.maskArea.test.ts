@@ -47,27 +47,6 @@ describe('segmentationStore - maskArea', () => {
     expect(getMaskArea()).toBeNull();
   });
 
-  it('should sync with legacy vars when setting mask area', () => {
-    const testArea: [number, number, number, number] = [10, 20, 100, 200];
-    const { setMaskArea } = useSegmentationStore.getState();
-    
-    // Mock window.vars
-    (window as any).vars = {};
-    
-    setMaskArea(testArea);
-    expect((window as any).vars.mask_area).toEqual(testArea);
-  });
-
-  it('should sync null values with legacy vars', () => {
-    const { setMaskArea } = useSegmentationStore.getState();
-    
-    // Mock window.vars
-    (window as any).vars = { mask_area: [10, 20, 100, 200] };
-    
-    setMaskArea(null);
-    expect((window as any).vars.mask_area).toBeNull();
-  });
-
   it('should handle edge case coordinates', () => {
     const { setMaskArea, getMaskArea } = useSegmentationStore.getState();
     

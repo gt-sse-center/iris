@@ -92,7 +92,7 @@ describe('Core Mask Data Operations', () => {
     consoleSpy.mockRestore();
   });
 
-  test('maintains immutability and syncs with legacy vars', () => {
+  test('maintains immutability', () => {
     const store = useSegmentationStore.getState();
     const originalData = new Uint8Array([1, 2, 3, 4]);
     
@@ -103,10 +103,6 @@ describe('Core Mask Data Operations', () => {
     
     // Stored data should be unchanged (immutable copy)
     expect(store.getMaskPixel(0, 0)).toBe(1);
-    
-    // Check legacy vars sync
-    expect(mockWindow.vars.mask).toEqual(new Uint8Array([1, 2, 3, 4]));
-    expect(mockWindow.vars.mask_shape).toEqual([2, 2]);
   });
 
   test('calculates pixel counts correctly', () => {

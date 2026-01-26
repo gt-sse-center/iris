@@ -119,12 +119,13 @@ describe('imageLocation', () => {
     });
   });
 
-  test('syncs with legacy vars object', () => {
+  test('no longer syncs with legacy vars object (vars removed)', () => {
     const store = useViewManagerStore.getState();
     
     store.setImageLocation([37.7749, -122.4194]); // San Francisco
     
-    expect(mockWindow.vars.image_location).toEqual([37.7749, -122.4194]);
+    // Verify store has the value - vars sync has been removed
+    expect(useViewManagerStore.getState().imageLocation).toEqual([37.7749, -122.4194]);
   });
 
   test('validateImageLocation function works correctly', () => {
