@@ -196,7 +196,7 @@ jobs:
 
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/esa-iris
+      url: https://test.pypi.org/p/iris-label
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing

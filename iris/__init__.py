@@ -12,17 +12,13 @@ import flask
 import numpy as np
 import yaml
 
-try:
-    from importlib.metadata import version, PackageNotFoundError
-except ImportError:
-    from importlib_metadata import version, PackageNotFoundError
+from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("esa-iris")
+    __version__ = version("iris-label")
 except PackageNotFoundError:
     # Package is not installed, e.g., in a development environment without an sdist install
     __version__ = "unknown"
-del version
 
 from iris.extensions import compress, db
 from iris.project import project
