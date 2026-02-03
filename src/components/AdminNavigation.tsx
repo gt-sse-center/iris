@@ -9,6 +9,7 @@ const AdminNavigation: React.FC = () => {
     if (path === '/users') return location.pathname === '/users';
     if (path === '/images') return location.pathname === '/images';
     if (path === '/actions') return location.pathname.startsWith('/actions');
+    if (path === '/password-resets') return location.pathname === '/password-resets';
     return false;
   };
 
@@ -40,6 +41,12 @@ const AdminNavigation: React.FC = () => {
           onClick={() => navigate('/actions/segmentation')}
         >
           Masks
+        </button>
+        <button 
+          style={buttonStyle('/password-resets')}
+          onClick={() => navigate('/password-resets')}
+        >
+          Password Resets
         </button>
       </div>
       <a

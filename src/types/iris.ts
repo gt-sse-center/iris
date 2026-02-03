@@ -3,6 +3,7 @@
 export interface User {
   id: number;
   name: string;
+  email?: string; // Optional for backward compatibility
   created: string;
   isAdmin: boolean;
   tested: boolean;
