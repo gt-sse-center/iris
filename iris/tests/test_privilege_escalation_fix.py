@@ -160,7 +160,8 @@ class TestPrivilegeEscalationFix:
         response = client.post('/user/register',
             data=json.dumps({
                 'username': 'first_user',
-                'password': 'password123'
+                'password': 'password123',
+                'email': 'first@example.com'
             }),
             content_type='application/json'
         )
@@ -177,7 +178,7 @@ class TestPrivilegeEscalationFix:
         """Test that subsequent users are not automatically made admin."""
         # Clear all users and create one admin (database is already clean from fixture)
         User.query.delete()
-        admin = User(name="existing_admin", admin=True)
+        admin = User(name="existing_admin", admin=True, email="admin@example.com")
         admin.set_password("admin123")
         db.session.add(admin)
         db.session.commit()
@@ -186,7 +187,8 @@ class TestPrivilegeEscalationFix:
         response = client.post('/user/register',
             data=json.dumps({
                 'username': 'second_user',
-                'password': 'password123'
+                'password': 'password123',
+                'email': 'second@example.com'
             }),
             content_type='application/json'
         )
