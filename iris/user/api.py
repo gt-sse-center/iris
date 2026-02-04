@@ -99,3 +99,49 @@ def get_profile(user_id):
     user_data['is_current_user'] = (user_id == current_user_id)
 
     return flask.jsonify(user_data)
+
+
+@api_bp.route('/change-password', methods=['POST'])
+@requires_auth
+def change_password():
+    """Allow user to change their own password."""
+    import json
+    
+    current_user_id = flask.session['user_id']
+    user = db.session.get(User, current_user_id)
+    
+    if user is None:
+        return flask.jsonify({'error': 'User not found'}), 404
+    
+    data = json.loads(flask.request.data)
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+    confirm_password = data.get('confirm_password', '')
+    
+    # Validate current password
+    if not current_password:
+        return flask.jsonify({'error': 'Current password is required'}), 400
+    
+    if not user.check_password(current_password):
+        return flask.jsonify({'error': 'Current password is incorrect'}), 403
+    
+    # Validate new password
+    if not new_password:
+        return flask.jsonify({'error': 'New password is required'}), 400
+    
+    if len(new_password) < 4:
+        return flask.jsonify({'error': 'New password must be at least 4 characters'}), 400
+    
+    if len(new_password) > 64:
+        return flask.jsonify({'error': 'New password is too long (max 64 characters)'}), 400
+    
+    # Validate password confirmation
+    if new_password != confirm_password:
+        return flask.jsonify({'error': 'New passwords do not match'}), 400
+    
+    # Update password
+    user.set_password(new_password)
+    db.session.add(user)
+    db.session.commit()
+    
+    return flask.jsonify({'message': 'Password changed successfully'})

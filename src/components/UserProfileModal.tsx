@@ -16,6 +16,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accordionOpen, setAccordionOpen] = useState(true);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,6 +59,84 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     } catch (err) {
       setError('Failed to logout');
     }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    // Client-side validation
+    if (!passwordForm.currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
+
+    if (!passwordForm.newPassword) {
+      setPasswordError('New password is required');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 4) {
+      setPasswordError('New password must be at least 4 characters');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const response = await fetch('/user/api/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          current_password: passwordForm.currentPassword,
+          new_password: passwordForm.newPassword,
+          confirm_password: passwordForm.confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setPasswordError(data.error || 'Failed to change password');
+        return;
+      }
+
+      setPasswordSuccess('Password changed successfully!');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      
+      // Hide form after 2 seconds
+      setTimeout(() => {
+        setShowPasswordForm(false);
+        setPasswordSuccess(null);
+      }, 2000);
+    } catch (err) {
+      setPasswordError('Failed to change password. Please try again.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleCancelPasswordChange = () => {
+    setShowPasswordForm(false);
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordError(null);
+    setPasswordSuccess(null);
   };
 
   const handleImageClick = (imageId: string) => {
@@ -161,9 +248,84 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               </div>
 
               {profile.is_current_user && (
-                <p>
-                  <button onClick={handleLogout}>Logout</button>
-                </p>
+                <>
+                  {!showPasswordForm ? (
+                    <p>
+                      <button onClick={() => setShowPasswordForm(true)}>Change Password</button>
+                      <button onClick={handleLogout} style={{ marginLeft: '10px' }}>Logout</button>
+                    </p>
+                  ) : (
+                    <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                      <h3>Change Password</h3>
+                      
+                      {passwordError && (
+                        <p className="tag red" style={{ marginBottom: '10px' }}>{passwordError}</p>
+                      )}
+                      
+                      {passwordSuccess && (
+                        <p className="tag green" style={{ marginBottom: '10px' }}>{passwordSuccess}</p>
+                      )}
+                      
+                      <form onSubmit={handlePasswordChange}>
+                        <div style={{ marginBottom: '10px' }}>
+                          <label htmlFor="current-password" style={{ display: 'block', marginBottom: '5px' }}>
+                            Current Password:
+                          </label>
+                          <input
+                            id="current-password"
+                            type="password"
+                            value={passwordForm.currentPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                            disabled={changingPassword}
+                            style={{ width: '100%', padding: '5px' }}
+                          />
+                        </div>
+                        
+                        <div style={{ marginBottom: '10px' }}>
+                          <label htmlFor="new-password" style={{ display: 'block', marginBottom: '5px' }}>
+                            New Password (min 4 characters):
+                          </label>
+                          <input
+                            id="new-password"
+                            type="password"
+                            value={passwordForm.newPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                            disabled={changingPassword}
+                            style={{ width: '100%', padding: '5px' }}
+                          />
+                        </div>
+                        
+                        <div style={{ marginBottom: '15px' }}>
+                          <label htmlFor="confirm-password" style={{ display: 'block', marginBottom: '5px' }}>
+                            Confirm New Password:
+                          </label>
+                          <input
+                            id="confirm-password"
+                            type="password"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                            disabled={changingPassword}
+                            style={{ width: '100%', padding: '5px' }}
+                          />
+                        </div>
+                        
+                        <div>
+                          <button type="submit" disabled={changingPassword}>
+                            {changingPassword ? 'Changing...' : 'Change Password'}
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={handleCancelPasswordChange}
+                            disabled={changingPassword}
+                            style={{ marginLeft: '10px' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
