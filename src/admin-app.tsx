@@ -5,6 +5,7 @@ import AdminNavigation from './components/AdminNavigation';
 import UsersPage from './pages/UsersPage';
 import ActionsPage from './pages/ActionsPage';
 import ImagesPage from './pages/ImagesPage';
+import PasswordResetRequestsPage from './pages/PasswordResetRequestsPage';
 
 const AdminApp: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const AdminApp: React.FC = () => {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/actions/:type" element={<ActionsPage />} />
             <Route path="/images" element={<ImagesPage />} />
+            <Route path="/password-resets" element={<PasswordResetRequestsPage />} />
           </Routes>
         </div>
       </div>

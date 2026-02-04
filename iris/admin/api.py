@@ -11,10 +11,11 @@ Migration Context:
     - Benefits: Better UX, type safety with TypeScript, easier testing, modern dev workflow
 """
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import flask
 
+from iris import db
 from iris.models import Action, User
 from iris.project import project
 from iris.user import requires_admin, requires_auth
@@ -279,6 +280,106 @@ def images():
         'images': images_list,
         'order_by': order_by,
         'ascending': ascending
+    })
+
+
+@api_bp.route('/password-reset-requests', methods=['GET'])
+@requires_admin
+def get_password_reset_requests():
+    """
+    Get list of password reset requests for admin interface.
+    
+    Returns:
+        JSON response with format:
+        {
+            "requests": [
+                {
+                    "id": 1,
+                    "user_id": 5,
+                    "username": "john_doe",
+                    "email": "john@example.com",
+                    "requested_at": "2024-01-01T12:00:00",
+                    "resolved": false,
+                    "resolved_at": null,
+                    "resolved_by_user_id": null
+                },
+                ...
+            ]
+        }
+    """
+    from iris.models import PasswordResetRequest
+    
+    # Get all unresolved requests first, then resolved ones
+    requests = PasswordResetRequest.query.order_by(
+        PasswordResetRequest.resolved.asc(),
+        PasswordResetRequest.requested_at.desc()
+    ).all()
+    
+    requests_json = []
+    for req in requests:
+        req_data = req.to_json()
+        # Add username and email from user
+        if req.user:
+            req_data['username'] = req.user.name
+            req_data['email'] = req.user.email
+        else:
+            req_data['username'] = 'Unknown'
+            req_data['email'] = None
+        requests_json.append(req_data)
+    
+    return flask.jsonify({'requests': requests_json})
+
+
+@api_bp.route('/password-reset-requests/<int:request_id>/generate-password', methods=['POST'])
+@requires_admin
+def generate_temporary_password(request_id):
+    """
+    Generate a temporary password for a password reset request.
+    
+    URL Parameters:
+        request_id (int): ID of the password reset request
+    
+    Returns:
+        JSON response with format:
+        {
+            "temporary_password": "abc123xyz",
+            "email": "user@example.com",
+            "username": "john_doe"
+        }
+    """
+    import secrets
+    import string
+    from iris.models import PasswordResetRequest
+    
+    reset_request = PasswordResetRequest.query.get_or_404(request_id)
+    
+    if reset_request.resolved:
+        return flask.jsonify({'error': 'This request has already been resolved'}), 400
+    
+    user = reset_request.user
+    if not user:
+        return flask.jsonify({'error': 'User not found'}), 404
+    
+    # Generate a simple temporary password (8 characters, alphanumeric)
+    alphabet = string.ascii_letters + string.digits
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(8))
+    
+    # Set the temporary password
+    user.set_password(temp_password)
+    
+    # Mark request as resolved
+    reset_request.resolved = True
+    reset_request.resolved_at = datetime.utcnow()
+    reset_request.resolved_by_user_id = flask.session['user_id']
+    
+    db.session.add(user)
+    db.session.add(reset_request)
+    db.session.commit()
+    
+    return flask.jsonify({
+        'temporary_password': temp_password,
+        'email': user.email,
+        'username': user.name
     })
 
 

@@ -166,6 +166,8 @@ def save_config():
 
 @user_app.route('/register', methods=['POST'])
 def register():
+    import re
+    
     data = json.loads(flask.request.data)
     if len(data['username']) > 64:
         return flask.make_response('Username is too long!', 400)
@@ -179,12 +181,26 @@ def register():
     if len(data['password']) > 64:
         return flask.make_response('Password is too long!', 400)
 
+    # Email validation (required for new users)
+    email = data.get('email', '').strip()
+    if not email:
+        return flask.make_response('Email is a required field!', 400)
+    
+    # Simple email regex validation
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return flask.make_response('Invalid email format!', 400)
+    
+    if len(email) > 256:
+        return flask.make_response('Email is too long!', 400)
+
     # Check if this is the first user - if no admin exists, make this user an admin
     existing_admin = User.query.filter_by(admin=True).first()
     is_first_admin = existing_admin is None
 
     new_user = User(
         name=data['username'],
+        email=email,
         admin=is_first_admin,
     )
     new_user.set_password(data['password'])
@@ -221,6 +237,42 @@ def logout():
         flask.session.pop('user_id')
 
     return flask.make_response("Successful logout!")
+
+
+@user_app.route('/request-password-reset', methods=['POST'])
+def request_password_reset():
+    """User requests a password reset by providing their username."""
+    from iris.models import PasswordResetRequest
+    
+    data = json.loads(flask.request.data)
+    username = data.get('username', '').strip()
+    
+    if not username:
+        return flask.make_response('Username is required!', 400)
+    
+    user = User.query.filter(User.name == username).first()
+    if user is None:
+        return flask.make_response('User not found!', 404)
+    
+    if not user.email:
+        return flask.make_response('This user has no email address on file. Please contact an administrator directly.', 400)
+    
+    # Check if there's already a pending request
+    existing_request = PasswordResetRequest.query.filter_by(
+        user_id=user.id,
+        resolved=False
+    ).first()
+    
+    if existing_request:
+        return flask.make_response('A password reset request is already pending for this user.', 400)
+    
+    # Create new password reset request
+    reset_request = PasswordResetRequest(user_id=user.id)
+    db.session.add(reset_request)
+    db.session.commit()
+    
+    return flask.make_response('Password reset request submitted successfully! An administrator will process your request.')
+
 
 def set_current_user(user):
     flask.session['user_id'] = user.id

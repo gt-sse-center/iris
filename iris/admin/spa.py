@@ -16,6 +16,7 @@ spa_bp = flask.Blueprint(
 @spa_bp.route('/users', methods=['GET'])
 @spa_bp.route('/actions/<type>', methods=['GET'])
 @spa_bp.route('/images', methods=['GET'])
+@spa_bp.route('/password-resets', methods=['GET'])
 @spa_bp.route('/', methods=['GET'])
 def admin_spa(type=None):
     """Serve React SPA for all admin routes."""
