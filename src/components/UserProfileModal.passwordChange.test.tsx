@@ -10,6 +10,8 @@ describe('UserProfileModal - Password Change', () => {
     email: 'test@example.com',
     admin: false,
     tested: true,
+    created: '2024-01-01T00:00:00',
+    image_seed: 12345,
     segmentation: {
       score: 100,
       score_unverified: 10,

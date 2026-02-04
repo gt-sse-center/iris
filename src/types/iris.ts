@@ -214,6 +214,7 @@ export interface AITrainingValidation {
 export interface UserProfile {
   id: number;
   name: string;
+  email?: string; // Optional for backward compatibility
   admin: boolean;
   tested: boolean;
   created: string;
