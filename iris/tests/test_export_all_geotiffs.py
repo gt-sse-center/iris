@@ -53,24 +53,30 @@ class TestExportAllCLI:
 
     def test_cli_export_all_help(self):
         """Test that CLI help works for export-all command."""
-        from iris.cli import app as cli_app
-        from typer.testing import CliRunner
-
-        runner = CliRunner()
-        result = runner.invoke(cli_app, ['export-all', '--help'])
+        import subprocess
+        import sys
         
-        assert result.exit_code == 0
-        assert 'export' in result.stdout.lower()
+        proc = subprocess.run(
+            [sys.executable, "-m", "iris.cli", "export-all", "--help"],
+            capture_output=True,
+            text=True
+        )
+        
+        output = (proc.stdout or "") + (proc.stderr or "")
+        assert proc.returncode == 0
+        assert 'export' in output.lower()
 
     def test_cli_export_all_missing_project(self):
         """Test that CLI fails gracefully when project file doesn't exist."""
-        from iris.cli import app as cli_app
-        from typer.testing import CliRunner
-
-        runner = CliRunner()
-        result = runner.invoke(cli_app, ['export-all', 'nonexistent.json'])
+        import subprocess
+        import sys
         
-        assert result.exit_code == 1
-        # Check stderr or stdout for error message
-        output = result.stdout + (result.stderr or '')
+        proc = subprocess.run(
+            [sys.executable, "-m", "iris.cli", "export-all", "nonexistent.json"],
+            capture_output=True,
+            text=True
+        )
+        
+        output = (proc.stdout or "") + (proc.stderr or "")
+        assert proc.returncode == 1
         assert 'not found' in output.lower() or 'error' in output.lower()
