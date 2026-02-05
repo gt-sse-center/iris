@@ -13,6 +13,8 @@ const ImagesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [orderBy, setOrderBy] = useState<string>('image_id');
   const [isAscending, setIsAscending] = useState<boolean>(true);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportMessage, setExportMessage] = useState<string>('');
 
   const fetchImages = async (): Promise<void> => {
     setIsLoading(true);
@@ -29,6 +31,51 @@ const ImagesPage: React.FC = () => {
       console.error('Error fetching images:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleExportAll = async (): Promise<void> => {
+    if (isExporting) return;
+
+    const outputDir = prompt('Enter output directory (default: exports):', 'exports');
+    if (outputDir === null) return; // User cancelled
+
+    setIsExporting(true);
+    setExportMessage('Exporting all images...');
+
+    try {
+      const response = await fetch('/admin/api/export-all-geotiffs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          output_dir: outputDir || 'exports'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Export failed');
+      }
+
+      const result = await response.json();
+      setExportMessage(
+        `✅ Export complete! Exported ${result.exported_count} images to ${result.output_dir}. ` +
+        `Skipped ${result.skipped_count} images (no annotations).`
+      );
+
+      // Clear message after 10 seconds
+      setTimeout(() => setExportMessage(''), 10000);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setExportMessage(`❌ Export failed: ${errorMsg}`);
+      console.error('Export error:', error);
+
+      // Clear error message after 10 seconds
+      setTimeout(() => setExportMessage(''), 10000);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -59,6 +106,38 @@ const ImagesPage: React.FC = () => {
         textAlign: 'center'
       }}>
         🚀 <strong>TypeScript React Images Page</strong> - Fully migrated from legacy templates!
+      </div>
+
+      {/* Export All Button and Message */}
+      <div style={{ margin: '20px 0', display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <button
+          onClick={handleExportAll}
+          disabled={isExporting}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            backgroundColor: isExporting ? '#ccc' : '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: isExporting ? 'not-allowed' : 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          {isExporting ? '⏳ Exporting...' : '📦 Export All GeoTIFFs'}
+        </button>
+        {exportMessage && (
+          <span style={{
+            padding: '8px 12px',
+            borderRadius: '4px',
+            backgroundColor: exportMessage.startsWith('✅') ? '#d4edda' : '#f8d7da',
+            color: exportMessage.startsWith('✅') ? '#155724' : '#721c24',
+            border: `1px solid ${exportMessage.startsWith('✅') ? '#c3e6cb' : '#f5c6cb'}`,
+            fontSize: '13px'
+          }}>
+            {exportMessage}
+          </span>
+        )}
       </div>
 
       {/* Sorting Controls */}
