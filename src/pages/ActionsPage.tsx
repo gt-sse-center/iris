@@ -58,18 +58,6 @@ const ActionsPage: React.FC = () => {
 
   return (
     <div>
-      {/* TypeScript Version Indicator */}
-      <div style={{
-        backgroundColor: '#e3f2fd',
-        border: '2px solid #2196f3',
-        padding: '10px',
-        margin: '10px 0',
-        borderRadius: '5px',
-        textAlign: 'center'
-      }}>
-        🚀 <strong>TypeScript React Actions Page</strong> - Fully migrated from legacy templates!
-      </div>
-
       {/* Progress Bar */}
       {imageStats.processed > 0 && (
         <div style={{ margin: '20px 0' }}>

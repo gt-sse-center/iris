@@ -63,18 +63,6 @@ const UsersPage: React.FC = () => {
 
   return (
     <div>
-      {/* TypeScript Version Indicator */}
-      <div style={{
-        backgroundColor: '#e3f2fd',
-        border: '2px solid #2196f3',
-        padding: '10px',
-        margin: '10px 0',
-        borderRadius: '5px',
-        textAlign: 'center'
-      }}>
-        🚀 <strong>TypeScript React Admin App</strong> - Type-safe, maintainable, and production-ready!
-      </div>
-
       <div style={{
         display: 'flex',
         flexDirection: 'row',

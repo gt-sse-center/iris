@@ -10,6 +10,7 @@ Migration Context:
     - Now: React components fetch JSON from these endpoints and render client-side
     - Benefits: Better UX, type safety with TypeScript, easier testing, modern dev workflow
 """
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -288,7 +289,7 @@ def images():
 def get_password_reset_requests():
     """
     Get list of password reset requests for admin interface.
-    
+
     Returns:
         JSON response with format:
         {
@@ -308,13 +309,13 @@ def get_password_reset_requests():
         }
     """
     from iris.models import PasswordResetRequest
-    
+
     # Get all unresolved requests first, then resolved ones
     requests = PasswordResetRequest.query.order_by(
         PasswordResetRequest.resolved.asc(),
         PasswordResetRequest.requested_at.desc()
     ).all()
-    
+
     requests_json = []
     for req in requests:
         req_data = req.to_json()
@@ -326,7 +327,7 @@ def get_password_reset_requests():
             req_data['username'] = 'Unknown'
             req_data['email'] = None
         requests_json.append(req_data)
-    
+
     return flask.jsonify({'requests': requests_json})
 
 
@@ -335,10 +336,10 @@ def get_password_reset_requests():
 def generate_temporary_password(request_id):
     """
     Generate a temporary password for a password reset request.
-    
+
     URL Parameters:
         request_id (int): ID of the password reset request
-    
+
     Returns:
         JSON response with format:
         {
@@ -349,33 +350,34 @@ def generate_temporary_password(request_id):
     """
     import secrets
     import string
+
     from iris.models import PasswordResetRequest
-    
+
     reset_request = PasswordResetRequest.query.get_or_404(request_id)
-    
+
     if reset_request.resolved:
         return flask.jsonify({'error': 'This request has already been resolved'}), 400
-    
+
     user = reset_request.user
     if not user:
         return flask.jsonify({'error': 'User not found'}), 404
-    
+
     # Generate a simple temporary password (8 characters, alphanumeric)
     alphabet = string.ascii_letters + string.digits
     temp_password = ''.join(secrets.choice(alphabet) for _ in range(8))
-    
+
     # Set the temporary password
     user.set_password(temp_password)
-    
+
     # Mark request as resolved
     reset_request.resolved = True
     reset_request.resolved_at = datetime.utcnow()
     reset_request.resolved_by_user_id = flask.session['user_id']
-    
+
     db.session.add(user)
     db.session.add(reset_request)
     db.session.commit()
-    
+
     return flask.jsonify({
         'temporary_password': temp_password,
         'email': user.email,
@@ -554,5 +556,204 @@ def export_merged_geotiff(image_id):
     except Exception as e:
         return flask.jsonify({
             'error': 'Failed to export merged GeoTIFF',
+            'message': str(e)
+        }), 500
+
+
+@api_bp.route('/export-all-geotiffs', methods=['POST'])
+@requires_admin
+def export_all_geotiffs():
+    """
+    Export all images with merged masks as GeoTIFF files (admin-only).
+
+    This endpoint creates GeoTIFF files for all images that have annotations,
+    saving them to a specified directory. Each file contains RGB bands from
+    the original image and the merged mask as the 4th band.
+
+    Request Body (JSON):
+        {
+            "output_dir": "path/to/output/directory"  // Optional, defaults to "exports"
+        }
+
+    Returns:
+        JSON response with format:
+        {
+            "success": true,
+            "exported_count": 5,
+            "skipped_count": 2,
+            "total_images": 7,
+            "output_dir": "/absolute/path/to/exports",
+            "files": [
+                "project_name_image_001_merged.tif",
+                "project_name_image_002_merged.tif",
+                ...
+            ],
+            "skipped": [
+                {"image_id": "image_003", "reason": "No annotations"},
+                ...
+            ]
+        }
+
+    Security:
+        - Admin-only access via @requires_admin decorator
+        - Validates and sanitizes output directory path
+        - Only exports images with existing annotations
+    """
+    import os
+    from glob import glob
+
+    import numpy as np
+    import rasterio as rio
+
+    try:
+        # Parse request body
+        data = flask.request.get_json() or {}
+        output_dir = data.get('output_dir', 'exports')
+
+        # Convert to absolute path and create directory
+        if not os.path.isabs(output_dir):
+            output_dir = os.path.join(os.getcwd(), output_dir)
+
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Get project name for filename prefix
+        project_name = project.config.get('name', 'project')
+        # Sanitize project name for filesystem
+        project_name = re.sub(r'[^\w\-_]', '_', project_name)
+
+        exported_files = []
+        skipped_images = []
+
+        from iris.segmentation import compute_merged_mask, get_mask_filenames
+
+        # Iterate through all images
+        for image_id in project.image_ids:
+            try:
+                # Check if image has any annotations
+                final_mask_paths = get_mask_filenames(image_id, user_id="*")[0]
+                mask_files = glob(final_mask_paths)
+
+                if not mask_files:
+                    skipped_images.append({
+                        'image_id': image_id,
+                        'reason': 'No annotations'
+                    })
+                    continue
+
+                # Get the original image path
+                image_path = project.get_image_path(image_id)
+
+                # Handle multi-source images - prefer Sentinel2
+                if isinstance(image_path, dict):
+                    if 'Sentinel2' in image_path:
+                        image_path = image_path['Sentinel2']
+                    elif 'Sentinel-2' in image_path:
+                        image_path = image_path['Sentinel-2']
+                    else:
+                        image_path = list(image_path.values())[0]
+
+                # Load all user masks and merge them
+                final_masks = []
+                for path in mask_files:
+                    mask_data = np.load(path)
+                    final_masks.append(np.argmax(mask_data, axis=-1))
+
+                final_masks = np.dstack(final_masks)
+                merged_mask = compute_merged_mask(final_masks)
+
+                # Render RGB image
+                rgb_view = None
+                if 'views' in project.config:
+                    if 'RGB' in project.config['views']:
+                        rgb_view = project.config['views']['RGB']
+                    elif 'NRGB' in project.config['views']:
+                        rgb_view = project.config['views']['NRGB']
+
+                if rgb_view:
+                    rendered_rgb = project.render_image(image_id, rgb_view)
+                else:
+                    # Fallback: open original GeoTIFF
+                    with rio.open(image_path) as src:
+                        original_data = src.read()
+                        if original_data.shape[0] >= 3:
+                            rendered_rgb = np.stack([
+                                original_data[0],
+                                original_data[1],
+                                original_data[2]
+                            ], axis=-1)
+                        else:
+                            rendered_rgb = np.stack([original_data[0]]*3, axis=-1)
+
+                        # Normalize to 0-255
+                        rendered_rgb = ((rendered_rgb - rendered_rgb.min()) /
+                                       (rendered_rgb.max() - rendered_rgb.min()) * 255).astype(np.uint8)
+
+                # Get correct dimensions
+                correct_height, correct_width = merged_mask.shape
+
+                # Create profile for output GeoTIFF
+                profile = {
+                    'driver': 'GTiff',
+                    'dtype': 'uint8',
+                    'width': correct_width,
+                    'height': correct_height,
+                    'count': 4,  # RGB + mask
+                    'crs': None,
+                    'transform': rio.transform.from_bounds(0, 0, correct_width, correct_height,
+                                                           correct_width, correct_height)
+                }
+
+                # Create output filename
+                output_filename = f'{project_name}_{image_id}_merged.tif'
+                output_path = os.path.join(output_dir, output_filename)
+
+                # Write GeoTIFF
+                with rio.open(output_path, 'w', **profile) as dst:
+                    # Resize rendered RGB if needed
+                    if rendered_rgb.shape[:2] != (correct_height, correct_width):
+                        from skimage.transform import resize
+                        rendered_rgb = resize(
+                            rendered_rgb,
+                            (correct_height, correct_width),
+                            order=1,
+                            preserve_range=True,
+                            anti_aliasing=True
+                        ).astype(np.uint8)
+
+                    # Write RGB bands
+                    dst.write(rendered_rgb[:, :, 0], 1)  # Red
+                    dst.write(rendered_rgb[:, :, 1], 2)  # Green
+                    dst.write(rendered_rgb[:, :, 2], 3)  # Blue
+
+                    # Write merged mask as 4th band
+                    dst.write(merged_mask.astype(np.uint8), 4)
+
+                    # Add band descriptions
+                    dst.set_band_description(1, 'Red')
+                    dst.set_band_description(2, 'Green')
+                    dst.set_band_description(3, 'Blue')
+                    dst.set_band_description(4, 'Merged Segmentation Mask')
+
+                exported_files.append(output_filename)
+
+            except Exception as e:
+                skipped_images.append({
+                    'image_id': image_id,
+                    'reason': str(e)
+                })
+
+        return flask.jsonify({
+            'success': True,
+            'exported_count': len(exported_files),
+            'skipped_count': len(skipped_images),
+            'total_images': len(project.image_ids),
+            'output_dir': output_dir,
+            'files': exported_files,
+            'skipped': skipped_images
+        })
+
+    except Exception as e:
+        return flask.jsonify({
+            'error': 'Failed to export GeoTIFFs',
             'message': str(e)
         }), 500
