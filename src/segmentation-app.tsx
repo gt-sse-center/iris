@@ -4,6 +4,7 @@ import SegmentationToolbar from './components/segmentation/SegmentationToolbar';
 import SegmentationStatusBar from './components/segmentation/SegmentationStatusBar';
 import SegmentationModals from './components/segmentation/SegmentationModals';
 import ViewerComparison from './components/segmentation/ViewerComparison';
+import ImageChatPanel from './components/segmentation/ImageChatPanel';
 import { useSegmentationSetup } from './components/segmentation/hooks/useSegmentationSetup';
 import { useSegmentationStore } from './stores/segmentationStore';
 import { useViewManagerStore } from './stores/viewManagerStore';
@@ -40,6 +41,13 @@ const SegmentationApp: React.FC = () => {
   const [isConfusionMatrixOpen, setIsConfusionMatrixOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Chat configuration from project config
+  const config = useSegmentationStore((state) => state.config);
+  const chatEnabled = config?.chat?.enabled || false;
+  const githubRepo = config?.chat?.github_repo || '';
+  const utterancesTheme = config?.chat?.utterances_theme || 'github-light';
 
   // Get config loader hook
   const { loadConfig } = useConfigLoader();
@@ -370,6 +378,45 @@ const SegmentationApp: React.FC = () => {
         onOpenImageInfo={handleOpenImageInfo}
         onOpenConfusionMatrix={handleOpenConfusionMatrix}
       />
+
+      {/* Chat toggle button - only show if chat is enabled */}
+      {chatEnabled && githubRepo && (
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          style={{
+            position: 'fixed',
+            right: isChatOpen ? '420px' : '20px',
+            bottom: '80px',
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            backgroundColor: '#007cba',
+            color: 'white',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+            zIndex: 999,
+            transition: 'right 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          title={isChatOpen ? 'Close chat' : 'Open chat'}
+        >
+          💬
+        </button>
+      )}
+
+      {/* Chat side panel */}
+      {chatEnabled && githubRepo && (
+        <ImageChatPanel 
+          githubRepo={githubRepo}
+          theme={utterancesTheme}
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+        />
+      )}
 
       <SegmentationModals
         isPreferencesOpen={isPreferencesOpen}
