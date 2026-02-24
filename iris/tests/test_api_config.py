@@ -705,6 +705,7 @@ def test_put_config_accepts_chat_configuration(logged_in_admin, restore_config_f
     # Verify chat config was saved
     response = logged_in_admin.get('/api/config/project')
     updated_config = response.json['config']
+    assert 'chat' in updated_config
     assert updated_config['chat']['enabled'] is True
     assert updated_config['chat']['github_repo'] == 'test-org/test-repo'
     assert updated_config['chat']['utterances_theme'] == 'github-dark'
@@ -749,6 +750,7 @@ def test_workflow_chat_config_roundtrip(logged_in_admin, restore_config_file):
     response = logged_in_admin.get('/api/config/project')
     saved_config = response.json['config']
     
+    assert 'chat' in saved_config
     assert saved_config['chat']['enabled'] is False
     assert saved_config['chat']['github_repo'] == 'owner/repo'
     assert saved_config['chat']['utterances_theme'] == 'preferred-color-scheme'
