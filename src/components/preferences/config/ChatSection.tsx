@@ -6,8 +6,7 @@ interface ChatConfig {
   utterances_theme: string;
 }
 
-// Define the SectionRef interface locally if needed
-interface ChatSectionRef {
+export interface ChatSectionRef {
   getData: () => ChatConfig;
   setData: (data: ChatConfig | undefined) => void;
 }
@@ -23,7 +22,7 @@ interface ChatSectionRef {
  * - github_repo: GitHub repository for storing discussions (format: owner/repo)
  * - utterances_theme: Theme for Utterances widget (github-light, github-dark, etc.)
  */
-const ChatSection = forwardRef<ChatSectionRef>((props, ref) => {
+const ChatSection = forwardRef<ChatSectionRef>((_props, ref) => {
   const [enabled, setEnabled] = useState(true);
   const [githubRepo, setGithubRepo] = useState('');
   const [utterancesTheme, setUtterancesTheme] = useState('github-light');
