@@ -4,6 +4,7 @@ import ClassesSection from './config/ClassesSection';
 import ViewsSection from './config/ViewsSection';
 import ViewGroupsSection from './config/ViewGroupsSection';
 import SegmentationSection from './config/SegmentationSection';
+import ChatSection from './config/ChatSection';
 import { getProjectConfig, updateProjectConfig, validateProjectConfig } from '../../services/config';
 import type { ProjectConfig } from '../../services/config';
 
@@ -64,6 +65,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
   const viewsRef = useRef<SectionRef>(null);
   const viewGroupsRef = useRef<SectionRef>(null);
   const segmentationRef = useRef<SectionRef>(null);
+  const chatRef = useRef<SectionRef>(null);
 
   // State management
   const [loading, setLoading] = useState(true);
@@ -98,6 +100,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
           const viewsData = viewsRef.current?.getData();
           const viewGroupsData = viewGroupsRef.current?.getData();
           const segmentationData = segmentationRef.current?.getData();
+          const chatData = chatRef.current?.getData();
 
           const currentConfig: ProjectConfig = {
             ...generalData,
@@ -105,6 +108,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
             views: viewsData,
             view_groups: viewGroupsData,
             segmentation: segmentationData,
+            chat: chatData,
           };
 
           setOriginalConfigJson(JSON.stringify(currentConfig));
@@ -207,6 +211,14 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
     } else {
       console.error('[ProjectConfigTab] SegmentationSection ref not available');
     }
+    
+    if (chatRef.current?.setData) {
+      // Pass the chat config from the loaded config, or undefined if not present
+      console.log('[ProjectConfigTab] Populating ChatSection with:', config.chat);
+      chatRef.current.setData(config.chat);
+    } else {
+      console.error('[ProjectConfigTab] ChatSection ref not available');
+    }
   };
 
   /**
@@ -231,6 +243,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       const viewsData = viewsRef.current?.getData();
       const viewGroupsData = viewGroupsRef.current?.getData();
       const segmentationData = segmentationRef.current?.getData();
+      const chatData = chatRef.current?.getData();
 
       const currentConfig: ProjectConfig = {
         ...generalData,
@@ -238,6 +251,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
         views: viewsData,
         view_groups: viewGroupsData,
         segmentation: segmentationData,
+        chat: chatData,
       };
 
       const currentConfigJson = JSON.stringify(currentConfig);
@@ -276,6 +290,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       const viewsData = viewsRef.current?.getData();
       const viewGroupsData = viewGroupsRef.current?.getData();
       const segmentationData = segmentationRef.current?.getData();
+      const chatData = chatRef.current?.getData();
 
       // Combine into final config structure
       const config: ProjectConfig = {
@@ -284,6 +299,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
         views: viewsData,
         view_groups: viewGroupsData,
         segmentation: segmentationData,
+        chat: chatData,
       };
       
       // Validate before saving
@@ -360,6 +376,7 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
       <ViewsSection ref={viewsRef} />
       <ViewGroupsSection ref={viewGroupsRef} getAvailableViews={getAvailableViews} />
       <SegmentationSection ref={segmentationRef} />
+      <ChatSection ref={chatRef} />
       
       <div style={{ padding: '20px', borderTop: '2px solid #ddd', marginTop: '20px', background: '#f8f9fa' }}>
         <button

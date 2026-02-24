@@ -42,6 +42,11 @@ export interface ProjectConfig {
     test_images?: string[] | null;
     ai_model: AIModelConfig | false;
   };
+  chat?: {
+    enabled: boolean;
+    github_repo: string;
+    utterances_theme: string;
+  };
 }
 
 export interface AIModelConfig {
