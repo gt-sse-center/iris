@@ -32,8 +32,9 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   
-  // Get filters from segmentation store
-  const { brightness, saturation, contrast, invert } = useSegmentationStore();
+  // NOTE: We do NOT get filters from store here because filters are applied via CSS
+  // in applyFiltersToLayers() function, not via React re-renders
+  // This prevents unnecessary canvas re-renders when filters change
   
   // Load image source
   const loadImage = useCallback(() => {
@@ -89,22 +90,8 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
     
     ctx.restore(); // Restore the zoom/pan transformation
     
-    // Apply filters via CSS
-    const filterParts: string[] = [];
-    
-    if (invert) {
-      filterParts.push('invert(1)');
-    }
-    
-    filterParts.push(`brightness(${brightness}%)`);
-    
-    if (contrast) {
-      filterParts.push('contrast(200%)');
-    }
-    
-    filterParts.push(`saturate(${saturation}%)`);
-    
-    canvas.style.filter = filterParts.join(' ');
+    // NOTE: Filters are applied via CSS by applyFiltersToLayers() function
+    // We do NOT apply them here to avoid triggering re-renders
     
     // Draw image at image dimensions (canvas transform will handle scaling)
     if (imageShape) {
@@ -121,7 +108,7 @@ const ReactRGBLayer: React.FC<ReactRGBLayerProps> = ({
         w.show_mask(showMask);
       }
     }
-  }, [brightness, saturation, contrast, invert]);
+  }, []); // NOTE: No dependencies on filters - they're applied via CSS only
   
   // Listen for zoom/transform changes and re-render
   useEffect(() => {

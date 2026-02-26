@@ -112,13 +112,12 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
   }, [isInitialized, config]);
   
   const containerStyle: React.CSSProperties = {
-    margin: '10px 0px',
     width: '100%',
-    height: '800px', // Standard height for the viewer
-    border: '1px solid #ccc',
-    borderRadius: '4px',
+    minHeight: '100%',
+    height: 'fit-content',
     backgroundColor: '#fff',
-    overflow: 'auto',
+    overflow: 'visible',
+    padding: '10px',
   };
   
   return (

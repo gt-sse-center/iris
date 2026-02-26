@@ -752,6 +752,74 @@ const triggerLegacyRender = () => {
   }
 };
 
+// Helper function to apply CSS filters without full re-render
+const applyFiltersToLayers = (viewManager: any) => {
+  // Check if we're using React ViewManager (via viewManagerStore)
+  const w = window as any;
+  if (w.viewManagerStore) {
+    // Use React ViewManager - apply filters via CSS to canvas elements
+    // IMPORTANT: Only apply to RGB canvases, not mask or preview canvases
+    const canvases = document.querySelectorAll('.view-canvas:not(.mask-canvas):not(.preview-canvas)');
+    
+    const filters = viewManager?.filters || {
+      contrast: false,
+      invert: false,
+      brightness: 100,
+      saturation: 100
+    };
+    
+    // Build CSS filter string
+    let filterString = [];
+    if (filters.invert) {
+      filterString.push("invert(1)");
+    }
+    filterString.push(`brightness(${filters.brightness}%)`);
+    if (filters.contrast) {
+      filterString.push("contrast(200%)");
+    }
+    filterString.push(`saturate(${filters.saturation}%)`);
+    
+    const filterValue = filterString.join(" ");
+    
+    // Apply to RGB canvas elements only
+    canvases.forEach((canvas: any) => {
+      if (canvas.style) {
+        canvas.style.filter = filterValue;
+      }
+    });
+    
+    return;
+  }
+  
+  // Legacy ViewManager path (for backward compatibility)
+  if (!viewManager || !viewManager.layers) {
+    return;
+  }
+  
+  const filters = viewManager.filters;
+  if (!filters) {
+    return;
+  }
+  
+  // Build CSS filter string
+  let filterString = [];
+  if (filters.invert) {
+    filterString.push("invert(1)");
+  }
+  filterString.push(`brightness(${filters.brightness}%)`);
+  if (filters.contrast) {
+    filterString.push("contrast(200%)");
+  }
+  filterString.push(`saturate(${filters.saturation}%)`);
+  
+  // Apply to all image layers
+  for (let layer of viewManager.layers) {
+    if (layer.container && layer.container.style) {
+      layer.container.style.filter = filterString.join(" ");
+    }
+  }
+};
+
 export const useSegmentationStore = create<SegmentationState>((set, get) => ({
   // Mask Visibility State
   showMask: true,
@@ -1295,10 +1363,20 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Sync with legacy ViewManager instance via store
     const w = window as any;
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
-    if (viewManager?.filters) {
+    if (viewManager) {
+      // Initialize filters object if it doesn't exist
+      if (!viewManager.filters) {
+        viewManager.filters = {
+          contrast: false,
+          invert: false,
+          brightness: 100,
+          saturation: 100
+        };
+      }
       viewManager.filters.brightness = clampedValue;
+      // Apply CSS filter directly without triggering full render
+      applyFiltersToLayers(viewManager);
     }
-    triggerLegacyRender();
   },
 
   setSaturation: (value: number) => {
@@ -1308,10 +1386,20 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Sync with legacy ViewManager instance via store
     const w = window as any;
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
-    if (viewManager?.filters) {
+    if (viewManager) {
+      // Initialize filters object if it doesn't exist
+      if (!viewManager.filters) {
+        viewManager.filters = {
+          contrast: false,
+          invert: false,
+          brightness: 100,
+          saturation: 100
+        };
+      }
       viewManager.filters.saturation = clampedValue;
+      // Apply CSS filter directly without triggering full render
+      applyFiltersToLayers(viewManager);
     }
-    triggerLegacyRender();
   },
 
   setContrast: (enabled: boolean) => {
@@ -1320,10 +1408,22 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Sync with legacy ViewManager instance via store
     const w = window as any;
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
-    if (viewManager?.filters) {
+    
+    if (viewManager) {
+      // Initialize filters object if it doesn't exist
+      if (!viewManager.filters) {
+        viewManager.filters = {
+          contrast: false,
+          invert: false,
+          brightness: 100,
+          saturation: 100
+        };
+      }
+      
       viewManager.filters.contrast = enabled;
+      // Apply CSS filter directly without triggering full render
+      applyFiltersToLayers(viewManager);
     }
-    triggerLegacyRender();
   },
 
   setInvert: (enabled: boolean) => {
@@ -1332,10 +1432,22 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     // Sync with legacy ViewManager instance via store
     const w = window as any;
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
-    if (viewManager?.filters) {
+    
+    if (viewManager) {
+      // Initialize filters object if it doesn't exist
+      if (!viewManager.filters) {
+        viewManager.filters = {
+          contrast: false,
+          invert: false,
+          brightness: 100,
+          saturation: 100
+        };
+      }
+      
       viewManager.filters.invert = enabled;
+      // Apply CSS filter directly without triggering full render
+      applyFiltersToLayers(viewManager);
     }
-    triggerLegacyRender();
   },
 
   resetFilters: () => {

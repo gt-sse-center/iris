@@ -182,6 +182,13 @@ async function init_views(){
             render: () => {
                 // Mock render - React ViewManager handles rendering
                 console.log('[IRIS Migration] Mock ViewManager render called - React handles rendering');
+            },
+            // Add filters property to match real ViewManager
+            filters: {
+                contrast: false,
+                invert: false,
+                brightness: 100,
+                saturation: 100
             }
         };
         
@@ -235,8 +242,9 @@ async function init_views(){
 
     reset_views();
 
-    get_object("toolbar").style.visibility = "visible";
-    get_object("statusbar").style.visibility = "visible";
+    // Note: toolbar and statusbar are now React components, no need to set visibility
+    // get_object("toolbar").style.visibility = "visible";
+    // get_object("statusbar").style.visibility = "visible";
     hide_loader(); // Ensure loader is hidden after initialization
     newuser_help_popup();
 }
