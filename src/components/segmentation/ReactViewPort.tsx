@@ -76,8 +76,12 @@ const ReactViewPort: React.FC<ReactViewPortProps> = ({
   
   const containerStyle: React.CSSProperties = {
     position: 'relative',
-    width: `${width}px`,
-    height: `${height}px`,
+    flex: '1 1 0', // Allow flex item to grow and shrink equally, with 0 base
+    minWidth: '0', // Allow shrinking below content size
+    minHeight: '0', // Allow shrinking below content size
+    height: '100%', // Use full available height from parent
+    maxHeight: '100%', // Don't exceed parent height
+    aspectRatio: '1 / 1', // Maintain square aspect ratio
     border: isActive ? '2px solid #007acc' : '1px solid #ccc',
     backgroundColor: isActive ? 'rgba(0, 122, 204, 0.05)' : 'transparent',
     cursor: 'pointer',

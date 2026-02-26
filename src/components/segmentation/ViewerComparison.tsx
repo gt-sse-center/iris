@@ -113,11 +113,15 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
   
   const containerStyle: React.CSSProperties = {
     width: '100%',
-    minHeight: '100%',
-    height: 'fit-content',
+    height: '100%', // Use full available height
+    minHeight: '0', // Allow shrinking
+    maxHeight: '100%', // Don't exceed parent
     backgroundColor: '#fff',
-    overflow: 'visible',
+    overflow: 'hidden', // Prevent overflow
     padding: '10px',
+    boxSizing: 'border-box', // Include padding in dimensions
+    display: 'flex', // Use flexbox for proper sizing
+    flexDirection: 'column', // Stack children vertically
   };
   
   return (
@@ -128,7 +132,7 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
             console.error('React ViewManager crashed:', error, errorInfo);
           }}
         >
-          <ReactViewManager />
+          <ReactViewManager style={{ flex: 1 }} />
         </ErrorBoundary>
       ) : (
         <div
