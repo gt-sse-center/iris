@@ -1,4 +1,6 @@
 import React from 'react';
+import AIScore from './statusbar/AIScore';
+import AIRecommendation from './statusbar/AIRecommendation';
 
 interface BottomBarProps {
   onOpenImageInfo: () => void;
@@ -63,6 +65,12 @@ const BottomBar: React.FC<BottomBarProps> = ({
         >
           📊 Stats
         </button>
+      </div>
+
+      {/* Center: AI Score and Recommendation */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <AIScore onOpenConfusionMatrix={onOpenConfusionMatrix} />
+        <AIRecommendation />
       </div>
 
       {/* Right: Admin Button */}
