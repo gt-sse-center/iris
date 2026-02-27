@@ -272,7 +272,8 @@ body {
 /* Paintbrush Selector Styles */
 .paintbrush-selector-container {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: 100%;
 }
 
 .paintbrush-selector-container .toolbutton.dropdown-open {
@@ -281,10 +282,7 @@ body {
 }
 
 .paintbrush-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
+  position: fixed;
   background: white;
   border: 2px solid black;
   border-radius: 4px;
