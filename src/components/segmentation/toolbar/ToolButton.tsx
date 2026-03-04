@@ -55,10 +55,20 @@ const ToolButton: React.FC<ToolButtonProps> = ({
       }}
       data-testid={testId}
     >
-      <img src={icon} className="icon" alt="" style={{ flexShrink: 0, width: '20px', height: '20px' }} />
+      <img 
+        src={icon} 
+        className="icon" 
+        alt="" 
+        style={{ 
+          flexShrink: 0, 
+          width: '20px', 
+          height: '20px',
+          filter: checked ? 'brightness(0) invert(1)' : 'none',
+        }} 
+      />
       {label && (
         <span style={{ 
-          color: '#2c3e50', 
+          color: checked ? 'white' : '#2c3e50', 
           fontSize: '13px', 
           fontWeight: checked ? '600' : 'normal',
           whiteSpace: 'nowrap',

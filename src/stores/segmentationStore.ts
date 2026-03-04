@@ -1714,6 +1714,7 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setMaskType: (type: 'final' | 'user' | 'errors') => {
     const { maskType: currentType } = get();
+    console.log('[Store] setMaskType called:', currentType, '->', type);
     set({ maskType: type });
     
     // Update legacy DOM elements
@@ -1728,20 +1729,22 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       if (newBtn) newBtn.classList.add('checked');
     }
     
-    // Trigger legacy mask reload and render (with comprehensive safety checks)
-    // Only call these functions if the initialization is complete
-    if (w.vars && w.vars.hidden_mask && w.vars.mask_shape && w.vars.mask) {
-      if (w.reload_hidden_mask) {
+    // Trigger legacy mask reload and render
+    // Call the functions if they exist - they will handle their own initialization checks
+    console.log('[Store] Calling legacy mask functions...');
+    if (w.reload_hidden_mask) {
+      try {
         w.reload_hidden_mask();
+      } catch (e) {
+        console.error('[Store] Error in reload_hidden_mask:', e);
       }
-      if (w.render_mask) {
+    }
+    if (w.render_mask) {
+      try {
         w.render_mask();
+      } catch (e) {
+        console.error('[Store] Error in render_mask:', e);
       }
-      if (w.show_mask) {
-        w.show_mask(true); // Show mask when type changes
-      }
-    } else {
-      console.log('[IRIS] setMaskType: Skipping legacy function calls, initialization not complete yet');
     }
   },
 
