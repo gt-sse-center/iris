@@ -8,6 +8,12 @@ interface LeftToolbarProps {
 }
 
 const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
+  const [isExpanded, setIsExpanded] = React.useState(() => {
+    // Load preference from localStorage
+    const saved = localStorage.getItem('leftToolbarExpanded');
+    return saved ? JSON.parse(saved) : false;
+  });
+
   const { 
     currentTool, 
     setCurrentTool, 
@@ -16,6 +22,11 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
     isLoading,
     showErrorModal 
   } = useSegmentationStore();
+  
+  // Save preference when it changes
+  React.useEffect(() => {
+    localStorage.setItem('leftToolbarExpanded', JSON.stringify(isExpanded));
+  }, [isExpanded]);
   
   const handlePredictMask = async () => {
     try {
@@ -40,6 +51,8 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
     if (w.redo) w.redo();
   };
   
+  const toolbarWidth = isExpanded ? 180 : 60;
+  
   return (
     <div
       style={{
@@ -47,21 +60,46 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
         left: 0,
         top: '50px',
         bottom: '60px',
-        width: '60px',
+        width: `${toolbarWidth}px`,
         backgroundColor: '#34495e',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
+        alignItems: isExpanded ? 'stretch' : 'center',
         padding: '10px 0',
         gap: '5px',
         zIndex: 900,
         boxShadow: '2px 0 4px rgba(0,0,0,0.1)',
         overflowY: 'auto',
+        overflowX: 'hidden',
         listStyle: 'none',
+        transition: 'width 0.3s ease',
       }}
     >
+      {/* Toggle Button */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{
+          background: 'transparent',
+          border: '1px solid rgba(255,255,255,0.3)',
+          color: 'white',
+          cursor: 'pointer',
+          padding: '5px',
+          margin: '0 10px 10px 10px',
+          borderRadius: '4px',
+          fontSize: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+        }}
+        title={isExpanded ? 'Collapse toolbar' : 'Expand toolbar'}
+      >
+        <span>{isExpanded ? '◀' : '▶'}</span>
+        {isExpanded && <span style={{ fontSize: '12px' }}>Collapse</span>}
+      </button>
+
       {/* Drawing Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0' }}>
         <ToolButton
           id="tb_tool_move"
           icon="/segmentation/static/icons/move.png"
@@ -69,6 +107,8 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           onClick={() => setCurrentTool('move')}
           disabled={isLoading}
           title="Move/Pan"
+          label={isExpanded ? 'Move' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
         />
         
         <PaintbrushSelector
@@ -79,6 +119,8 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           disabled={isLoading}
           title="Draw pixels"
           dropdownType="draw"
+          label={isExpanded ? 'Draw' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px' } : {}}
         />
         
         <PaintbrushSelector
@@ -89,19 +131,23 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           disabled={isLoading}
           title="Erase pixels"
           dropdownType="eraser"
+          label={isExpanded ? 'Erase' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px' } : {}}
         />
       </div>
 
       {/* Separator */}
-      <div style={{ width: '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px 0' }} />
+      <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px auto' }} />
 
       {/* Editing Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0' }}>
         <ToolButton
           id="tb_undo"
           icon="/segmentation/static/icons/undo.png"
           onClick={handleUndo}
           title="Undo"
+          label={isExpanded ? 'Undo' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
         />
         
         <ToolButton
@@ -109,20 +155,24 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           icon="/segmentation/static/icons/redo.png"
           onClick={handleRedo}
           title="Redo"
+          label={isExpanded ? 'Redo' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
         />
       </div>
 
       {/* Separator */}
-      <div style={{ width: '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px 0' }} />
+      <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px auto' }} />
 
       {/* AI & Reset Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0' }}>
         <ToolButton
           id="tb_predict_mask"
           icon="/segmentation/static/icons/ai.png"
           onClick={handlePredictMask}
           disabled={isLoading}
           title={isLoading ? "Predicting..." : "Predict mask using AI"}
+          label={isExpanded ? 'AI Predict' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
         />
         
         <ToolButton
@@ -131,6 +181,8 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           onClick={onResetMask}
           disabled={isLoading}
           title="Reset mask"
+          label={isExpanded ? 'Reset Mask' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
         />
         
         <ToolButton
@@ -139,6 +191,8 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           onClick={handleResetViews}
           disabled={isLoading}
           title="Reset views"
+          label={isExpanded ? 'Reset Views' : undefined}
+          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
         />
       </div>
     </div>

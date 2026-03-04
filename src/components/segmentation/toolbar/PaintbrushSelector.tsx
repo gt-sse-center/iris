@@ -10,6 +10,8 @@ interface PaintbrushSelectorProps {
   disabled?: boolean;
   title?: string;
   dropdownType: 'draw' | 'eraser';
+  label?: string;
+  style?: React.CSSProperties;
 }
 
 const PaintbrushSelector: React.FC<PaintbrushSelectorProps> = ({
@@ -20,6 +22,8 @@ const PaintbrushSelector: React.FC<PaintbrushSelectorProps> = ({
   disabled = false,
   title,
   dropdownType,
+  label,
+  style,
 }) => {
   const { 
     showDrawToolDropdown,
@@ -93,7 +97,7 @@ const PaintbrushSelector: React.FC<PaintbrushSelectorProps> = ({
   const dropdownPosition = getDropdownPosition();
 
   return (
-    <div className="paintbrush-selector-container" ref={buttonRef}>
+    <div className="paintbrush-selector-container" ref={buttonRef} style={style}>
       <ToolButton
         id={id}
         icon={icon}
@@ -102,6 +106,7 @@ const PaintbrushSelector: React.FC<PaintbrushSelectorProps> = ({
         disabled={disabled}
         title={title}
         className={showDropdown ? 'dropdown-open' : ''}
+        label={label}
       />
       
       {showDropdown && (

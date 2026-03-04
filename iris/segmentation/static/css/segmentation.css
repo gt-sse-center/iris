@@ -273,7 +273,10 @@ body {
 .paintbrush-selector-container {
   position: relative;
   display: block;
-  width: 100%;
+}
+
+.paintbrush-selector-container .toolbutton {
+  box-sizing: border-box;
 }
 
 .paintbrush-selector-container .toolbutton.dropdown-open {
@@ -373,4 +376,30 @@ body {
 
 .brush-option.selected .brush-size-label {
   color: #007cba;
+}
+}
+
+/* Left Toolbar Button Overrides */
+/* Reduce button width to fit within expanded toolbar */
+#tb_tool_move,
+#tb_tool_draw,
+#tb_tool_eraser,
+#tb_undo,
+#tb_redo,
+#tb_predict_mask,
+#tb_reset_mask,
+#tb_tool_reset_views {
+  margin: 2px 0 !important; /* Remove horizontal margins */
+  width: auto !important;
+  max-width: calc(100% - 4px) !important; /* Account for border */
+}
+
+/* Ensure paintbrush selector containers also respect width */
+.paintbrush-selector-container {
+  margin: 2px 0 !important;
+  max-width: 100% !important;
+}
+
+.paintbrush-selector-container .toolbutton {
+  max-width: calc(100% - 4px) !important;
 }
