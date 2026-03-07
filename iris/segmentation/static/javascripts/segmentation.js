@@ -242,9 +242,6 @@ async function init_views(){
 
     reset_views();
 
-    // Note: toolbar and statusbar are now React components, no need to set visibility
-    // get_object("toolbar").style.visibility = "visible";
-    // get_object("statusbar").style.visibility = "visible";
     hide_loader(); // Ensure loader is hidden after initialization
     newuser_help_popup();
 }
