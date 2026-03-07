@@ -41,13 +41,24 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
     }
   }, [showMask]);
 
+  // Watch for filter changes and apply to canvas
+  useEffect(() => {
+    const w = window as any;
+    if (w.renderFromStore) {
+      try {
+        w.renderFromStore();
+      } catch (error) {
+        console.error('[RightPanel] Error applying filters:', error);
+      }
+    }
+  }, [brightness, saturation, contrast, invert]);
+
   // Modern card section wrapper
   const SectionCard: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
     <div style={{
-      backgroundColor: 'rgba(255, 255, 255, 0.7)',
-      borderRadius: '8px',
-      padding: '16px',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+      paddingBottom: '20px',
+      marginBottom: '20px',
+      borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
       ...style
     }}>
       {children}
@@ -58,15 +69,129 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
   const SectionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h3 style={{
       margin: '0 0 12px 0',
-      fontSize: '13px',
+      fontSize: '11px',
       fontWeight: '600',
-      color: '#1a202c',
-      letterSpacing: '0.3px',
+      color: '#6b7280',
+      letterSpacing: '0.5px',
       textTransform: 'uppercase',
     }}>
       {children}
     </h3>
   );
+
+  // Segmented control for mask types
+  const SegmentedControl: React.FC<{
+    options: Array<{ value: string; icon: string; title: string; label: string }>;
+    value: string;
+    onChange: (value: string) => void;
+  }> = ({ options, value, onChange }) => {
+    const [hoveredOption, setHoveredOption] = React.useState<string | null>(null);
+    
+    return (
+      <div style={{ position: 'relative' }}>
+        <div style={{
+          display: 'flex',
+          backgroundColor: '#f3f4f6',
+          borderRadius: '6px',
+          padding: '2px',
+          gap: '2px',
+        }}>
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onChange(option.value)}
+              onMouseEnter={() => setHoveredOption(option.value)}
+              onMouseLeave={() => setHoveredOption(null)}
+              title={option.title}
+              style={{
+                flex: 1,
+                padding: '8px',
+                backgroundColor: value === option.value ? 'white' : 'transparent',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: value === option.value ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+              }}
+            >
+              <img
+                src={option.icon}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  opacity: value === option.value ? 1 : 0.6,
+                }}
+                alt={option.title}
+              />
+              
+              {/* Modern Tooltip */}
+              {hoveredOption === option.value && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  marginBottom: '8px',
+                  padding: '6px 10px',
+                  backgroundColor: '#1f2937',
+                  color: 'white',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  borderRadius: '4px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  zIndex: 1000,
+                  pointerEvents: 'none',
+                  animation: 'fadeIn 0.15s ease',
+                }}>
+                  {option.title}
+                  {/* Tooltip arrow */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '4px solid transparent',
+                    borderRight: '4px solid transparent',
+                    borderTop: '4px solid #1f2937',
+                  }} />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+        
+        {/* Labels below buttons */}
+        <div style={{
+          display: 'flex',
+          marginTop: '6px',
+          gap: '2px',
+        }}>
+          {options.map((option) => (
+            <div
+              key={option.value}
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                fontSize: '10px',
+                color: value === option.value ? '#374151' : '#9ca3af',
+                fontWeight: value === option.value ? '600' : '500',
+                transition: 'color 0.15s ease',
+              }}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -74,13 +199,13 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
       <div
         style={{
           position: 'fixed',
-          right: isCollapsed ? '-320px' : '0',
+          right: isCollapsed ? '-256px' : '0',
           top: '50px',
           bottom: '60px',
-          width: '320px',
+          width: '256px',
           backgroundColor: '#f7f9fb',
-          padding: '20px',
-          paddingTop: '56px',
+          padding: '16px',
+          paddingTop: '52px',
           zIndex: 900,
           boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.06)',
           overflowY: 'auto',
@@ -170,116 +295,121 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
         )}
 
       {/* Class Selection */}
-      <SectionCard style={{ marginBottom: '16px' }}>
-        <SectionHeader>Class Selection</SectionHeader>
+      <SectionCard style={{ borderBottom: 'none', paddingBottom: '16px', marginBottom: '16px' }}>
+        <SectionHeader>Class</SectionHeader>
         <button
           onClick={onSelectClass}
           style={{
             width: '100%',
-            padding: '12px 14px',
+            padding: '10px 12px',
             backgroundColor: 'white',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
+            border: '1px solid #e5e7eb',
             borderRadius: '6px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            fontSize: '14px',
-            color: '#2d3748',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+            gap: '10px',
+            fontSize: '13px',
+            color: '#374151',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f7fafc';
-            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.08)';
+            e.currentTarget.style.backgroundColor = '#f9fafb';
+            e.currentTarget.style.borderColor = '#d1d5db';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.04)';
+            e.currentTarget.style.borderColor = '#e5e7eb';
           }}
         >
           <img
             src="/segmentation/static/icons/class.png"
-            style={{ width: '20px', height: '20px', opacity: 0.8 }}
+            style={{ width: '18px', height: '18px', opacity: 0.7 }}
             alt="Class"
           />
           <span id="tb_current_class" style={{ flex: 1, textAlign: 'left', fontWeight: '500' }}>No class</span>
         </button>
       </SectionCard>
 
-      {/* Mask Visibility */}
-      <SectionCard style={{ marginBottom: '16px' }}>
-        <SectionHeader>Mask Layers</SectionHeader>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ listStyle: 'none' }}>
-              <ToolButton
-                id="tb_toggle_mask"
-                icon="/segmentation/static/icons/show_mask.png"
-                checked={showMask}
-                onClick={toggleMask}
-                title="Toggle mask visibility"
-              />
-            </div>
-            <span style={{ fontSize: '13px', fontWeight: '500', color: '#2d3748' }}>Show Mask</span>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '8px', listStyle: 'none' }}>
-            <ToolButton
-              id="tb_mask_final"
-              icon="/segmentation/static/icons/mask_final.png"
-              checked={maskType === 'final'}
-              onClick={() => setMaskType('final')}
-              title="Final mask"
-            />
-            <ToolButton
-              id="tb_mask_user"
-              icon="/segmentation/static/icons/mask_user.png"
-              checked={maskType === 'user'}
-              onClick={() => setMaskType('user')}
-              title="User mask"
-            />
-            <ToolButton
-              id="tb_mask_errors"
-              icon="/segmentation/static/icons/mask_errors.png"
-              checked={maskType === 'errors'}
-              onClick={() => setMaskType('errors')}
-              title="Error mask"
-            />
-          </div>
+      {/* Mask Layers */}
+      <SectionCard>
+        <SectionHeader>Layers</SectionHeader>
+        
+        {/* Show/Hide Toggle */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '12px',
+          padding: '8px 0',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Show Mask</span>
+          <button
+            onClick={toggleMask}
+            style={{
+              width: '44px',
+              height: '24px',
+              backgroundColor: showMask ? '#3b82f6' : '#e5e7eb',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'background-color 0.2s ease',
+            }}
+            title="Toggle mask visibility"
+          >
+            <div style={{
+              position: 'absolute',
+              top: '2px',
+              left: showMask ? '22px' : '2px',
+              width: '20px',
+              height: '20px',
+              backgroundColor: 'white',
+              borderRadius: '50%',
+              transition: 'left 0.2s ease',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+            }} />
+          </button>
+        </div>
+        
+        {/* Mask Type Selector */}
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Type</div>
+          <SegmentedControl
+            options={[
+              { value: 'final', icon: '/segmentation/static/icons/mask_final.png', title: 'Final mask', label: 'Final' },
+              { value: 'user', icon: '/segmentation/static/icons/mask_user.png', title: 'User mask', label: 'User' },
+              { value: 'errors', icon: '/segmentation/static/icons/mask_errors.png', title: 'Error mask', label: 'Errors' },
+            ]}
+            value={maskType}
+            onChange={(type) => setMaskType(type as 'final' | 'user' | 'errors')}
+          />
         </div>
       </SectionCard>
 
       {/* Filters */}
-      <SectionCard>
-        <SectionHeader>Image Filters</SectionHeader>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <SectionCard style={{ borderBottom: 'none' }}>
+        <SectionHeader>Adjustments</SectionHeader>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Brightness Slider */}
           <div>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              marginBottom: '8px' 
+              marginBottom: '6px' 
             }}>
               <label style={{ 
-                fontSize: '13px', 
-                color: '#4a5568',
+                fontSize: '12px', 
+                color: '#6b7280',
                 fontWeight: '500',
               }}>
                 Brightness
               </label>
               <span style={{
-                fontSize: '12px',
-                color: '#718096',
+                fontSize: '11px',
+                color: '#9ca3af',
                 fontWeight: '600',
-                backgroundColor: '#edf2f7',
-                padding: '2px 8px',
-                borderRadius: '4px',
               }}>
                 {brightness}%
               </span>
@@ -293,10 +423,10 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               onChange={(e) => setBrightness(Number(e.target.value))}
               style={{ 
                 width: '100%',
-                height: '6px',
-                borderRadius: '3px',
+                height: '4px',
+                borderRadius: '2px',
                 outline: 'none',
-                background: `linear-gradient(to right, #3182ce 0%, #3182ce ${(brightness / 800) * 100}%, #e2e8f0 ${(brightness / 800) * 100}%, #e2e8f0 100%)`,
+                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(brightness / 800) * 100}%, #e5e7eb ${(brightness / 800) * 100}%, #e5e7eb 100%)`,
                 WebkitAppearance: 'none',
                 appearance: 'none',
                 cursor: 'pointer',
@@ -305,7 +435,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 const target = e.target as HTMLInputElement;
                 const value = Number(target.value);
                 const percentage = (value / 800) * 100;
-                target.style.background = `linear-gradient(to right, #3182ce 0%, #3182ce ${percentage}%, #e2e8f0 ${percentage}%, #e2e8f0 100%)`;
+                target.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
               }}
             />
           </div>
@@ -316,22 +446,19 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              marginBottom: '8px' 
+              marginBottom: '6px' 
             }}>
               <label style={{ 
-                fontSize: '13px', 
-                color: '#4a5568',
+                fontSize: '12px', 
+                color: '#6b7280',
                 fontWeight: '500',
               }}>
                 Saturation
               </label>
               <span style={{
-                fontSize: '12px',
-                color: '#718096',
+                fontSize: '11px',
+                color: '#9ca3af',
                 fontWeight: '600',
-                backgroundColor: '#edf2f7',
-                padding: '2px 8px',
-                borderRadius: '4px',
               }}>
                 {saturation}%
               </span>
@@ -345,10 +472,10 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               onChange={(e) => setSaturation(Number(e.target.value))}
               style={{ 
                 width: '100%',
-                height: '6px',
-                borderRadius: '3px',
+                height: '4px',
+                borderRadius: '2px',
                 outline: 'none',
-                background: `linear-gradient(to right, #3182ce 0%, #3182ce ${(saturation / 800) * 100}%, #e2e8f0 ${(saturation / 800) * 100}%, #e2e8f0 100%)`,
+                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(saturation / 800) * 100}%, #e5e7eb ${(saturation / 800) * 100}%, #e5e7eb 100%)`,
                 WebkitAppearance: 'none',
                 appearance: 'none',
                 cursor: 'pointer',
@@ -357,34 +484,70 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 const target = e.target as HTMLInputElement;
                 const value = Number(target.value);
                 const percentage = (value / 800) * 100;
-                target.style.background = `linear-gradient(to right, #3182ce 0%, #3182ce ${percentage}%, #e2e8f0 ${percentage}%, #e2e8f0 100%)`;
+                target.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
               }}
             />
           </div>
 
-          {/* Toggle Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', listStyle: 'none' }}>
-              <ToolButton
-                id="tb_toggle_contrast"
-                icon="/segmentation/static/icons/contrast.png"
-                checked={contrast}
-                onClick={() => setContrast(!contrast)}
-                title="Toggle contrast"
-              />
-              <span style={{ fontSize: '13px', fontWeight: '500', color: '#2d3748' }}>Contrast</span>
-            </div>
+          {/* Toggle Buttons Row */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setContrast(!contrast)}
+              style={{
+                flex: 1,
+                padding: '8px',
+                backgroundColor: contrast ? '#3b82f6' : 'white',
+                color: contrast ? 'white' : '#374151',
+                border: contrast ? 'none' : '1px solid #e5e7eb',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!contrast) {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!contrast) {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
+              }}
+              title="Toggle contrast"
+            >
+              Contrast
+            </button>
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', listStyle: 'none' }}>
-              <ToolButton
-                id="tb_toggle_invert"
-                icon="/segmentation/static/icons/invert.png"
-                checked={invert}
-                onClick={() => setInvert(!invert)}
-                title="Toggle invert"
-              />
-              <span style={{ fontSize: '13px', fontWeight: '500', color: '#2d3748' }}>Invert</span>
-            </div>
+            <button
+              onClick={() => setInvert(!invert)}
+              style={{
+                flex: 1,
+                padding: '8px',
+                backgroundColor: invert ? '#3b82f6' : 'white',
+                color: invert ? 'white' : '#374151',
+                border: invert ? 'none' : '1px solid #e5e7eb',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!invert) {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!invert) {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }
+              }}
+              title="Toggle invert"
+            >
+              Invert
+            </button>
           </div>
 
           {/* Reset Button */}
@@ -392,27 +555,26 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
             onClick={resetFilters}
             style={{
               width: '100%',
-              padding: '10px',
+              padding: '8px',
               backgroundColor: 'transparent',
-              color: '#4a5568',
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              color: '#6b7280',
+              border: '1px solid #e5e7eb',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '500',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              marginTop: '4px',
+              transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f7fafc';
-              e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.16)';
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.color = '#374151';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
+              e.currentTarget.style.color = '#6b7280';
             }}
           >
-            Reset Filters
+            Reset
           </button>
         </div>
       </SectionCard>

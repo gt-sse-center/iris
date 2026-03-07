@@ -409,8 +409,8 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 6px;
-  border-radius: 3px;
+  height: 4px;
+  border-radius: 2px;
   outline: none;
   cursor: pointer;
 }
@@ -419,45 +419,45 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #3182ce;
+  background: #3b82f6;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  background: #2c5aa0;
-  transform: scale(1.15);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
 input[type="range"]::-webkit-slider-thumb:active {
-  transform: scale(1.05);
+  transform: scale(1);
 }
 
 /* Firefox */
 input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #3182ce;
+  background: #3b82f6;
   cursor: pointer;
   border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s ease;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-  background: #2c5aa0;
-  transform: scale(1.15);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
 input[type="range"]::-moz-range-thumb:active {
-  transform: scale(1.05);
+  transform: scale(1);
 }
 
 input[type="range"]::-moz-range-track {
@@ -467,17 +467,29 @@ input[type="range"]::-moz-range-track {
 
 /* Microsoft Edge/IE */
 input[type="range"]::-ms-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #3182ce;
+  background: #3b82f6;
   cursor: pointer;
   border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 input[type="range"]::-ms-track {
   background: transparent;
   border-color: transparent;
   color: transparent;
+}
+
+/* Tooltip fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
