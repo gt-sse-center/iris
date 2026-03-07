@@ -55,55 +55,7 @@ const SegmentationApp: React.FC = () => {
   // Get config loader hook
   const { loadConfig } = useConfigLoader();
 
-  // Export GeoTIFF function - memoized to prevent re-renders
-  const exportGeoTIFF = useCallback(async () => {
-    try {
-      // Get current image ID from React store (primary source)
-      const imageId = useSegmentationStore.getState().currentImageId;
-      if (!imageId) {
-        alert('No image loaded');
-        return;
-      }
-
-      const w = window as any;
-      if (w.show_message) w.show_message('Exporting GeoTIFF...');
-
-      const response = await fetch(`/segmentation/api/export-geotiff/${imageId}`, {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${imageId}_annotated.tif`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        if (w.show_message) w.show_message('GeoTIFF exported successfully', 2000);
-      } else {
-        const error = await response.json();
-        const errorMsg = error.message || error.error || 'Export failed';
-        if (w.show_dialogue) {
-          w.show_dialogue('error', `<p>Could not export GeoTIFF: ${errorMsg}</p>`);
-        } else {
-          alert(`Export failed: ${errorMsg}`);
-        }
-      }
-    } catch (error) {
-      const w = window as any;
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (w.show_dialogue) {
-        w.show_dialogue('error', `<p>Could not export GeoTIFF: ${errorMsg}</p>`);
-      } else {
-        alert(`Export failed: ${errorMsg}`);
-      }
-    }
-  }, []);
+  // Note: Export GeoTIFF is now handled in TopBar component
 
   // Check authentication status
   useEffect(() => {

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useSegmentationStore } from '../../stores/segmentationStore';
-import ToolButton from './toolbar/ToolButton';
 
 interface RightPanelProps {
   onSelectClass: () => void;

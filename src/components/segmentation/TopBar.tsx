@@ -165,6 +165,7 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
 
   return (
     <div
+      data-testid="top-bar"
       style={{
         position: 'fixed',
         top: 0,
@@ -286,6 +287,7 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           👤 Profile
         </button>
         <button
+          data-testid="preferences-button"
           onClick={onOpenPreferences}
           style={{
             background: 'transparent',
