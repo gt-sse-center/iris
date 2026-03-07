@@ -214,7 +214,9 @@ const ProjectConfigTab: React.FC<ProjectConfigTabProps> = ({ onStateChange }) =>
     
     if (chatRef.current?.setData) {
       // Pass the chat config from the loaded config, or undefined if not present
-      console.log('[ProjectConfigTab] Populating ChatSection with:', config.chat);
+      if ((window as any).IRIS_DEBUG) {
+        console.log('[ProjectConfigTab] Populating ChatSection with:', config.chat);
+      }
       chatRef.current.setData(config.chat);
     } else {
       console.error('[ProjectConfigTab] ChatSection ref not available');

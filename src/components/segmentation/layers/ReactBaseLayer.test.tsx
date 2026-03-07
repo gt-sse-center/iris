@@ -20,7 +20,8 @@ describe('ReactBaseLayer', () => {
         <div>Test content</div>
       </ReactBaseLayer>
     );
-    expect(container.firstChild).toHaveStyle({ width: '400px', height: '300px' });
+    // Component now uses responsive 100% width/height instead of fixed pixels
+    expect(container.firstChild).toHaveStyle({ width: '100%', height: '100%' });
   });
 
   it('applies custom className', () => {

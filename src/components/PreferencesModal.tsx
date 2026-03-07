@@ -265,7 +265,6 @@ const PreferencesModalContent: React.FC<PreferencesModalProps> = ({ isOpen, onCl
                     className={`tablinks ${activeTab === 'configuration' ? 'checked' : ''}`}
                     data-testid="tab-configuration"
                     onClick={() => {
-                      console.log('Configuration tab clicked');
                       setActiveTab('configuration');
                     }}
                   >

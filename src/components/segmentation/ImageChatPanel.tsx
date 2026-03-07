@@ -48,7 +48,9 @@ const ImageChatPanel: React.FC<ImageChatPanelProps> = ({
     
     // Add loading handler
     script.onload = () => {
-      console.log('Utterances script loaded successfully');
+      if ((window as any).IRIS_DEBUG) {
+        console.log('Utterances script loaded successfully');
+      }
     };
     
     script.onerror = (error) => {

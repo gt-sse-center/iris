@@ -132,9 +132,10 @@ describe('ViewerComparison', () => {
     });
     
     const container = screen.getByText('Loading configuration...').parentElement;
+    // Component now uses responsive 100% height instead of fixed 800px
     expect(container).toHaveStyle({
       width: '100%',
-      height: '800px',
+      height: '100%',
     });
   });
 });

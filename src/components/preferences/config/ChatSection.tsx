@@ -39,16 +39,22 @@ const ChatSection = forwardRef<ChatSectionRef>((_props, ref) => {
       };
     },
     setData: (data: ChatConfig | undefined) => {
-      console.log('[ChatSection] setData called with:', data);
+      if ((window as any).IRIS_DEBUG) {
+        console.log('[ChatSection] setData called with:', data);
+      }
       if (data) {
         // Use values from the loaded config
-        console.log('[ChatSection] Setting github_repo to:', data.github_repo);
+        if ((window as any).IRIS_DEBUG) {
+          console.log('[ChatSection] Setting github_repo to:', data.github_repo);
+        }
         setEnabled(data.enabled ?? true);
         setGithubRepo(data.github_repo || '');
         setUtterancesTheme(data.utterances_theme || 'github-light');
       } else {
         // If no chat config exists in the file, show empty/default values
-        console.log('[ChatSection] No chat config provided, using defaults');
+        if ((window as any).IRIS_DEBUG) {
+          console.log('[ChatSection] No chat config provided, using defaults');
+        }
         setEnabled(true);
         setGithubRepo(''); // Empty placeholder
         setUtterancesTheme('github-light');

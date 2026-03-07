@@ -31,7 +31,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
     const w = window as any;
     // Only call if function exists and vars is initialized
     if (w.vars && w.show_mask) {
-      console.log('[RightPanel] showMask changed to:', showMask);
+      if (w.IRIS_DEBUG) console.log('[RightPanel] showMask changed to:', showMask);
       try {
         w.show_mask(showMask);
       } catch (error) {

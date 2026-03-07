@@ -40,7 +40,6 @@ const PasswordResetRequestsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('🔑 Password Reset Requests page loaded!');
     fetchRequests();
   }, []);
 
