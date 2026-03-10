@@ -33,7 +33,6 @@ const UsersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('🚀 React Admin Users page loaded!');
     fetchUsers();
   }, [orderBy, isAscending]);
 

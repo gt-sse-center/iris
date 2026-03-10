@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import SegmentationToolbar from './components/segmentation/SegmentationToolbar';
-import SegmentationStatusBar from './components/segmentation/SegmentationStatusBar';
+import TopBar from './components/segmentation/TopBar';
+import LeftToolbar from './components/segmentation/LeftToolbar';
+import RightPanel from './components/segmentation/RightPanel';
+import BottomBar from './components/segmentation/BottomBar';
 import SegmentationModals from './components/segmentation/SegmentationModals';
 import ViewerComparison from './components/segmentation/ViewerComparison';
 import ImageChatPanel from './components/segmentation/ImageChatPanel';
@@ -42,6 +44,7 @@ const SegmentationApp: React.FC = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
 
   // Chat configuration from project config
   const config = useSegmentationStore((state) => state.config);
@@ -52,55 +55,7 @@ const SegmentationApp: React.FC = () => {
   // Get config loader hook
   const { loadConfig } = useConfigLoader();
 
-  // Export GeoTIFF function - memoized to prevent re-renders
-  const exportGeoTIFF = useCallback(async () => {
-    try {
-      // Get current image ID from React store (primary source)
-      const imageId = useSegmentationStore.getState().currentImageId;
-      if (!imageId) {
-        alert('No image loaded');
-        return;
-      }
-
-      const w = window as any;
-      if (w.show_message) w.show_message('Exporting GeoTIFF...');
-
-      const response = await fetch(`/segmentation/api/export-geotiff/${imageId}`, {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${imageId}_annotated.tif`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        if (w.show_message) w.show_message('GeoTIFF exported successfully', 2000);
-      } else {
-        const error = await response.json();
-        const errorMsg = error.message || error.error || 'Export failed';
-        if (w.show_dialogue) {
-          w.show_dialogue('error', `<p>Could not export GeoTIFF: ${errorMsg}</p>`);
-        } else {
-          alert(`Export failed: ${errorMsg}`);
-        }
-      }
-    } catch (error) {
-      const w = window as any;
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (w.show_dialogue) {
-        w.show_dialogue('error', `<p>Could not export GeoTIFF: ${errorMsg}</p>`);
-      } else {
-        alert(`Export failed: ${errorMsg}`);
-      }
-    }
-  }, []);
+  // Note: Export GeoTIFF is now handled in TopBar component
 
   // Check authentication status
   useEffect(() => {
@@ -362,19 +317,42 @@ const SegmentationApp: React.FC = () => {
   }, []);
 
   return (
-    <div>
-      <SegmentationToolbar
-        onExportGeoTIFF={exportGeoTIFF}
-        onSelectClass={handleSelectClass}
-        onResetMask={handleResetMask}
-        onOpenHelp={handleOpenHelp}
+    <div style={{ height: '100vh', overflow: 'hidden' }}>
+      {/* Top Bar */}
+      <TopBar
         onOpenPreferences={handleOpenPreferences}
+        onOpenHelp={handleOpenHelp}
+        onOpenProfile={handleOpenProfile}
       />
 
-      <ViewerComparison />
+      {/* Left Toolbar */}
+      <LeftToolbar onResetMask={handleResetMask} />
 
-      <SegmentationStatusBar
-        onOpenProfile={handleOpenProfile}
+      {/* Main Canvas Area */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '60px',
+          right: isRightPanelCollapsed ? '0' : '280px',
+          top: '50px',
+          bottom: '60px',
+          overflow: 'auto',
+          backgroundColor: '#f5f5f5',
+          transition: 'right 0.3s ease',
+        }}
+      >
+        <ViewerComparison />
+      </div>
+
+      {/* Right Panel */}
+      <RightPanel 
+        onSelectClass={handleSelectClass}
+        isCollapsed={isRightPanelCollapsed}
+        onToggleCollapse={() => setIsRightPanelCollapsed(!isRightPanelCollapsed)}
+      />
+
+      {/* Bottom Bar */}
+      <BottomBar
         onOpenImageInfo={handleOpenImageInfo}
         onOpenConfusionMatrix={handleOpenConfusionMatrix}
       />

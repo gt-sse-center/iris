@@ -209,9 +209,15 @@ const ReactViewManager: React.FC<ReactViewManagerProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'row',
+        flexWrap: 'nowrap', // Keep all views in one row
         gap: '0px',
         width: '100%',
+        height: '100%',
+        minHeight: '0', // Allow shrinking
+        maxHeight: '100%', // Don't exceed parent
         position: 'relative',
+        overflow: 'hidden', // Prevent overflow, force fit
+        boxSizing: 'border-box', // Include padding/border in dimensions
         // PHASE 3A: Add cursor style based on interaction state
         cursor: isDragging ? 'grabbing' : (isMouseDown ? 'grab' : 'default'),
         ...style

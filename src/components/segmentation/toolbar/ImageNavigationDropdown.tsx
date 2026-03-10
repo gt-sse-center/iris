@@ -19,7 +19,7 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
 }) => {
   const { images, currentImageId } = useSegmentationStore();
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLLIElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -68,10 +68,10 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
   };
 
   return (
-    <li
+    <div
       className="toolbutton icon_button image-navigation-dropdown"
-      ref={dropdownRef}
-      style={{ width: '220px', position: 'relative' }}
+      ref={dropdownRef as React.RefObject<HTMLDivElement>}
+      style={{ width: '220px', position: 'relative', listStyle: 'none' }}
     >
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -144,6 +144,6 @@ export const ImageNavigationDropdown: React.FC<ImageNavigationDropdownProps> = (
           )}
         </div>
       )}
-    </li>
+    </div>
   );
 };

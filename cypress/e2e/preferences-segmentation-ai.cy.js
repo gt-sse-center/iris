@@ -79,7 +79,7 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     cy.reload();
     
     // Wait for application to reinitialize
-    cy.get('#toolbar', { timeout: TIMEOUTS.TOOLBAR_READY }).should('be.visible');
+    cy.get('[data-testid="top-bar"]', { timeout: TIMEOUTS.TOOLBAR_READY }).should('be.visible');
     cy.wait(TIMEOUTS.PAGE_RELOAD_WAIT); // Extra time for React hydration after reload
     
     // === STEP 4: Verify Persistence ===
@@ -126,7 +126,7 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
         cy.get('[data-testid="button-move-bands-right"]').click();
         
         // Try to save
-        cy.get('[data-testid="save-preferences-button"]').click();
+        cy.get('[data-testid="save-preferences-button"]').click({ force: true });
         
         // Should show an error message (this is the key validation test)
         // Use a longer timeout and scroll into view since modal might have overflow

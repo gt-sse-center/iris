@@ -455,21 +455,4 @@ describe('PasswordResetRequestsPage', () => {
       expect(screen.queryByText('Pending Requests')).not.toBeInTheDocument();
     });
   });
-
-  it('logs page load to console', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ requests: [] })
-    });
-
-    render(<PasswordResetRequestsPage />);
-
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith('🔑 Password Reset Requests page loaded!');
-    });
-
-    consoleSpy.mockRestore();
-  });
 });

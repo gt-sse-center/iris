@@ -143,55 +143,93 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
   // Handle canvas size changes and coordinate transformation
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      // Set canvas internal dimensions to match viewport dimensions (like legacy)
-      // Legacy uses: [canvas.width, canvas.height] = vm.calculateViewWidthHeight();
-      canvas.width = width;
-      canvas.height = height;
-      
-      const w = window as any;
-      
-      const imageShape = (window as any).getImageShapeFromStore ? 
-        (window as any).getImageShapeFromStore() : w.vars?.image_shape;
-      
-      if (imageShape) {
-        const imageWidth = imageShape[1];  // width is image_shape[1]
-        const imageHeight = imageShape[0]; // height is image_shape[0]
+    if (!canvas) return;
+    
+    const updateCanvasSize = () => {
+      // Get actual container dimensions instead of using fixed width/height props
+      const container = canvas.parentElement;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const containerWidth = rect.width;
+        const containerHeight = rect.height;
         
-        const newTransform = createCoordinateTransform(
-          canvas.width, canvas.height,
-          imageWidth, imageHeight
-        );
-        setTransform(newTransform);
+        const w = window as any;
+        const imageShape = (window as any).getImageShapeFromStore ? 
+          (window as any).getImageShapeFromStore() : w.vars?.image_shape;
         
-        // Disable image smoothing for pixel-perfect rendering
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.imageSmoothingEnabled = false;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          ctx.shadowBlur = 0;
-          ctx.shadowColor = '';
+        let actualWidth = containerWidth;
+        let actualHeight = containerHeight;
+        
+        // Maintain aspect ratio based on image dimensions
+        if (imageShape) {
+          const imageWidth = imageShape[1];
+          const imageHeight = imageShape[0];
+          const imageAspectRatio = imageWidth / imageHeight;
+          const containerAspectRatio = containerWidth / containerHeight;
           
-          // Add full canvas transformation tracking (enables zoom/pan)
-          // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
-          addTrackTransforms(ctx);
+          if (containerAspectRatio > imageAspectRatio) {
+            // Container is wider than image - fit to height
+            actualWidth = containerHeight * imageAspectRatio;
+            actualHeight = containerHeight;
+          } else {
+            // Container is taller than image - fit to width
+            actualWidth = containerWidth;
+            actualHeight = containerWidth / imageAspectRatio;
+          }
           
-          // CRITICAL: Only set base transformation on canvas initialization, not on every render
-          // Check if this canvas already has a transformation applied by legacy zoom
-          const currentTransform = ctx.getTransform();
-          const isIdentityTransform = [
-            currentTransform.a, currentTransform.b, currentTransform.c,
-            currentTransform.d, currentTransform.e, currentTransform.f
-          ].every((val, idx) => val === [1, 0, 0, 1, 0, 0][idx]);
+          // Set canvas internal dimensions to maintain aspect ratio
+          canvas.width = actualWidth;
+          canvas.height = actualHeight;
           
-          // Only set base transformation if no zoom/pan has been applied yet
-          if (isIdentityTransform) {
-            const scale = canvas.width / imageShape[0]; // Use image height for both dimensions
+          // Center the canvas in the container
+          canvas.style.left = `${(containerWidth - actualWidth) / 2}px`;
+          canvas.style.top = `${(containerHeight - actualHeight) / 2}px`;
+          canvas.style.width = `${actualWidth}px`;
+          canvas.style.height = `${actualHeight}px`;
+          
+          const newTransform = createCoordinateTransform(
+            actualWidth, actualHeight,
+            imageWidth, imageHeight
+          );
+          setTransform(newTransform);
+          
+          // Disable image smoothing for pixel-perfect rendering
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = '';
+            
+            // Add full canvas transformation tracking (enables zoom/pan)
+            // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
+            addTrackTransforms(ctx);
+            
+            // CRITICAL: Always reset transformation when canvas size changes
+            // This ensures the preview fits properly after resize
+            const scale = actualWidth / imageShape[0]; // Use image height for both dimensions
             ctx.setTransform(scale, 0, 0, scale, 0, 0);
           }
         }
       }
+    };
+    
+    // Initial size update
+    updateCanvasSize();
+    
+    // Watch for container size changes using ResizeObserver
+    const container = canvas.parentElement;
+    if (container) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateCanvasSize();
+      });
+      
+      resizeObserver.observe(container);
+      
+      return () => {
+        resizeObserver.disconnect();
+      };
     }
   }, [width, height]); // REMOVED renderPreview dependency to prevent transformation reset
   
@@ -433,8 +471,6 @@ const ReactPreviewLayer: React.FC<ReactPreviewLayerProps> = ({
     >
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
         style={canvasStyle}
         className="view-canvas preview-canvas"
       />

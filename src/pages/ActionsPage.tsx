@@ -38,7 +38,6 @@ const ActionsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('🚀 React Actions page loaded (full React)');
     fetchActions();
   }, [type, orderBy, isAscending]);
 

@@ -21,7 +21,11 @@ describe('ReactViewPort', () => {
         onImageLocationChange={() => {}}
       />
     );
-    expect(container.firstChild).toHaveStyle({ width: '400px', height: '300px' });
+    // Component uses flex layout with 100% height
+    expect(container.firstChild).toHaveStyle({ 
+      height: '100%',
+      position: 'relative',
+    });
   });
 
   it('renders with controls hidden', () => {
@@ -36,6 +40,10 @@ describe('ReactViewPort', () => {
         onImageLocationChange={() => {}}
       />
     );
-    expect(container.firstChild).toHaveStyle({ width: '400px', height: '300px' });
+    // Component uses flex layout with 100% height
+    expect(container.firstChild).toHaveStyle({ 
+      height: '100%',
+      position: 'relative',
+    });
   });
 });

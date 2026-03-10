@@ -55,8 +55,8 @@ const ReactBaseLayer: React.FC<ReactBaseLayerProps & {
     position: 'absolute',
     top: 0,
     left: 0,
-    width: `${width}px`,
-    height: `${height}px`,
+    width: '100%', // Use percentage instead of fixed pixels
+    height: '100%', // Use percentage instead of fixed pixels
     zIndex,
     ...style,
   };

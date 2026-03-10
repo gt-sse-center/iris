@@ -120,56 +120,96 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
   // Handle canvas size changes
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      // CRITICAL: Set canvas internal dimensions to match legacy system exactly
-      // Legacy uses: [canvas.width, canvas.height] = vm.calculateViewWidthHeight();
-      // This means canvas internal dimensions = viewport dimensions (not image dimensions)
-      canvas.width = width;
-      canvas.height = height;
-      
-      // Disable image smoothing for pixel-perfect rendering
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.imageSmoothingEnabled = false;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = '';
+    if (!canvas) return;
+    
+    const updateCanvasSize = () => {
+      // Get actual container dimensions instead of using fixed width/height props
+      const container = canvas.parentElement;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const containerWidth = rect.width;
+        const containerHeight = rect.height;
         
-        // Add full canvas transformation tracking (enables zoom/pan)
-        // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
-        addTrackTransforms(ctx);
-        
-        // CRITICAL: Set the initial transformation matrix to match legacy system exactly
-        // image_shape[0] = height, image_shape[1] = width
-        // We need to scale canvas dimensions to image dimensions
+        // Get image shape to maintain aspect ratio
         const w = window as any;
-        
         const imageShape = (window as any).getImageShapeFromStore ? 
           (window as any).getImageShapeFromStore() : w.vars?.image_shape;
         
+        let actualWidth = containerWidth;
+        let actualHeight = containerHeight;
+        
+        // Maintain aspect ratio based on image dimensions
         if (imageShape) {
-          // CRITICAL: Only set base transformation on canvas initialization, not on every render
-          // Check if this canvas already has a transformation applied by legacy zoom
-          const currentTransform = ctx.getTransform();
-          const isIdentityTransform = [
-            currentTransform.a, currentTransform.b, currentTransform.c,
-            currentTransform.d, currentTransform.e, currentTransform.f
-          ].every((val, idx) => val === [1, 0, 0, 1, 0, 0][idx]);
+          const imageWidth = imageShape[1];
+          const imageHeight = imageShape[0];
+          const imageAspectRatio = imageWidth / imageHeight;
+          const containerAspectRatio = containerWidth / containerHeight;
           
-          // Only set base transformation if no zoom/pan has been applied yet
-          if (isIdentityTransform) {
-            const scaleX = canvas.width / imageShape[1];  // canvas width / image width
-            const scaleY = canvas.height / imageShape[0]; // canvas height / image height
-            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          if (containerAspectRatio > imageAspectRatio) {
+            // Container is wider than image - fit to height
+            actualWidth = containerHeight * imageAspectRatio;
+            actualHeight = containerHeight;
+          } else {
+            // Container is taller than image - fit to width
+            actualWidth = containerWidth;
+            actualHeight = containerWidth / imageAspectRatio;
           }
-        } else {
-          console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available for canvas transformation - using identity transform');
         }
+        
+        // Set canvas internal dimensions to maintain aspect ratio
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+        
+        // Center the canvas in the container
+        canvas.style.left = `${(containerWidth - actualWidth) / 2}px`;
+        canvas.style.top = `${(containerHeight - actualHeight) / 2}px`;
+        canvas.style.width = `${actualWidth}px`;
+        canvas.style.height = `${actualHeight}px`;
+        
+        // Disable image smoothing for pixel-perfect rendering
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = false;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.shadowBlur = 0;
+          ctx.shadowColor = '';
+          
+          // Add full canvas transformation tracking (enables zoom/pan)
+          // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
+          addTrackTransforms(ctx);
+          
+          // CRITICAL: Always reset transformation when canvas size changes
+          // This ensures the mask fits properly after resize
+          if (imageShape) {
+            const scaleX = actualWidth / imageShape[1];  // canvas width / image width
+            const scaleY = actualHeight / imageShape[0]; // canvas height / image height
+            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+          } else {
+            console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available for canvas transformation - using identity transform');
+          }
+        }
+        
+        // Re-render after size change
+        renderMask();
       }
+    };
+    
+    // Initial size update
+    updateCanvasSize();
+    
+    // Watch for container size changes using ResizeObserver
+    const container = canvas.parentElement;
+    if (container) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateCanvasSize();
+      });
       
-      // Re-render after size change
-      renderMask();
+      resizeObserver.observe(container);
+      
+      return () => {
+        resizeObserver.disconnect();
+      };
     }
   }, [width, height, renderMask]);
   
@@ -304,8 +344,6 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     >
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
         style={canvasStyle}
         className="view-canvas mask-canvas"
       />

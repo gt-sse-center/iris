@@ -80,7 +80,6 @@ const ImagesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('🚀 React Images page loaded (full React)');
     fetchImages();
   }, [orderBy, isAscending]);
 

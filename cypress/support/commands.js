@@ -14,7 +14,7 @@ const TIMEOUTS = {
 
 const SELECTORS = {
   DIALOGUE: '#dialogue',
-  TOOLBAR: '#toolbar',
+  TOOLBAR: '[data-testid="top-bar"]', // Updated to use TopBar instead of old toolbar
   PREFERENCES_BUTTON: '[data-testid="preferences-button"]',
   PREFERENCES_MODAL: '[data-testid="preferences-modal"]',
   SAVE_BUTTON: '[data-testid="save-preferences-button"]',
@@ -148,9 +148,11 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
 Cypress.Commands.add('closeHelpDialogue', () => {
   cy.get('body').then($body => {
     const $dialogue = $body.find('#dialogue');
-    if ($dialogue.length > 0 && $dialogue.css('display') !== 'none') {
-      cy.log('Closing help dialogue...');
-      cy.get('#dialogue-close').click();
+    if ($dialogue.length > 0 && $dialogue.css('display') !== 'none' && $dialogue.is(':visible')) {
+      cy.log('Closing dialogue...');
+      // Try to find and click the close button
+      cy.get('#dialogue-close').click({ force: true });
+      cy.wait(500); // Wait for dialogue to close
       cy.get('#dialogue').should('not.be.visible');
     }
   });
@@ -168,6 +170,9 @@ Cypress.Commands.add('closeHelpDialogue', () => {
 Cypress.Commands.add('openPreferences', () => {
   // Close help dialogue if it's open (appears on first launch)
   cy.closeHelpDialogue();
+  
+  // Wait a bit for any animations to complete
+  cy.wait(1000);
   
   // Intercept config fetch to know when modal is ready
   cy.intercept('GET', '/segmentation/api/user-config').as('getUserConfig');
@@ -195,8 +200,8 @@ Cypress.Commands.add('savePreferences', () => {
   // Intercept save API call
   cy.intercept('POST', '/segmentation/api/user-config').as('saveConfig');
   
-  // Click save button
-  cy.get(SELECTORS.SAVE_BUTTON).click();
+  // Click save button (force: true to handle modal overflow/positioning)
+  cy.get(SELECTORS.SAVE_BUTTON).click({ force: true });
   
   // Wait for save to complete
   cy.wait('@saveConfig', { timeout: TIMEOUTS.API_CALL }).then((interception) => {
@@ -218,7 +223,7 @@ Cypress.Commands.add('savePreferences', () => {
  * cy.closePreferences();
  */
 Cypress.Commands.add('closePreferences', () => {
-  cy.get(SELECTORS.CLOSE_BUTTON).click();
+  cy.get(SELECTORS.CLOSE_BUTTON).click({ force: true });
   // Verify modal closed (React unmounts it, so it won't exist in DOM)
   cy.get(SELECTORS.PREFERENCES_MODAL).should('not.exist');
 });

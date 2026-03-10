@@ -11,6 +11,7 @@ interface ToolButtonProps {
   children?: React.ReactNode;
   checked?: boolean;
   disabled?: boolean;
+  label?: string;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -23,7 +24,8 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   testId,
   children,
   checked = false,
-  disabled = false
+  disabled = false,
+  label
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
@@ -41,13 +43,40 @@ const ToolButton: React.FC<ToolButtonProps> = ({
       onClick={handleClick}
       title={title}
       style={{
-        ...style,
         opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? 'not-allowed' : 'pointer'
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        justifyContent: label ? 'flex-start' : 'center',
+        padding: label ? '8px 10px' : '8px',
+        minHeight: '36px',
+        ...style,
       }}
       data-testid={testId}
     >
-      <img src={icon} className="icon" alt="" />
+      <img 
+        src={icon} 
+        className="icon" 
+        alt="" 
+        style={{ 
+          flexShrink: 0, 
+          width: '20px', 
+          height: '20px',
+          filter: checked ? 'brightness(0) invert(1)' : 'none',
+        }} 
+      />
+      {label && (
+        <span style={{ 
+          color: checked ? 'white' : '#2c3e50', 
+          fontSize: '13px', 
+          fontWeight: checked ? '600' : 'normal',
+          whiteSpace: 'nowrap',
+          flex: 1,
+        }}>
+          {label}
+        </span>
+      )}
       {children}
     </li>
   );
