@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { UserProfile } from '../types/iris';
+import { useTheme } from '../contexts/ThemeContext';
+import type { ThemeName } from '../themes/colorschemes';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -25,6 +27,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
+  
+  // Theme management (localStorage only)
+  const { themeName, setTheme } = useTheme();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -138,6 +143,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     setPasswordError(null);
     setPasswordSuccess(null);
   };
+  
+  const handleThemeChange = (newTheme: ThemeName) => {
+    // Simply update the theme - it will be saved to localStorage automatically
+    setTheme(newTheme);
+  };
 
   const handleImageClick = (imageId: string) => {
     // Call legacy JavaScript function to navigate to image
@@ -249,6 +259,62 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
               {profile.is_current_user && (
                 <>
+                  {/* Theme Selector */}
+                  <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                    <h3>Appearance</h3>
+                    
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
+                        Theme:
+                      </label>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="theme"
+                            value="light"
+                            checked={themeName === 'light'}
+                            onChange={() => handleThemeChange('light')}
+                            style={{ marginRight: '8px' }}
+                          />
+                          <span>☀️ Light (Sunset)</span>
+                        </label>
+                        
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="theme"
+                            value="dark"
+                            checked={themeName === 'dark'}
+                            onChange={() => handleThemeChange('dark')}
+                            style={{ marginRight: '8px' }}
+                          />
+                          <span>🌙 Dark (Midnight)</span>
+                        </label>
+                        
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="theme"
+                            value="system"
+                            checked={themeName === 'system'}
+                            onChange={() => handleThemeChange('system')}
+                            style={{ marginRight: '8px' }}
+                          />
+                          <span>💻 System Default</span>
+                        </label>
+                      </div>
+                      
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '10px', marginBottom: '0' }}>
+                        {themeName === 'system' 
+                          ? 'Theme will match your operating system preference'
+                          : `Using ${themeName === 'light' ? 'Light (Sunset)' : 'Dark (Midnight)'} theme`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
                   {!showPasswordForm ? (
                     <p>
                       <button onClick={() => setShowPasswordForm(true)}>Change Password</button>

@@ -12,6 +12,7 @@
 {% block title %}segmentation{% endblock %}
 {% block head %}
     <!-- Load all existing CSS and JavaScript exactly as before -->
+    <link rel="stylesheet" href="{{ url_for('segmentation.static', filename='css/theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('segmentation.static', filename='css/segmentation.css') }}">
 
     <script type="text/javascript" src="{{ url_for('main.static', filename='javascripts/views.js') }}"></script>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ThemeProvider } from './contexts/ThemeContext';
 import TopBar from './components/segmentation/TopBar';
 import LeftToolbar from './components/segmentation/LeftToolbar';
 import RightPanel from './components/segmentation/RightPanel';
@@ -317,9 +318,10 @@ const SegmentationApp: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* Top Bar */}
-      <TopBar
+    <ThemeProvider>
+      <div style={{ height: '100vh', overflow: 'hidden' }}>
+        {/* Top Bar */}
+        <TopBar
         onOpenPreferences={handleOpenPreferences}
         onOpenHelp={handleOpenHelp}
         onOpenProfile={handleOpenProfile}
@@ -442,6 +444,7 @@ const SegmentationApp: React.FC = () => {
         </div>
       )}
     </div>
+    </ThemeProvider>
   );
 };
 

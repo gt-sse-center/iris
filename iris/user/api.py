@@ -145,3 +145,4 @@ def change_password():
     db.session.commit()
     
     return flask.jsonify({'message': 'Password changed successfully'})
+

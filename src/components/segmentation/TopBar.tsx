@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSegmentationStore } from '../../stores/segmentationStore';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ImageNavigationDropdown } from './toolbar/ImageNavigationDropdown';
 
 interface TopBarProps {
@@ -9,6 +10,7 @@ interface TopBarProps {
 }
 
 const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenProfile }) => {
+  const { theme } = useTheme();
   const config = useSegmentationStore((state) => state.config);
   const projectName = config?.name || 'IRIS';
   
@@ -172,8 +174,8 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
         left: 0,
         right: 0,
         height: '50px',
-        backgroundColor: '#2c3e50',
-        color: 'white',
+        backgroundColor: theme.toolbarBg,
+        color: theme.toolbarText,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -194,20 +196,28 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           disabled={!hasPrev || isLoading}
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
+            border: `1px solid ${theme.toolbarBorder}`,
+            color: theme.toolbarText,
             cursor: !hasPrev || isLoading ? 'not-allowed' : 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '13px',
             opacity: !hasPrev || isLoading ? 0.5 : 1,
           }}
+          onMouseEnter={(e) => {
+            if (hasPrev && !isLoading) {
+              e.currentTarget.style.backgroundColor = theme.toolbarHover;
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
           title={hasPrev ? "Previous image" : "No previous image"}
         >
           ◀ Prev
         </button>
         
-        <div style={{ color: 'white' }}>
+        <div style={{ color: theme.toolbarText }}>
           <ImageNavigationDropdown onNavigate={handleNavigateToImage} />
         </div>
         
@@ -216,33 +226,51 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           disabled={!hasNext || isLoading}
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
+            border: `1px solid ${theme.toolbarBorder}`,
+            color: theme.toolbarText,
             cursor: !hasNext || isLoading ? 'not-allowed' : 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '13px',
             opacity: !hasNext || isLoading ? 0.5 : 1,
           }}
+          onMouseEnter={(e) => {
+            if (hasNext && !isLoading) {
+              e.currentTarget.style.backgroundColor = theme.toolbarHover;
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
           title={hasNext ? "Next image" : "No more images"}
         >
           Next ▶
         </button>
         
-        <div style={{ width: '1px', height: '30px', backgroundColor: 'rgba(255,255,255,0.3)', margin: '0 5px' }} />
+        <div style={{ width: '1px', height: '30px', backgroundColor: theme.toolbarBorder, margin: '0 5px' }} />
         
         <button
           onClick={handleSave}
           disabled={isLoading}
           style={{
-            background: maskChanged ? '#e74c3c' : 'transparent',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
+            background: maskChanged ? theme.buttonDangerBg : 'transparent',
+            border: `1px solid ${theme.toolbarBorder}`,
+            color: theme.toolbarText,
             cursor: isLoading ? 'not-allowed' : 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '13px',
             fontWeight: maskChanged ? 'bold' : 'normal',
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading && !maskChanged) {
+              e.currentTarget.style.backgroundColor = theme.toolbarHover;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!maskChanged) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
           }}
           title={isLoading ? "Saving..." : maskChanged ? "Save mask (unsaved changes)" : "Save mask"}
         >
@@ -254,12 +282,20 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           disabled={isLoading}
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
+            border: `1px solid ${theme.toolbarBorder}`,
+            color: theme.toolbarText,
             cursor: isLoading ? 'not-allowed' : 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '13px',
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = theme.toolbarHover;
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
           title="Export GeoTIFF"
         >
@@ -274,13 +310,13 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           style={{
             background: 'transparent',
             border: 'none',
-            color: 'white',
+            color: theme.toolbarText,
             cursor: 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '14px',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="User Profile"
         >
@@ -292,13 +328,13 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           style={{
             background: 'transparent',
             border: 'none',
-            color: 'white',
+            color: theme.toolbarText,
             cursor: 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '14px',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="Settings"
         >
@@ -309,13 +345,13 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           style={{
             background: 'transparent',
             border: 'none',
-            color: 'white',
+            color: theme.toolbarText,
             cursor: 'pointer',
             padding: '5px 10px',
             borderRadius: '4px',
             fontSize: '14px',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="Help"
         >
