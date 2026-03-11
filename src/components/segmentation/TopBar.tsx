@@ -2,6 +2,15 @@ import React from 'react';
 import { useSegmentationStore } from '../../stores/segmentationStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ImageNavigationDropdown } from './toolbar/ImageNavigationDropdown';
+import { 
+  SaveIcon, 
+  DownloadIcon, 
+  UserIcon, 
+  SettingsIcon, 
+  HelpIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon 
+} from '../icons/ToolbarIcons';
 
 interface TopBarProps {
   onOpenPreferences: () => void;
@@ -199,10 +208,14 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: `1px solid ${theme.toolbarBorder}`,
             color: theme.toolbarText,
             cursor: !hasPrev || isLoading ? 'not-allowed' : 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
+            padding: '6px 12px',
+            borderRadius: '6px',
             fontSize: '13px',
             opacity: !hasPrev || isLoading ? 0.5 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontWeight: '500',
           }}
           onMouseEnter={(e) => {
             if (hasPrev && !isLoading) {
@@ -214,7 +227,8 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           }}
           title={hasPrev ? "Previous image" : "No previous image"}
         >
-          ◀ Prev
+          <ChevronLeftIcon size={16} color={theme.toolbarText} />
+          Prev
         </button>
         
         <div style={{ color: theme.toolbarText }}>
@@ -229,10 +243,14 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: `1px solid ${theme.toolbarBorder}`,
             color: theme.toolbarText,
             cursor: !hasNext || isLoading ? 'not-allowed' : 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
+            padding: '6px 12px',
+            borderRadius: '6px',
             fontSize: '13px',
             opacity: !hasNext || isLoading ? 0.5 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontWeight: '500',
           }}
           onMouseEnter={(e) => {
             if (hasNext && !isLoading) {
@@ -244,7 +262,8 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           }}
           title={hasNext ? "Next image" : "No more images"}
         >
-          Next ▶
+          Next
+          <ChevronRightIcon size={16} color={theme.toolbarText} />
         </button>
         
         <div style={{ width: '1px', height: '30px', backgroundColor: theme.toolbarBorder, margin: '0 5px' }} />
@@ -257,10 +276,13 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: `1px solid ${theme.toolbarBorder}`,
             color: theme.toolbarText,
             cursor: isLoading ? 'not-allowed' : 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
+            padding: '6px 12px',
+            borderRadius: '6px',
             fontSize: '13px',
-            fontWeight: maskChanged ? 'bold' : 'normal',
+            fontWeight: maskChanged ? '600' : '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
           onMouseEnter={(e) => {
             if (!isLoading && !maskChanged) {
@@ -274,7 +296,8 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           }}
           title={isLoading ? "Saving..." : maskChanged ? "Save mask (unsaved changes)" : "Save mask"}
         >
-          💾 Save
+          <SaveIcon size={16} color={theme.toolbarText} />
+          Save
         </button>
         
         <button
@@ -285,9 +308,13 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: `1px solid ${theme.toolbarBorder}`,
             color: theme.toolbarText,
             cursor: isLoading ? 'not-allowed' : 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
+            padding: '6px 12px',
+            borderRadius: '6px',
             fontSize: '13px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
           onMouseEnter={(e) => {
             if (!isLoading) {
@@ -299,12 +326,13 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
           }}
           title="Export GeoTIFF"
         >
-          📥 Export
+          <DownloadIcon size={16} color={theme.toolbarText} />
+          Export
         </button>
       </div>
 
       {/* Right: User & Settings */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <button
           onClick={onOpenProfile}
           style={{
@@ -312,15 +340,19 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: 'none',
             color: theme.toolbarText,
             cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            fontSize: '14px',
+            padding: '8px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="User Profile"
         >
-          👤 Profile
+          <UserIcon size={20} color={theme.toolbarText} />
         </button>
         <button
           data-testid="preferences-button"
@@ -330,15 +362,19 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: 'none',
             color: theme.toolbarText,
             cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            fontSize: '14px',
+            padding: '8px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="Settings"
         >
-          ⚙️ Settings
+          <SettingsIcon size={20} color={theme.toolbarText} />
         </button>
         <button
           onClick={onOpenHelp}
@@ -347,15 +383,19 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPreferences, onOpenHelp, onOpenPr
             border: 'none',
             color: theme.toolbarText,
             cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            fontSize: '14px',
+            padding: '8px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="Help"
         >
-          ❓ Help
+          <HelpIcon size={20} color={theme.toolbarText} />
         </button>
       </div>
     </div>
