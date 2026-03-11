@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface ToolButtonProps {
   id?: string;
@@ -27,6 +28,8 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   disabled = false,
   label
 }) => {
+  const { theme } = useTheme();
+  
   const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
     e.preventDefault();
@@ -35,6 +38,16 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   };
 
   const buttonClassName = `toolbutton icon_button ${className} ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}`.trim();
+
+  // Determine if we're in dark theme
+  const isDarkTheme = theme.gray900 === '#E8EDF2';
+  
+  // Icon filter logic:
+  // Light theme: checked = no filter (black), unchecked = invert (white)
+  // Dark theme: checked = invert (white), unchecked = invert (white)
+  const iconFilter = isDarkTheme
+    ? 'invert(1) brightness(0.9)' // Dark theme: always white
+    : (checked ? 'none' : 'invert(1) brightness(0.9)'); // Light theme: black when checked, white when unchecked
 
   return (
     <li
@@ -55,6 +68,10 @@ const ToolButton: React.FC<ToolButtonProps> = ({
         maxWidth: '100%',
         boxSizing: 'border-box',
         margin: '0',
+        backgroundColor: checked ? theme.toolbarActive : theme.toolbarHover,
+        border: `1px solid ${checked ? theme.toolbarActive : 'transparent'}`,
+        borderRadius: '6px',
+        transition: 'all 0.2s ease',
         ...style,
       }}
       data-testid={testId}
@@ -67,14 +84,14 @@ const ToolButton: React.FC<ToolButtonProps> = ({
           flexShrink: 0, 
           width: '18px', 
           height: '18px',
-          filter: checked ? 'brightness(0) invert(1)' : 'none',
+          filter: iconFilter,
         }} 
       />
       {label && (
         <span style={{ 
-          color: checked ? 'white' : '#2c3e50', 
+          color: theme.toolbarText, 
           fontSize: '13px', 
-          fontWeight: checked ? '600' : 'normal',
+          fontWeight: checked ? '600' : '500',
           whiteSpace: 'nowrap',
           flex: 1,
         }}>

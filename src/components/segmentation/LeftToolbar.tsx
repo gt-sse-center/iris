@@ -2,12 +2,15 @@ import React from 'react';
 import ToolButton from './toolbar/ToolButton';
 import PaintbrushSelector from './toolbar/PaintbrushSelector';
 import { useSegmentationStore } from '../../stores/segmentationStore';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LeftToolbarProps {
   onResetMask: () => void;
 }
 
 const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
+  const { theme } = useTheme();
+  
   const [isExpanded, setIsExpanded] = React.useState(() => {
     // Load preference from localStorage
     const saved = localStorage.getItem('leftToolbarExpanded');
@@ -61,7 +64,7 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
         top: '50px',
         bottom: '60px',
         width: `${toolbarWidth}px`,
-        backgroundColor: '#34495e',
+        backgroundColor: theme.toolbarBg,
         display: 'flex',
         flexDirection: 'column',
         alignItems: isExpanded ? 'stretch' : 'center',
@@ -80,8 +83,8 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
           background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.3)',
-          color: 'white',
+          border: `1px solid ${theme.toolbarBorder}`,
+          color: theme.toolbarText,
           cursor: 'pointer',
           padding: '5px',
           margin: '0 10px 10px 10px',
@@ -138,7 +141,7 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
       </div>
 
       {/* Separator */}
-      <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px auto' }} />
+      <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: theme.toolbarBorder, margin: '5px auto' }} />
 
       {/* Editing Tools */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0 5px', alignItems: isExpanded ? 'stretch' : 'center', boxSizing: 'border-box' }}>
@@ -164,7 +167,7 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
       </div>
 
       {/* Separator */}
-      <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px auto' }} />
+      <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: theme.toolbarBorder, margin: '5px auto' }} />
 
       {/* AI & Reset Tools */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0 5px', alignItems: isExpanded ? 'stretch' : 'center', boxSizing: 'border-box' }}>
