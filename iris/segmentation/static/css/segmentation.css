@@ -341,7 +341,7 @@ body {
 }
 
 .paintbrush-selector-container .toolbutton {
-  max-width: calc(100% - 4px) !important;
+  box-sizing: border-box;
 }
 
 /* Modern Range Slider Styling */

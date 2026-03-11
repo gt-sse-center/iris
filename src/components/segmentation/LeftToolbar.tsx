@@ -99,17 +99,18 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
       </button>
 
       {/* Drawing Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0' }}>
-        <ToolButton
-          id="tb_tool_move"
-          icon="/segmentation/static/icons/move.png"
-          checked={currentTool === 'move'}
-          onClick={() => setCurrentTool('move')}
-          disabled={isLoading}
-          title="Move/Pan"
-          label={isExpanded ? 'Move' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0 5px', alignItems: isExpanded ? 'stretch' : 'center', boxSizing: 'border-box' }}>
+        <div style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}>
+          <ToolButton
+            id="tb_tool_move"
+            icon="/segmentation/static/icons/move.png"
+            checked={currentTool === 'move'}
+            onClick={() => setCurrentTool('move')}
+            disabled={isLoading}
+            title="Move/Pan"
+            label={isExpanded ? 'Move' : undefined}
+          />
+        </div>
         
         <PaintbrushSelector
           id="tb_tool_draw"
@@ -120,7 +121,7 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           title="Draw pixels"
           dropdownType="draw"
           label={isExpanded ? 'Draw' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px' } : {}}
+          style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}
         />
         
         <PaintbrushSelector
@@ -132,7 +133,7 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
           title="Erase pixels"
           dropdownType="eraser"
           label={isExpanded ? 'Erase' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px' } : {}}
+          style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}
         />
       </div>
 
@@ -140,60 +141,65 @@ const LeftToolbar: React.FC<LeftToolbarProps> = ({ onResetMask }) => {
       <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px auto' }} />
 
       {/* Editing Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0' }}>
-        <ToolButton
-          id="tb_undo"
-          icon="/segmentation/static/icons/undo.png"
-          onClick={handleUndo}
-          title="Undo"
-          label={isExpanded ? 'Undo' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0 5px', alignItems: isExpanded ? 'stretch' : 'center', boxSizing: 'border-box' }}>
+        <div style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}>
+          <ToolButton
+            id="tb_undo"
+            icon="/segmentation/static/icons/undo.png"
+            onClick={handleUndo}
+            title="Undo"
+            label={isExpanded ? 'Undo' : undefined}
+          />
+        </div>
         
-        <ToolButton
-          id="tb_redo"
-          icon="/segmentation/static/icons/redo.png"
-          onClick={handleRedo}
-          title="Redo"
-          label={isExpanded ? 'Redo' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
-        />
+        <div style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}>
+          <ToolButton
+            id="tb_redo"
+            icon="/segmentation/static/icons/redo.png"
+            onClick={handleRedo}
+            title="Redo"
+            label={isExpanded ? 'Redo' : undefined}
+          />
+        </div>
       </div>
 
       {/* Separator */}
       <div style={{ width: isExpanded ? 'calc(100% - 30px)' : '80%', height: '1px', backgroundColor: '#7f8c8d', margin: '5px auto' }} />
 
       {/* AI & Reset Tools */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0' }}>
-        <ToolButton
-          id="tb_predict_mask"
-          icon="/segmentation/static/icons/ai.png"
-          onClick={handlePredictMask}
-          disabled={isLoading}
-          title={isLoading ? "Predicting..." : "Predict mask using AI"}
-          label={isExpanded ? 'AI Predict' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', listStyle: 'none', width: '100%', padding: isExpanded ? '0 15px' : '0 5px', alignItems: isExpanded ? 'stretch' : 'center', boxSizing: 'border-box' }}>
+        <div style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}>
+          <ToolButton
+            id="tb_predict_mask"
+            icon="/segmentation/static/icons/ai.png"
+            onClick={handlePredictMask}
+            disabled={isLoading}
+            title={isLoading ? "Predicting..." : "Predict mask using AI"}
+            label={isExpanded ? 'AI Predict' : undefined}
+          />
+        </div>
         
-        <ToolButton
-          id="tb_reset_mask"
-          icon="/segmentation/static/icons/reset_mask.png"
-          onClick={onResetMask}
-          disabled={isLoading}
-          title="Reset mask"
-          label={isExpanded ? 'Reset Mask' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
-        />
+        <div style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}>
+          <ToolButton
+            id="tb_reset_mask"
+            icon="/segmentation/static/icons/reset_mask.png"
+            onClick={onResetMask}
+            disabled={isLoading}
+            title="Reset mask"
+            label={isExpanded ? 'Reset Mask' : undefined}
+          />
+        </div>
         
-        <ToolButton
-          id="tb_tool_reset_views"
-          icon="/segmentation/static/icons/reset_views.png"
-          onClick={handleResetViews}
-          disabled={isLoading}
-          title="Reset views"
-          label={isExpanded ? 'Reset Views' : undefined}
-          style={isExpanded ? { width: '150px', maxWidth: '150px', boxSizing: 'border-box' } : {}}
-        />
+        <div style={isExpanded ? { maxWidth: '100%' } : { width: '50px' }}>
+          <ToolButton
+            id="tb_tool_reset_views"
+            icon="/segmentation/static/icons/reset_views.png"
+            onClick={handleResetViews}
+            disabled={isLoading}
+            title="Reset views"
+            label={isExpanded ? 'Reset Views' : undefined}
+          />
+        </div>
       </div>
     </div>
   );

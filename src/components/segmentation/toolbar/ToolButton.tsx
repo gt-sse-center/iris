@@ -49,8 +49,12 @@ const ToolButton: React.FC<ToolButtonProps> = ({
         alignItems: 'center',
         gap: '8px',
         justifyContent: label ? 'flex-start' : 'center',
-        padding: label ? '8px 10px' : '8px',
-        minHeight: '36px',
+        padding: label ? '6px 10px' : '6px',
+        minHeight: '32px',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        margin: '0',
         ...style,
       }}
       data-testid={testId}
@@ -61,8 +65,8 @@ const ToolButton: React.FC<ToolButtonProps> = ({
         alt="" 
         style={{ 
           flexShrink: 0, 
-          width: '20px', 
-          height: '20px',
+          width: '18px', 
+          height: '18px',
           filter: checked ? 'brightness(0) invert(1)' : 'none',
         }} 
       />
