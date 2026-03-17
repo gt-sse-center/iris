@@ -1,12 +1,23 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { createRef } from 'react';
+import { ThemeProvider } from '../../../contexts/ThemeContext';
 import ChatSection from './ChatSection';
+
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener: vi.fn(), removeListener: vi.fn(),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+  })));
+});
+
+const renderWithTheme = (ui: React.ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);
 
 describe('ChatSection', () => {
   it('loads and displays config from backend', () => {
     const ref = createRef<any>();
-    render(<ChatSection ref={ref} />);
+    renderWithTheme(<ChatSection ref={ref} />);
     
     act(() => {
       ref.current?.setData({
@@ -23,7 +34,7 @@ describe('ChatSection', () => {
 
   it('disables fields when chat is disabled', () => {
     const ref = createRef<any>();
-    render(<ChatSection ref={ref} />);
+    renderWithTheme(<ChatSection ref={ref} />);
     
     act(() => {
       ref.current?.setData({
@@ -44,7 +55,7 @@ describe('ChatSection', () => {
 
   it('shows validation error when enabled but repo empty', () => {
     const ref = createRef<any>();
-    render(<ChatSection ref={ref} />);
+    renderWithTheme(<ChatSection ref={ref} />);
     
     act(() => {
       ref.current?.setData({

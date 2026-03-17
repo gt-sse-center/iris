@@ -1,352 +1,140 @@
 import { useState, useImperativeHandle, forwardRef } from 'react';
+import { useConfigStyles } from './useConfigStyles';
 
 interface ClassEntry {
   id: number;
   name: string;
   description: string;
-  colour: [number, number, number, number]; // RGBA array [R, G, B, A]
+  colour: [number, number, number, number];
   hasUserColour: boolean;
-  userColour: [number, number, number, number]; // Optional RGBA array
+  userColour: [number, number, number, number];
 }
 
-/**
- * ClassListEditor Component
- * 
- * Manages the list of segmentation classes.
- * Each class requires:
- * - name: Class name
- * - description: Optional description
- * - colour: Required RGBA color array [R, G, B, A] (0-255)
- * - user_colour: Optional RGBA color array for user display
- */
 const ClassListEditor = forwardRef<any, {}>((_props, ref) => {
   const [classes, setClasses] = useState<ClassEntry[]>([]);
   const [nextId, setNextId] = useState(1);
+  const s = useConfigStyles();
 
-  const getData = () => {
-    return classes.map((cls) => {
-      const classData: any = {
-        name: cls.name,
-        colour: cls.colour,
-      };
-      
-      // Only include description if it's not empty (Issue #17)
-      if (cls.description.trim()) {
-        classData.description = cls.description;
-      }
-      
-      // Only include user_colour if enabled
-      if (cls.hasUserColour) {
-        classData.user_colour = cls.userColour;
-      }
-      
-      return classData;
-    });
-  };
+  const getData = () => classes.map((cls) => {
+    const d: any = { name: cls.name, colour: cls.colour };
+    if (cls.description.trim()) d.description = cls.description;
+    if (cls.hasUserColour) d.user_colour = cls.userColour;
+    return d;
+  });
 
   const setData = (data: any[]) => {
-    if (!Array.isArray(data)) {
-      return;
-    }
-    
-    const loadedClasses = data.map((cls, index) => ({
-      id: index + 1,
-      name: cls.name || '',
-      description: cls.description || '',
-      colour: cls.colour || [255, 255, 255, 0],
-      hasUserColour: !!cls.user_colour,
+    if (!Array.isArray(data)) return;
+    const loaded = data.map((cls, i) => ({
+      id: i + 1, name: cls.name || '', description: cls.description || '',
+      colour: cls.colour || [255, 255, 255, 0], hasUserColour: !!cls.user_colour,
       userColour: cls.user_colour || [0, 255, 255, 70],
     }));
-    
-    setClasses(loadedClasses);
-    setNextId(loadedClasses.length + 1);
+    setClasses(loaded);
+    setNextId(loaded.length + 1);
   };
 
-  useImperativeHandle(ref, () => ({
-    getData,
-    setData,
-  }));
+  useImperativeHandle(ref, () => ({ getData, setData }));
 
   const addClass = () => {
-    setClasses([
-      ...classes,
-      {
-        id: nextId,
-        name: '',
-        description: '',
-        colour: [255, 255, 255, 0], // Default: white, transparent
-        hasUserColour: false,
-        userColour: [0, 255, 255, 70], // Default: cyan, semi-transparent
-      },
-    ]);
+    setClasses([...classes, { id: nextId, name: '', description: '', colour: [255, 255, 255, 0], hasUserColour: false, userColour: [0, 255, 255, 70] }]);
     setNextId(nextId + 1);
   };
-
-  const removeClass = (id: number) => {
-    setClasses(classes.filter((c) => c.id !== id));
-  };
-
-  const updateClass = (id: number, field: 'name' | 'description', value: string) => {
+  const removeClass = (id: number) => setClasses(classes.filter((c) => c.id !== id));
+  const updateClass = (id: number, field: 'name' | 'description', value: string) =>
     setClasses(classes.map((c) => (c.id === id ? { ...c, [field]: value } : c)));
-  };
 
   const updateColour = (id: number, index: number, value: number) => {
-    setClasses(
-      classes.map((c) => {
-        if (c.id === id) {
-          const newColour: [number, number, number, number] = [...c.colour] as [number, number, number, number];
-          newColour[index] = Math.max(0, Math.min(255, value)); // Clamp to 0-255
-          return { ...c, colour: newColour };
-        }
-        return c;
-      })
-    );
+    setClasses(classes.map((c) => {
+      if (c.id !== id) return c;
+      const newColour = [...c.colour] as [number, number, number, number];
+      newColour[index] = Math.max(0, Math.min(255, value));
+      return { ...c, colour: newColour };
+    }));
   };
 
   const updateUserColour = (id: number, index: number, value: number) => {
-    setClasses(
-      classes.map((c) => {
-        if (c.id === id) {
-          const newUserColour: [number, number, number, number] = [...c.userColour] as [
-            number,
-            number,
-            number,
-            number
-          ];
-          newUserColour[index] = Math.max(0, Math.min(255, value)); // Clamp to 0-255
-          return { ...c, userColour: newUserColour };
-        }
-        return c;
-      })
-    );
+    setClasses(classes.map((c) => {
+      if (c.id !== id) return c;
+      const nc = [...c.userColour] as [number, number, number, number];
+      nc[index] = Math.max(0, Math.min(255, value));
+      return { ...c, userColour: nc };
+    }));
   };
 
-  const toggleUserColour = (id: number) => {
+  const toggleUserColour = (id: number) =>
     setClasses(classes.map((c) => (c.id === id ? { ...c, hasUserColour: !c.hasUserColour } : c)));
-  };
+
+  const rgbaLabels = ['Red', 'Green', 'Blue', 'Alpha'];
+  const numInput: React.CSSProperties = { ...s.inputStyle, padding: '6px', fontSize: '12px' };
 
   return (
     <div>
       {classes.map((cls) => (
-        <div
-          key={cls.id}
-          style={{
-            marginBottom: '20px',
-            padding: '16px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            background: '#fafafa',
-          }}
-        >
+        <div key={cls.id} style={{ ...s.sectionBox, marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-            <button
-              onClick={() => removeClass(cls.id)}
-              style={{
-                marginLeft: 'auto',
-                padding: '4px 12px',
-                border: '1px solid #dc3545',
-                background: 'white',
-                color: '#dc3545',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Remove
-            </button>
+            <span style={{ fontWeight: 600, color: s.theme.gray900, fontSize: '14px' }}>{cls.name || 'New Class'}</span>
+            <button onClick={() => removeClass(cls.id)} style={{ ...s.buttonDanger, marginLeft: 'auto' }}>Remove</button>
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              <strong>Name *</strong>
-            </label>
-            <small style={{ display: 'block', color: '#666', marginBottom: '4px' }}>Name of the class.</small>
-            <input
-              type="text"
-              value={cls.name}
-              onChange={(e) => updateClass(cls.id, 'name', e.target.value)}
-              style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
+            <label style={s.labelStyle}>Name *</label>
+            <small style={s.descriptionStyle}>Name of the class.</small>
+            <input type="text" value={cls.name} onChange={(e) => updateClass(cls.id, 'name', e.target.value)} style={s.inputStyle} />
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              <strong>Description</strong>
-            </label>
-            <small style={{ display: 'block', color: '#666', marginBottom: '4px' }}>
-              Optional description explaining the class (e.g. why is it different from another class, etc.)
-            </small>
-            <input
-              type="text"
-              placeholder="Optional description"
-              value={cls.description}
-              onChange={(e) => updateClass(cls.id, 'description', e.target.value)}
-              style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
+            <label style={s.labelStyle}>Description</label>
+            <small style={s.descriptionStyle}>Optional description explaining the class.</small>
+            <input type="text" placeholder="Optional description" value={cls.description}
+              onChange={(e) => updateClass(cls.id, 'description', e.target.value)} style={s.inputStyle} />
           </div>
 
-          {/* Colour Field - Required */}
+          {/* Colour RGBA */}
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              <strong>Colour (RGBA) *</strong>
-            </label>
-            <small style={{ display: 'block', color: '#666', marginBottom: '8px' }}>
-              Required color for this class. RGBA values (0-255). Example: [255, 255, 0, 70] = yellow with transparency
-            </small>
+            <label style={s.labelStyle}>Colour (RGBA) *</label>
+            <small style={s.descriptionStyle}>Required color. RGBA values (0-255). Example: [255, 255, 0, 70] = yellow with transparency</small>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Red</label>
-                <input
-                  type="number"
-                  value={cls.colour[0]}
-                  onChange={(e) => updateColour(cls.id, 0, parseInt(e.target.value) || 0)}
-                  min="0"
-                  max="255"
-                  style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Green</label>
-                <input
-                  type="number"
-                  value={cls.colour[1]}
-                  onChange={(e) => updateColour(cls.id, 1, parseInt(e.target.value) || 0)}
-                  min="0"
-                  max="255"
-                  style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Blue</label>
-                <input
-                  type="number"
-                  value={cls.colour[2]}
-                  onChange={(e) => updateColour(cls.id, 2, parseInt(e.target.value) || 0)}
-                  min="0"
-                  max="255"
-                  style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Alpha</label>
-                <input
-                  type="number"
-                  value={cls.colour[3]}
-                  onChange={(e) => updateColour(cls.id, 3, parseInt(e.target.value) || 0)}
-                  min="0"
-                  max="255"
-                  style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                />
-              </div>
+              {rgbaLabels.map((lbl, i) => (
+                <div key={lbl}>
+                  <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', color: s.theme.gray600 }}>{lbl}</label>
+                  <input type="number" value={cls.colour[i]} min="0" max="255"
+                    onChange={(e) => updateColour(cls.id, i, parseInt(e.target.value) || 0)} style={numInput} />
+                </div>
+              ))}
             </div>
-            {/* Color Preview */}
-            <div
-              style={{
-                marginTop: '8px',
-                height: '30px',
-                borderRadius: '4px',
-                border: '1px solid #ddd',
-                background: `rgba(${cls.colour[0]}, ${cls.colour[1]}, ${cls.colour[2]}, ${cls.colour[3] / 255})`,
-              }}
-            />
+            <div style={{ marginTop: '8px', height: '30px', borderRadius: '6px', border: `1px solid ${s.theme.modalBorder}`,
+              background: `rgba(${cls.colour[0]}, ${cls.colour[1]}, ${cls.colour[2]}, ${cls.colour[3] / 255})` }} />
           </div>
 
-          {/* User Colour Field - Optional */}
+          {/* User Colour */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <input
-                type="checkbox"
-                checked={cls.hasUserColour}
-                onChange={() => toggleUserColour(cls.id)}
-                style={{ cursor: 'pointer' }}
-              />
-              <label style={{ cursor: 'pointer' }} onClick={() => toggleUserColour(cls.id)}>
-                <strong>User Colour (Optional)</strong>
-              </label>
+              <input type="checkbox" checked={cls.hasUserColour} onChange={() => toggleUserColour(cls.id)}
+                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: s.theme.primary }} />
+              <label style={{ cursor: 'pointer', fontWeight: 600, color: s.theme.gray900, fontSize: '14px' }}
+                onClick={() => toggleUserColour(cls.id)}>User Colour (Optional)</label>
             </div>
-            <small style={{ display: 'block', color: '#666', marginBottom: '8px' }}>
-              Optional alternative color for user display. If not set, the main colour will be used.
-            </small>
-
+            <small style={s.descriptionStyle}>Optional alternative color for user display.</small>
             {cls.hasUserColour && (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Red</label>
-                    <input
-                      type="number"
-                      value={cls.userColour[0]}
-                      onChange={(e) => updateUserColour(cls.id, 0, parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="255"
-                      style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Green</label>
-                    <input
-                      type="number"
-                      value={cls.userColour[1]}
-                      onChange={(e) => updateUserColour(cls.id, 1, parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="255"
-                      style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Blue</label>
-                    <input
-                      type="number"
-                      value={cls.userColour[2]}
-                      onChange={(e) => updateUserColour(cls.id, 2, parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="255"
-                      style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>Alpha</label>
-                    <input
-                      type="number"
-                      value={cls.userColour[3]}
-                      onChange={(e) => updateUserColour(cls.id, 3, parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="255"
-                      style={{ width: '100%', padding: '4px', fontSize: '12px' }}
-                    />
-                  </div>
+                  {rgbaLabels.map((lbl, i) => (
+                    <div key={lbl}>
+                      <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', color: s.theme.gray600 }}>{lbl}</label>
+                      <input type="number" value={cls.userColour[i]} min="0" max="255"
+                        onChange={(e) => updateUserColour(cls.id, i, parseInt(e.target.value) || 0)} style={numInput} />
+                    </div>
+                  ))}
                 </div>
-                {/* Color Preview */}
-                <div
-                  style={{
-                    marginTop: '8px',
-                    height: '30px',
-                    borderRadius: '4px',
-                    border: '1px solid #ddd',
-                    background: `rgba(${cls.userColour[0]}, ${cls.userColour[1]}, ${cls.userColour[2]}, ${cls.userColour[3] / 255})`,
-                  }}
-                />
+                <div style={{ marginTop: '8px', height: '30px', borderRadius: '6px', border: `1px solid ${s.theme.modalBorder}`,
+                  background: `rgba(${cls.userColour[0]}, ${cls.userColour[1]}, ${cls.userColour[2]}, ${cls.userColour[3] / 255})` }} />
               </>
             )}
           </div>
         </div>
       ))}
-      <button
-        onClick={addClass}
-        style={{
-          width: '100%',
-          padding: '10px',
-          border: '2px dashed #007bff',
-          background: 'white',
-          color: '#007bff',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-        }}
-      >
-        + Add
-      </button>
+      <button onClick={addClass} style={s.buttonDashed}>+ Add</button>
     </div>
   );
 });
 
 ClassListEditor.displayName = 'ClassListEditor';
-
 export default ClassListEditor;

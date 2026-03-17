@@ -1,6 +1,12 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LoginForm } from './LoginForm';
+import { ThemeProvider } from '../contexts/ThemeContext';
+
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>);
+}
 
 describe('LoginForm - Forgot Password Mode', () => {
   beforeEach(() => {
@@ -8,13 +14,13 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('shows forgot password button in login mode', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     expect(screen.getByText('Forgot Password?')).toBeInTheDocument();
   });
 
   it('switches to forgot password mode when button clicked', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     const forgotPasswordButton = screen.getByText('Forgot Password?');
     fireEvent.click(forgotPasswordButton);
@@ -25,7 +31,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('shows back to login button in forgot password mode', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -33,7 +39,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('switches back to login mode from forgot password', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     // Go to forgot password mode
     fireEvent.click(screen.getByText('Forgot Password?'));
@@ -46,7 +52,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('validates username is required in forgot password mode', async () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -64,7 +70,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       text: async () => 'Password reset request submitted successfully! An administrator will process your request.'
     });
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -97,7 +103,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       text: async () => 'User not found!'
     });
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -118,7 +124,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       text: async () => 'This user has no email address on file. Please contact an administrator directly.'
     });
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -139,7 +145,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       text: async () => 'A password reset request is already pending for this user.'
     });
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -155,7 +161,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('clears form when switching modes', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     // Fill in login form
     const usernameInput = screen.getByRole('textbox');
@@ -170,7 +176,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('clears error when switching modes', async () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -195,7 +201,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       text: async () => 'Password reset request submitted successfully!'
     });
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -224,7 +230,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       }), 100))
     );
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -250,7 +256,7 @@ describe('LoginForm - Forgot Password Mode', () => {
       }), 100))
     );
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     
@@ -270,7 +276,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   });
 
   it('can initialize in forgot password mode', () => {
-    render(<LoginForm initialMode="forgot-password" />);
+    renderWithTheme(<LoginForm initialMode="forgot-password" />);
     
     expect(screen.getByRole('heading', { name: 'Forgot Password' })).toBeInTheDocument();
     expect(screen.queryByText('Password:')).not.toBeInTheDocument();
@@ -279,7 +285,7 @@ describe('LoginForm - Forgot Password Mode', () => {
   it('handles network errors gracefully', async () => {
     (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     fireEvent.click(screen.getByText('Forgot Password?'));
     

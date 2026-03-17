@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 import SegmentationAITab from './SegmentationAITab';
 import { UserConfig } from '../../types/iris';
+import { ThemeProvider } from '../../contexts/ThemeContext';
+
+const renderWithTheme = (ui: React.ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);
 
 const mockConfig: UserConfig = {
   segmentation: {
@@ -29,7 +33,7 @@ const mockConfig: UserConfig = {
 
 describe('SegmentationAITab', () => {
   it('renders the AI configuration sections', () => {
-    render(
+    renderWithTheme(
       <SegmentationAITab
         config={mockConfig}
         allBands={['B1', 'B2', 'B3', 'B4']}
@@ -44,7 +48,7 @@ describe('SegmentationAITab', () => {
   });
 
   it('displays model parameter values', () => {
-    render(
+    renderWithTheme(
       <SegmentationAITab
         config={mockConfig}
         allBands={['B1', 'B2', 'B3', 'B4']}
@@ -53,13 +57,12 @@ describe('SegmentationAITab', () => {
       />
     );
 
-    // Check that n_estimators value is displayed in the input field
     const nEstimatorsInput = screen.getByTestId('input-n-estimators') as HTMLInputElement;
     expect(nEstimatorsInput.value).toBe('100');
   });
 
-  it('has correct CSS classes', () => {
-    const { container } = render(
+  it('renders with themed styling', () => {
+    const { container } = renderWithTheme(
       <SegmentationAITab
         config={mockConfig}
         allBands={['B1', 'B2', 'B3', 'B4']}
@@ -67,7 +70,7 @@ describe('SegmentationAITab', () => {
         moveBands={vi.fn()}
       />
     );
-    const div = container.firstChild as HTMLElement;
-    expect(div).toHaveClass('iris-tabs-config', 'tabcontent');
+    const div = container.querySelector('[data-testid="segmentation-ai-tab"]');
+    expect(div).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * Band Selector Component
@@ -19,13 +20,23 @@ const BandSelector: React.FC<BandSelectorProps> = ({
   id = 'bands-selector',
   'data-testid': dataTestId
 }) => {
+  const { theme } = useTheme();
+
   return (
     <select
       id={id}
       data-testid={dataTestId}
       size={10}
       multiple
-      style={{ width: '125px', height: '200px' }}
+      style={{
+        width: '100%', height: '200px', padding: '4px',
+        borderRadius: '6px', border: `1px solid ${theme.inputBorder}`,
+        backgroundColor: theme.inputBg, color: theme.inputText,
+        fontSize: '13px', outline: 'none',
+        // Reset legacy CSS overrides
+        display: 'block', fontWeight: 'normal', boxShadow: 'none',
+        appearance: 'auto', WebkitAppearance: 'listbox',
+      }}
       onChange={(e) => {
         const selected = Array.from(e.target.selectedOptions).map(opt => opt.value);
         onSelectionChange(selected);

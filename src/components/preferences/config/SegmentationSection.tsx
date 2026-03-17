@@ -2,20 +2,18 @@ import { useState, useImperativeHandle, forwardRef } from 'react';
 import { FormInput, FormRadioGroup, FormCheckbox } from './FormField';
 import MaskAreaConfig from './MaskAreaConfig';
 import AIModelConfig, { AIModelConfigData } from './AIModelConfig';
+import { useConfigStyles } from './useConfigStyles';
 
 const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
-  // Basic Configuration
+  const [isOpen, setIsOpen] = useState(false);
+  const s = useConfigStyles();
   const [path, setPath] = useState('');
   const [maskEnum, setMaskEnum] = useState('rgb');
   const [maskAreaEnabled, setMaskAreaEnabled] = useState(false);
   const [maskAreaCoords, setMaskAreaCoords] = useState<number[]>([0, 0, 0, 0]);
   const [scoreEnum, setScoreEnum] = useState('f1');
   const [prioritiseUnmarked, setPrioritiseUnmarked] = useState(true);
-
-  // AI Model Enable/Disable
   const [aiModelEnabled, setAiModelEnabled] = useState(true);
-
-  // AI Model Configuration
   const [aiConfig, setAiConfig] = useState<AIModelConfigData>({
     unverifiedThreshold: 1,
     aiModel: 'IrisSegAIModel*',
@@ -34,56 +32,41 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
     meshgridCells: '3x3',
   });
 
-  const getData = () => {
-    return {
-      path,
-      mask_encoding: maskEnum,
-      mask_area: maskAreaEnabled ? maskAreaCoords : null, // Array of 4 ints or null
-      score: scoreEnum,
-      prioritise_unmarked_images: prioritiseUnmarked,
-      unverified_threshold: aiConfig.unverifiedThreshold,
-      test_images: null, // Issue #5: Always null, used for specifying test image IDs
-      // AI model can be false (disabled) or full object (enabled)
-      ai_model: aiModelEnabled
-        ? {
-            bands: aiConfig.bands.trim() ? aiConfig.bands : null, // Issue #4: Convert empty string to null
-            train_ratio: aiConfig.trainRatio,
-            max_train_pixels: aiConfig.maxTrainPixels,
-            n_estimators: aiConfig.nEstimators,
-            max_depth: aiConfig.maxDepth,
-            n_leaves: aiConfig.nLeaves,
-            suppression_threshold: aiConfig.suppressionThreshold,
-            suppression_filter_size: aiConfig.suppressionFilterSize,
-            suppression_default_class: aiConfig.suppressionDefaultClass,
-            use_edge_filter: aiConfig.useEdgeFilter,
-            use_superpixels: aiConfig.useSuperpixels,
-            use_meshgrid: aiConfig.useMeshgrid,
-            meshgrid_cells: aiConfig.meshgridCells,
-          }
-        : false,
-    };
-  };
+  const getData = () => ({
+    path,
+    mask_encoding: maskEnum,
+    mask_area: maskAreaEnabled ? maskAreaCoords : null,
+    score: scoreEnum,
+    prioritise_unmarked_images: prioritiseUnmarked,
+    unverified_threshold: aiConfig.unverifiedThreshold,
+    test_images: null,
+    ai_model: aiModelEnabled
+      ? {
+          bands: aiConfig.bands.trim() ? aiConfig.bands : null,
+          train_ratio: aiConfig.trainRatio,
+          max_train_pixels: aiConfig.maxTrainPixels,
+          n_estimators: aiConfig.nEstimators,
+          max_depth: aiConfig.maxDepth,
+          n_leaves: aiConfig.nLeaves,
+          suppression_threshold: aiConfig.suppressionThreshold,
+          suppression_filter_size: aiConfig.suppressionFilterSize,
+          suppression_default_class: aiConfig.suppressionDefaultClass,
+          use_edge_filter: aiConfig.useEdgeFilter,
+          use_superpixels: aiConfig.useSuperpixels,
+          use_meshgrid: aiConfig.useMeshgrid,
+          meshgrid_cells: aiConfig.meshgridCells,
+        }
+      : false,
+  });
 
   const setData = (data: any) => {
-    if (!data || typeof data !== 'object') {
-      return;
-    }
-    
-    // Basic fields
-    if (data.path !== undefined) {
-      setPath(data.path);
-    }
-    if (data.mask_encoding !== undefined) {
-      setMaskEnum(data.mask_encoding);
-    }
-    if (data.score !== undefined) {
-      setScoreEnum(data.score);
-    }
+    if (!data || typeof data !== 'object') return;
+    if (data.path !== undefined) setPath(data.path);
+    if (data.mask_encoding !== undefined) setMaskEnum(data.mask_encoding);
+    if (data.score !== undefined) setScoreEnum(data.score);
     if (data.prioritise_unmarked_images !== undefined) {
       setPrioritiseUnmarked(data.prioritise_unmarked_images);
     }
-    
-    // Mask area
     if (data.mask_area !== undefined) {
       if (data.mask_area === null) {
         setMaskAreaEnabled(false);
@@ -93,65 +76,78 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
         setMaskAreaCoords(data.mask_area);
       }
     }
-    
-    // AI Model
     if (data.ai_model !== undefined) {
       if (data.ai_model === false) {
         setAiModelEnabled(false);
       } else if (typeof data.ai_model === 'object' && data.ai_model !== null) {
         setAiModelEnabled(true);
-        
-        const aiModel = data.ai_model;
+        const m = data.ai_model;
         setAiConfig({
-          unverifiedThreshold: data.unverified_threshold !== undefined ? data.unverified_threshold : 1,
+          unverifiedThreshold: data.unverified_threshold ?? 1,
           aiModel: 'IrisSegAIModel*',
-          bands: aiModel.bands !== null ? String(aiModel.bands) : '',
-          trainRatio: aiModel.train_ratio !== undefined ? aiModel.train_ratio : 0.8,
-          maxTrainPixels: aiModel.max_train_pixels !== undefined ? aiModel.max_train_pixels : 20000,
-          nEstimators: aiModel.n_estimators !== undefined ? aiModel.n_estimators : 20,
-          maxDepth: aiModel.max_depth !== undefined ? aiModel.max_depth : 10,
-          nLeaves: aiModel.n_leaves !== undefined ? aiModel.n_leaves : 10,
-          suppressionThreshold: aiModel.suppression_threshold !== undefined ? aiModel.suppression_threshold : 0,
-          suppressionFilterSize: aiModel.suppression_filter_size !== undefined ? aiModel.suppression_filter_size : 5,
-          suppressionDefaultClass: aiModel.suppression_default_class !== undefined ? aiModel.suppression_default_class : 0,
-          useEdgeFilter: aiModel.use_edge_filter !== undefined ? aiModel.use_edge_filter : false,
-          useSuperpixels: aiModel.use_superpixels !== undefined ? aiModel.use_superpixels : false,
-          useMeshgrid: aiModel.use_meshgrid !== undefined ? aiModel.use_meshgrid : false,
-          meshgridCells: aiModel.meshgrid_cells !== undefined ? aiModel.meshgrid_cells : '3x3',
+          bands: m.bands !== null ? String(m.bands) : '',
+          trainRatio: m.train_ratio ?? 0.8,
+          maxTrainPixels: m.max_train_pixels ?? 20000,
+          nEstimators: m.n_estimators ?? 20,
+          maxDepth: m.max_depth ?? 10,
+          nLeaves: m.n_leaves ?? 10,
+          suppressionThreshold: m.suppression_threshold ?? 0,
+          suppressionFilterSize: m.suppression_filter_size ?? 5,
+          suppressionDefaultClass: m.suppression_default_class ?? 0,
+          useEdgeFilter: m.use_edge_filter ?? false,
+          useSuperpixels: m.use_superpixels ?? false,
+          useMeshgrid: m.use_meshgrid ?? false,
+          meshgridCells: m.meshgrid_cells ?? '3x3',
         });
       }
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    getData,
-    setData,
-  }));
+  useImperativeHandle(ref, () => ({ getData, setData }));
 
   return (
-    <>
-      <div
-        className="accordion"
-        onClick={(e) => {
-          const panel = e.currentTarget.nextElementSibling as HTMLElement;
-          const isVisible = panel.style.display === 'block';
-          panel.style.display = isVisible ? 'none' : 'block';
-          e.currentTarget.classList.toggle('checked');
+    <div style={{ marginBottom: '8px' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          ...s.accordionStyle,
+          ...(isOpen ? s.accordionOpenStyle : {}),
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = s.theme.panelHeaderBg;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = s.theme.bgTertiary;
         }}
       >
-        Segmentation
-      </div>
-      <div className="panel" style={{ display: 'none' }}>
-        <div style={{ padding: '16px' }}>
+        <span>Segmentation</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={s.theme.gray500}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div style={s.panelStyle}>
           <FormInput
             label="Path"
             value={path}
             onChange={setPath}
             required
-            description="This directory will contain the mask files from the segmentation. Four different mask formats are allowed: *.npy* *tif*, *png* or *jpeg*. Example: This will create a folder next to the project file called masks containing the mask files in *png* format."
-            codeExample={`"path": "masks/{id}.png"`}
+            description="This directory will contain the mask files from the segmentation. Four different mask formats are allowed: *.npy* *tif*, *png* or *jpeg*."
+            codeExample={'"path": "masks/{id}.png"'}
           />
-
           <FormRadioGroup
             label="SegMaskEnum"
             options={['integer', 'binary', 'rgb', 'rgba']}
@@ -159,14 +155,12 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
             onChange={setMaskEnum}
             description="Allowed encodings for final masks. Not all mask formats support all encodings."
           />
-
           <MaskAreaConfig
             maskAreaEnabled={maskAreaEnabled}
             setMaskAreaEnabled={setMaskAreaEnabled}
             maskAreaCoords={maskAreaCoords}
             setMaskAreaCoords={setMaskAreaCoords}
           />
-
           <FormRadioGroup
             label="SegScoreEnum"
             options={['f1', 'jaccard', 'accuracy']}
@@ -174,42 +168,39 @@ const SegmentationSection = forwardRef<any, {}>((_props, ref) => {
             onChange={setScoreEnum}
             description="Allowed score measure."
           />
-
           <FormCheckbox
             label="Prioritise Unmarked Images"
             checked={prioritiseUnmarked}
             onChange={setPrioritiseUnmarked}
             description="Mode to serve up images with the lowest number of annotations when user asks for next image."
           />
-
-          {/* AI Model Enable/Disable Toggle */}
-          <div style={{ marginBottom: '20px', padding: '12px', background: '#f8f9fa', borderRadius: '4px' }}>
+          <div style={s.sectionBox}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
               <input
                 type="checkbox"
                 checked={aiModelEnabled}
                 onChange={(e) => setAiModelEnabled(e.target.checked)}
-                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: s.theme.primary }}
               />
-              <label style={{ cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setAiModelEnabled(!aiModelEnabled)}>
+              <label
+                style={{ cursor: 'pointer', fontWeight: 600, color: s.theme.gray900, fontSize: '14px' }}
+                onClick={() => setAiModelEnabled(!aiModelEnabled)}
+              >
                 Enable AI Model
               </label>
             </div>
-            <small style={{ display: 'block', color: '#666', lineHeight: '1.5' }}>
+            <small style={{ display: 'block', color: s.theme.gray600, lineHeight: '1.5', fontSize: '12px' }}>
               {aiModelEnabled
                 ? 'AI-assisted segmentation is enabled. Configure the model parameters below.'
                 : 'AI-assisted segmentation is disabled. The ai_model field will be set to false.'}
             </small>
           </div>
-
-          {/* AI Model Configuration - Only show when enabled */}
           {aiModelEnabled && <AIModelConfig config={aiConfig} onChange={setAiConfig} />}
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 });
 
 SegmentationSection.displayName = 'SegmentationSection';
-
 export default SegmentationSection;

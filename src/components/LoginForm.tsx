@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { lightTheme, ColorScheme } from '../themes/colorschemes';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -7,18 +7,6 @@ interface LoginFormProps {
 }
 
 type FormMode = 'login' | 'register' | 'forgot-password';
-
-/** Try to get theme from context, fall back to light theme (for tests without ThemeProvider) */
-function useThemeSafe(): ColorScheme {
-  try {
-    // Dynamic import to avoid hook-order issues when context is missing
-    const { useTheme } = require('../contexts/ThemeContext');
-    const ctx = useTheme();
-    return ctx.theme;
-  } catch {
-    return lightTheme;
-  }
-}
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, initialMode = 'login' }) => {
   const [mode, setMode] = useState<FormMode>(initialMode);
@@ -30,7 +18,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, initialMode = '
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const theme = useThemeSafe();
+  const { theme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

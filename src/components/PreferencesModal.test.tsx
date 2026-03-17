@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import PreferencesModal from './PreferencesModal';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import React from 'react';
+
+const renderWithTheme = (ui: React.ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);
 
 /**
  * PreferencesModal Tests
@@ -16,6 +20,21 @@ describe('PreferencesModal - Keyboard Shortcuts', () => {
   beforeEach(() => {
     originalKeyDownHandler = document.body.onkeydown;
     originalKeyUpHandler = document.body.onkeyup;
+
+    // Re-establish matchMedia mock (vi.restoreAllMocks in afterEach clears it)
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
 
     // Mock fetch with proper URL handling
     global.fetch = vi.fn((url) => {
@@ -57,7 +76,7 @@ describe('PreferencesModal - Keyboard Shortcuts', () => {
     const mockKeyHandler = vi.fn();
     document.body.onkeydown = mockKeyHandler;
 
-    render(<PreferencesModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<PreferencesModal isOpen={true} onClose={() => {}} />);
 
     // Handler should be replaced
     expect(document.body.onkeydown).not.toBe(mockKeyHandler);
@@ -70,13 +89,13 @@ describe('PreferencesModal - Keyboard Shortcuts', () => {
     document.body.onkeydown = mockKeyHandler;
     document.body.onkeyup = mockKeyUpHandler;
 
-    const { rerender } = render(<PreferencesModal isOpen={true} onClose={() => {}} />);
+    const { rerender } = renderWithTheme(<PreferencesModal isOpen={true} onClose={() => {}} />);
 
     // Handlers should be replaced
     expect(document.body.onkeydown).not.toBe(mockKeyHandler);
 
     // Close modal
-    rerender(<PreferencesModal isOpen={false} onClose={() => {}} />);
+    rerender(<ThemeProvider><PreferencesModal isOpen={false} onClose={() => {}} /></ThemeProvider>);
 
     // Handlers should be restored
     expect(document.body.onkeydown).toBe(mockKeyHandler);
@@ -87,7 +106,7 @@ describe('PreferencesModal - Keyboard Shortcuts', () => {
     const mockKeyHandler = vi.fn();
     document.body.onkeydown = mockKeyHandler;
 
-    render(<PreferencesModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<PreferencesModal isOpen={true} onClose={() => {}} />);
 
     const currentHandler = document.body.onkeydown;
     expect(currentHandler).not.toBeNull();

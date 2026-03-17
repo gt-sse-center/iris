@@ -1,45 +1,41 @@
-import { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewListEditor from './ViewListEditor';
+import { useConfigStyles } from './useConfigStyles';
 
 const ViewsSection = forwardRef<any, {}>((_props, ref) => {
   const editorRef = useRef<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const s = useConfigStyles();
 
   useImperativeHandle(ref, () => ({
     getData: () => editorRef.current?.getData() || {},
-    setData: (data: any) => {
-      if (editorRef.current?.setData) {
-        editorRef.current.setData(data);
-      }
-    },
+    setData: (data: any) => { if (editorRef.current?.setData) editorRef.current.setData(data); },
   }));
 
   return (
-    <>
-      <div
-        className="accordion"
-        onClick={(e) => {
-          const panel = e.currentTarget.nextElementSibling as HTMLElement;
-          const isVisible = panel.style.display === 'block';
-          panel.style.display = isVisible ? 'none' : 'block';
-          e.currentTarget.classList.toggle('checked');
-        }}
+    <div style={{ marginBottom: '8px' }}>
+      <button onClick={() => setIsOpen(!isOpen)}
+        style={{ ...s.accordionStyle, ...(isOpen ? s.accordionOpenStyle : {}) }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = s.theme.panelHeaderBg)}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = s.theme.bgTertiary)}
       >
-        Views
-      </div>
-      <div className="panel" style={{ display: 'none' }}>
-        <div style={{ padding: '16px' }}>
-          <small style={{ color: '#666', display: 'block', marginBottom: '16px', lineHeight: '1.5' }}>
-            Since this app was developed for multi-spectral satellite data (i.e. images with more than just three
-            channels), you can decide how to present the images to the user. This option must be a dictionary where each
-            key is the name of the view and the value another dictionary containing properties for the view.
+        <span>Views</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={s.theme.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div style={s.panelStyle}>
+          <small style={s.descriptionStyle}>
+            Configure how multi-spectral images are presented. Each view defines band mappings and display settings.
           </small>
           <ViewListEditor ref={editorRef} />
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 });
 
 ViewsSection.displayName = 'ViewsSection';
-
 export default ViewsSection;

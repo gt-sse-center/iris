@@ -1,52 +1,41 @@
-import { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import ClassListEditor from './ClassListEditor';
+import { useConfigStyles } from './useConfigStyles';
 
 const ClassesSection = forwardRef<any, {}>((_props, ref) => {
   const editorRef = useRef<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const s = useConfigStyles();
 
   useImperativeHandle(ref, () => ({
     getData: () => editorRef.current?.getData() || [],
-    setData: (data: any) => {
-      if (editorRef.current?.setData) {
-        editorRef.current.setData(data);
-      }
-    },
+    setData: (data: any) => { if (editorRef.current?.setData) editorRef.current.setData(data); },
   }));
 
   return (
-    <>
-      <div
-        className="accordion"
-        onClick={(e) => {
-          const panel = e.currentTarget.nextElementSibling as HTMLElement;
-          const isVisible = panel.style.display === 'block';
-          panel.style.display = isVisible ? 'none' : 'block';
-          e.currentTarget.classList.toggle('checked');
-        }}
+    <div style={{ marginBottom: '8px' }}>
+      <button onClick={() => setIsOpen(!isOpen)}
+        style={{ ...s.accordionStyle, ...(isOpen ? s.accordionOpenStyle : {}) }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = s.theme.panelHeaderBg)}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = s.theme.bgTertiary)}
       >
-        Classes
-      </div>
-      <div className="panel" style={{ display: 'none' }}>
-        <div style={{ padding: '16px' }}>
-          <h4 style={{ marginTop: 0, marginBottom: '8px' }}>Classes</h4>
-          <small style={{ color: '#666', display: 'block', marginBottom: '12px', lineHeight: '1.5' }}>
-            This is a list of classes that you want to allow the user to label. Examples:{' '}
-            <code style={{ color: '#d63384' }}>
-              {`{ "name": "Clear", "description": "All clear pixels.", "colour": [255,255,255,0], "user_colour": [0,255,255,70] }`}
-            </code>
-            ,{' '}
-            <code style={{ color: '#d63384' }}>
-              {`{ "name": "Cloud", "description": "All cloudy pixels.", "colour": [255,255,0,70] }`}
-            </code>
+        <span>Classes</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={s.theme.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div style={s.panelStyle}>
+          <small style={s.descriptionStyle}>
+            List of classes for segmentation labeling. Each class needs a name, colour (RGBA), and optional description.
           </small>
-          <h4 style={{ marginBottom: '16px' }}>Classes</h4>
           <ClassListEditor ref={editorRef} />
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 });
 
 ClassesSection.displayName = 'ClassesSection';
-
 export default ClassesSection;

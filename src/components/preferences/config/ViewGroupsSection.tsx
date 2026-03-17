@@ -1,5 +1,6 @@
-import { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import ViewGroupListEditor from './ViewGroupListEditor';
+import { useConfigStyles } from './useConfigStyles';
 
 interface ViewGroupsSectionProps {
   getAvailableViews: () => string[];
@@ -7,61 +8,39 @@ interface ViewGroupsSectionProps {
 
 const ViewGroupsSection = forwardRef<any, ViewGroupsSectionProps>(({ getAvailableViews }, ref) => {
   const editorRef = useRef<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const s = useConfigStyles();
 
   useImperativeHandle(ref, () => ({
     getData: () => editorRef.current?.getData() || {},
-    setData: (data: any) => {
-      if (editorRef.current?.setData) {
-        editorRef.current.setData(data);
-      }
-    },
+    setData: (data: any) => { if (editorRef.current?.setData) editorRef.current.setData(data); },
   }));
 
   return (
-    <>
-      <div
-        className="accordion"
-        onClick={(e) => {
-          const panel = e.currentTarget.nextElementSibling as HTMLElement;
-          const isVisible = panel.style.display === 'block';
-          panel.style.display = isVisible ? 'none' : 'block';
-          e.currentTarget.classList.toggle('checked');
-        }}
+    <div style={{ marginBottom: '8px' }}>
+      <button onClick={() => setIsOpen(!isOpen)}
+        style={{ ...s.accordionStyle, ...(isOpen ? s.accordionOpenStyle : {}) }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = s.theme.panelHeaderBg)}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = s.theme.bgTertiary)}
       >
-        View Groups
-      </div>
-      <div className="panel" style={{ display: 'none' }}>
-        <div style={{ padding: '16px' }}>
-          <small style={{ color: '#666', display: 'block', marginBottom: '12px', lineHeight: '1.5' }}>
-            Views are displayed in groups. In the GUI of IRIS, you will be able to switch between different groups
-            quickly. The group <code style={{ color: '#d63384' }}>default</code> must always be set, further groups are
-            optional. Examples:
+        <span>View Groups</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={s.theme.gray500} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div style={s.panelStyle}>
+          <small style={s.descriptionStyle}>
+            Views are displayed in groups. The <code style={s.codeStyle}>default</code> group is required.
           </small>
-          <pre
-            style={{
-              background: '#f5f5f5',
-              padding: '8px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              marginBottom: '12px',
-            }}
-          >
-            {`"view_groups": {
-  "default": ["Cirrus", "RGB", "Bing"],
-  "clouds": ["Cirrus"],
-  "radar": ["Sentinel1"]
-}`}
-          </pre>
-          <small style={{ color: '#666', display: 'block', marginBottom: '16px' }}>
-            The 'default' group is required and will be shown first
-          </small>
+          <pre style={s.preStyle}>{`"view_groups": {\n  "default": ["Cirrus", "RGB", "Bing"],\n  "clouds": ["Cirrus"]\n}`}</pre>
           <ViewGroupListEditor ref={editorRef} getAvailableViews={getAvailableViews} />
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 });
 
 ViewGroupsSection.displayName = 'ViewGroupsSection';
-
 export default ViewGroupsSection;
