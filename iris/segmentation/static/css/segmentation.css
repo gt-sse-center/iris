@@ -226,10 +226,10 @@ body {
 
 .paintbrush-dropdown {
   position: fixed;
-  background: white;
-  border: 2px solid black;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   z-index: 9999;
   min-width: 320px;
   padding: 8px;
@@ -237,13 +237,13 @@ body {
 
 .paintbrush-dropdown-header {
   padding: 8px 12px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-  font-weight: bold;
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-panel-border);
+  font-weight: 600;
   font-size: 12px;
-  color: #333;
+  color: var(--color-gray900);
   margin: -8px -8px 8px -8px;
-  border-radius: 2px 2px 0 0;
+  border-radius: 8px 8px 0 0;
 }
 
 .brush-row {
@@ -256,8 +256,8 @@ body {
 
 .brush-row-label {
   font-size: 11px;
-  font-weight: bold;
-  color: #666;
+  font-weight: 600;
+  color: var(--color-gray500);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -275,26 +275,26 @@ body {
   align-items: center;
   gap: 2px;
   padding: 6px;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  background: white;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-bg-tertiary);
   cursor: pointer;
   transition: all 0.15s;
   min-width: 40px;
 }
 
 .brush-option:hover {
-  border-color: #999;
-  background: #f9f9f9;
+  border-color: var(--color-gray500);
+  background: var(--color-panel-header-bg);
 }
 
 .brush-option.selected {
-  border-color: #007cba;
-  background: #e3f2fd;
+  border-color: var(--color-primary);
+  background: var(--color-primary-pale);
 }
 
 .brush-preview {
-  background: #666;
+  background: var(--color-gray500);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,12 +310,12 @@ body {
 
 .brush-size-label {
   font-size: 10px;
-  color: #666;
-  font-weight: bold;
+  color: var(--color-gray600);
+  font-weight: 600;
 }
 
 .brush-option.selected .brush-size-label {
-  color: #007cba;
+  color: var(--color-primary);
 }
 
 /* Left Toolbar Button Overrides */

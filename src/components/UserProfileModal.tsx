@@ -197,15 +197,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <span style={{ fontSize: '20px', fontWeight: 700, color: theme.gray900 }}>{profile.name}</span>
                 <div>
                   {profile.is_current_user && (
-                    <span style={tagStyle(theme.primary, theme.primaryPale)}>this is you</span>
+                    <span style={tagStyle(theme.bgPrimary, theme.primary)}>this is you</span>
                   )}
                   {profile.admin && (
-                    <span style={tagStyle(theme.success, theme.successLight)}>admin</span>
+                    <span style={tagStyle(theme.bgPrimary, theme.success)}>admin</span>
                   )}
                   {profile.tested ? (
-                    <span style={tagStyle(theme.success, theme.successLight)}>tested</span>
+                    <span style={tagStyle(theme.bgPrimary, theme.success)}>tested</span>
                   ) : (
-                    <span style={tagStyle(theme.alert, theme.alertPale)}>not tested</span>
+                    <span style={tagStyle(theme.bgPrimary, theme.alert)}>not tested</span>
                   )}
                 </div>
               </div>
