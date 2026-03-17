@@ -22,7 +22,7 @@ def get_config():
     """Get project configuration as JSON."""
     # Get the full project config
     config = project.config
-    
+
     return flask.jsonify(config)
 
 
