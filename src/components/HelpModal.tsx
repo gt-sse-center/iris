@@ -56,6 +56,24 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // Use same dark-mode detection as ToolButton
+  const isDarkTheme = theme.gray900 === '#E8EDF2';
+  const iconFilter = isDarkTheme ? 'invert(1) brightness(0.9)' : 'none';
+  const inlineIcon = (src: string, alt: string) => (
+    <img
+      src={src}
+      alt={alt}
+      style={{
+        width: '15px',
+        height: '15px',
+        verticalAlign: 'middle',
+        display: 'inline-block',
+        filter: iconFilter,
+        margin: '0 2px',
+      }}
+    />
+  );
+
   const keyStyle: React.CSSProperties = {
     display: 'inline-block',
     padding: '2px 7px',
@@ -67,17 +85,6 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
     backgroundColor: theme.bgTertiary,
     color: theme.gray700,
     margin: '0 2px',
-  };
-
-  const iconBtnStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'none',
-    border: 'none',
-    padding: '0 2px',
-    verticalAlign: 'middle',
-    cursor: 'default',
   };
 
   const accordionBtnStyle = (open: boolean): React.CSSProperties => ({
@@ -242,7 +249,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <p style={bodyText}>
                 If you're new here, please take a moment to read this page. It will introduce you to some
                 of the basic functionality of IRIS. If you ever want to return to this page later simply
-                click <b>help</b> <button style={iconBtnStyle}><img src="/segmentation/static/icons/help.png" height="15" width="15" alt="help" /></button>
+                click <b>help</b> {inlineIcon('/segmentation/static/icons/help.png', 'help')}
                 at the top-right of the IRIS interface. We recommend that you read through the following step-by-step, and go check out and explore what is described as you go along.
                 As you do that, the <b>Hotkeys</b> tab above may be a useful companion.
               </p>
@@ -261,7 +268,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 As an annotator in IRIS, your job is to create a <i>segmentation mask</i> for the images you are shown. Painting all those pixels could take you a lot of time, but luckily you
                 get to work alongside an <i>AI assistant</i>, which tries to predict the classes of areas which you haven't labelled yourself. You will be iteratively
                 labelling areas in the image with the different classes you find (what those classes are depends on the project your working on, but you can find a list of them by pressing the
-                <button style={iconBtnStyle}><img src="/segmentation/static/icons/class.png" height="15" width="15" alt="class" /></button>
+                {inlineIcon('/segmentation/static/icons/class.png', 'class')}
                 button in the toolbar). The AI assistant (a Random Forest model) will then try to predict the classes of areas which you haven't labelled yourself. You can then correct areas
                 that it gets wrong, and see if it improves when you retrain the model. You can find some tips and best practices for interacting with the AI assistant in the FAQs.
               </p>
@@ -281,14 +288,14 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
               <ul style={bodyText}>
                 <li>
-                  <b>The final mask<button style={iconBtnStyle}><img src="/segmentation/static/icons/mask_final.png" height="15" width="15" alt="final mask" /></button>:</b> shows a combination of your annotations and model predictions. This is the view that corresponds to the final saved mask, when you complete your work. Your annotations are always favoured against the model.
+                  <b>The final mask{inlineIcon('/segmentation/static/icons/mask_final.png', 'final mask')}:</b> shows a combination of your annotations and model predictions. This is the view that corresponds to the final saved mask, when you complete your work. Your annotations are always favoured against the model.
                 </li>
                 <li>
-                  <b>The user mask <button style={iconBtnStyle}><img src="/segmentation/static/icons/mask_user.png" height="15" width="15" alt="user mask" /></button>:</b> shows only the pixels you have manually annotated. A project will often define one class to be invisible in the final mask (as a way of symbolising some kind of background class), but you should still be able to see the manual labels
+                  <b>The user mask {inlineIcon('/segmentation/static/icons/mask_user.png', 'user mask')}:</b> shows only the pixels you have manually annotated. A project will often define one class to be invisible in the final mask (as a way of symbolising some kind of background class), but you should still be able to see the manual labels
                   that you've drawn of that class in the user mask view. This can be useful for checking where you've already annotated, and when erasing annotations.
                 </li>
                 <li>
-                  <b>The error mask<button style={iconBtnStyle}><img src="/segmentation/static/icons/mask_errors.png" height="15" width="15" alt="error mask" /></button>:</b> shows the pixels that the
+                  <b>The error mask{inlineIcon('/segmentation/static/icons/mask_errors.png', 'error mask')}:</b> shows the pixels that the
                   model has predicted correctly (in green) and incorrectly (in red) for the pixels that are used for validating the models (this view does not include pixels that the model was trained on). This is a useful
                   way to see where the model is making mistakes, and where you should focus your labelling efforts.
                 </li>
@@ -322,14 +329,14 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <h4 style={subHeading}>5. Display the mask</h4>
               <p style={bodyText}>
                 IRIS's mask comes from a combination of hand-drawn labels, and AI-generated predictions. When you begin annotating an image, these will be blank, but when they are populated they are displayed as a semi-transparent overlay above
-                the image views. You can view either the combined predictions between human and model, known as the final mask <button style={iconBtnStyle}><img src="/segmentation/static/icons/mask_final.png" height="15" width="15" alt="final mask" /></button>/<span style={keyStyle}>F</span>,
-                or only the annotations you've made, known as the user mask <button style={iconBtnStyle}><img src="/segmentation/static/icons/mask_user.png" height="15" width="15" alt="user mask" /></button>/<span style={keyStyle}>G</span>.
+                the image views. You can view either the combined predictions between human and model, known as the final mask {inlineIcon('/segmentation/static/icons/mask_final.png', 'final mask')}/<span style={keyStyle}>F</span>,
+                or only the annotations you've made, known as the user mask {inlineIcon('/segmentation/static/icons/mask_user.png', 'user mask')}/<span style={keyStyle}>G</span>.
                 Try selecting the user mask mode before you begin annotating.
               </p>
 
               <h4 style={subHeading}>5. Train your AI assistant</h4>
               <p style={bodyText}>
-                Now that you've labelled a few pixels, you can train your AI assistant. Click the <button style={iconBtnStyle}><img src="/segmentation/static/icons/ai.png" height="15" width="15" alt="AI" /></button>/<span style={keyStyle}>A</span>
+                Now that you've labelled a few pixels, you can train your AI assistant. Click the {inlineIcon('/segmentation/static/icons/ai.png', 'AI')}/<span style={keyStyle}>A</span>
                 button in the toolbar, and see what happens! You can use the tools from Step 5 to display the AI predictions, and the spacebar to toggle the mask transparency, allowing you to see the image below easily.
               </p>
 
@@ -341,8 +348,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
               <h4 style={subHeading}>7. Save your work</h4>
               <p style={bodyText}>
-                When you're done, don't forget to save your work! You can do this by clicking the <button style={iconBtnStyle}><img src="/segmentation/static/icons/save_mask.png" height="15" width="15" alt="save" /></button>/<span style={keyStyle}>S</span>
-                button in the toolbar. You can then come back and finish the image any time you like. Or, you can move on to the next image in the project by clicking the <button style={iconBtnStyle}><img src="/segmentation/static/icons/next.png" height="15" width="15" alt="next" /></button>/<span style={keyStyle}>Enter</span>
+                When you're done, don't forget to save your work! You can do this by clicking the {inlineIcon('/segmentation/static/icons/save_mask.png', 'save')}/<span style={keyStyle}>S</span>
+                button in the toolbar. You can then come back and finish the image any time you like. Or, you can move on to the next image in the project by clicking the {inlineIcon('/segmentation/static/icons/next.png', 'next')}/<span style={keyStyle}>Enter</span>
                 button.
               </p>
 
@@ -359,7 +366,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <p style={bodyText}>
                 Something else to keep in mind is that each pixel in the image that you label is a training example for the model. This means that the model doesn't understand <i>spatial</i> relationships between pixels. This means if there
                 are classes which strongly depend on textural information, it may be difficult for the model to perform well (unless the project administrator has somehow embedded this spatial information in each pixel). In the Preferences menu
-                <button style={iconBtnStyle}><img src="/segmentation/static/icons/preferences.png" height="15" width="15" alt="preferences" /></button>, you can add a post-processing step which filters out small areas with
+                {inlineIcon('/segmentation/static/icons/preferences.png', 'preferences')}, you can add a post-processing step which filters out small areas with
                 different classes. This effectively smooths your output spatially, and may help if you have lots of noisy model errors that are difficult to correct manually.
               </p>
 
@@ -372,7 +379,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <p style={bodyText}>
                 An accuracy score and confusion matrix can also be found in the Information Panel (once the model is trained). This gives you an idea of how well the model is performing, on a set of pixels held out from training. This doesn't necessarily indicate
                 its performance in areas you haven't annotated: we can't know that. However, it can give you some measure of the model's success. If you think its struggling and has
-                a low accuracy, you can also try changing the model parameters in the Preferences menu <button style={iconBtnStyle}><img src="/segmentation/static/icons/preferences.png" height="15" width="15" alt="preferences" /></button>. Low accuracy
+                a low accuracy, you can also try changing the model parameters in the Preferences menu {inlineIcon('/segmentation/static/icons/preferences.png', 'preferences')}. Low accuracy
                 isn't necessarily a bad thing, and you will usually find the accuracy <i>decreasing</i> over time, because you are adding more and more difficult labels.
               </p>
               <p style={bodyText}>For more tips and advanced use suggestions, check out the FAQs.</p>
@@ -391,12 +398,12 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <p>
                   In some projects (including, for example, IRIS' demo) there is a class that is in some sense the background or default, which one does not want to visualise with a coloured overlay. For example, in the case of cloud masking with satellite imagery, pixels
                   for which we can clearly see the surface, and for which no cloud is present, it is much easier to visualise as a clear colour. Upon loading, IRIS defaults to showing you an overlay of the <i>final mask</i> which may use no colour for one of the classes. However,
-                  you can switch to the <i>user mask</i> by pressing <button style={iconBtnStyle}><img src="/segmentation/static/icons/mask_user.png" height="15" width="15" alt="user mask" /></button><b>/</b><span style={keyStyle}>G</span>. In the <i>user mask</i>,
+                  you can switch to the <i>user mask</i> by pressing {inlineIcon('/segmentation/static/icons/mask_user.png', 'user mask')}<b>/</b><span style={keyStyle}>G</span>. In the <i>user mask</i>,
                   one should be able to see more clearly where annotations by the user have been made.
                 </p>
                 <p>
-                  If there is still nothing showing, then make sure you are using the <i>draw tool</i> <button style={iconBtnStyle}><img src="/segmentation/static/icons/pencil.png" height="15" width="15" alt="draw" /></button><b>/</b><span style={keyStyle}>D</span>, and
-                  that your mask is is set to be visible <button style={iconBtnStyle}><img src="/segmentation/static/icons/show_mask.png" height="15" width="15" alt="show mask" /></button><b>/</b><span style={keyStyle}>Space</span>
+                  If there is still nothing showing, then make sure you are using the <i>draw tool</i> {inlineIcon('/segmentation/static/icons/pencil.png', 'draw')}<b>/</b><span style={keyStyle}>D</span>, and
+                  that your mask is is set to be visible {inlineIcon('/segmentation/static/icons/show_mask.png', 'show mask')}<b>/</b><span style={keyStyle}>Space</span>
                 </p>
               </div>
 
@@ -412,7 +419,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               </button>
               <div style={panelStyle(openAccordions.has('undo'))}>
                 <p>
-                  Use either the undo <button style={iconBtnStyle}><img src="/segmentation/static/icons/undo.png" height="15" width="15" alt="undo" /></button><b>/</b><span style={keyStyle}>U</span> command or the eraser <button style={iconBtnStyle}><img src="/segmentation/static/icons/eraser.png" height="15" width="15" alt="eraser" /></button>/<span style={keyStyle}>E</span>.
+                  Use either the undo {inlineIcon('/segmentation/static/icons/undo.png', 'undo')}<b>/</b><span style={keyStyle}>U</span> command or the eraser {inlineIcon('/segmentation/static/icons/eraser.png', 'eraser')}/<span style={keyStyle}>E</span>.
                 </p>
               </div>
 
@@ -421,7 +428,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               </button>
               <div style={panelStyle(openAccordions.has('select-class'))}>
                 <p>
-                  Use either the number hotkeys (<span style={keyStyle}>1..9</span>) or click <button style={iconBtnStyle}><img src="/segmentation/static/icons/class.png" height="15" width="15" alt="class" /></button> in the toolbar.
+                  Use either the number hotkeys (<span style={keyStyle}>1..9</span>) or click {inlineIcon('/segmentation/static/icons/class.png', 'class')} in the toolbar.
                 </p>
               </div>
 
@@ -433,7 +440,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <div style={panelStyle(openAccordions.has('save-progress'))}>
                 <p>It is possible to lose your progress whilst annotating in IRIS, if you navigate away from the page or close the browser without doing one of the following:</p>
                 <ul>
-                  <li>Clicking save <button style={iconBtnStyle}><img src="/segmentation/static/icons/save_mask.png" height="15" width="15" alt="save" /></button> at the top-left of the IRIS interface. This will allow you to come back to the same image and mask later, as if you had never stopped working on it.</li>
+                  <li>Clicking save {inlineIcon('/segmentation/static/icons/save_mask.png', 'save')} at the top-left of the IRIS interface. This will allow you to come back to the same image and mask later, as if you had never stopped working on it.</li>
                   <li>Going to the next or previous image.</li>
                 </ul>
               </div>
@@ -473,7 +480,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 </p>
                 <ul>
                   <li><b>Providing high quality labels</b> helps the model by guiding it in its learning process. If the model is struggling to learn over a specific kind of area in the image, try to provide examples from those areas. Counterintuitively, more training data is not always better. Try to provide the model with a diverse set of pixels, rather than a large number of pixels from the same class and the same colour/type of pixel in the image.</li>
-                  <li><b>Altering the model parameters</b> can have a big effect on the model's performance. When training data are too few, an overly large model can overfit and produce strange outputs. Meanwhile, if many difficult and diverse labels are given, then the model may struggle to learn the complex relationships between input and output if it is too small. These parameters can be adjusted from the Preferences menu <button style={iconBtnStyle}><img src="/segmentation/static/icons/preferences.png" height="15" width="15" alt="preferences" /></button>.</li>
+                  <li><b>Altering the model parameters</b> can have a big effect on the model's performance. When training data are too few, an overly large model can overfit and produce strange outputs. Meanwhile, if many difficult and diverse labels are given, then the model may struggle to learn the complex relationships between input and output if it is too small. These parameters can be adjusted from the Preferences menu {inlineIcon('/segmentation/static/icons/preferences.png', 'preferences')}.</li>
                   <li><b>Changing the bands</b> used by the model can stop the model from overfitting to input data that is not particularly relevant to the annotations of that image. Like the model's parameters, the bands can be included and excluded in the Preferences menu.</li>
                   <li><b>Post-processing the results</b> with the <i>suppression filter</i> can remove the small (a few pixels wide) areas that the AI assistant picks up. This can be useful to make the mask appear more smooth. However, it should be used with caution, if those small regions are important for the dataset's application.</li>
                 </ul>
