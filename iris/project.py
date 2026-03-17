@@ -47,7 +47,7 @@ class Project:
                 elif filename.endswith('yaml'):
                     self.config = yaml.safe_load(stream)
         except Exception as error:
-            raise Exception('[CONFIG] Error in config file: '+ str(error))
+            raise Exception('[CONFIG] Error in config file: '+ str(error)) from error
 
         # Load default config:
         with open(join(dirname(__file__), "default_config.json")) as stream:
@@ -194,10 +194,10 @@ class Project:
                 regex_images.match(image_path).groups()[0]
                 for image_path in images
             ])
-        except Exception:
+        except Exception as err:
             raise Exception(
                 f'[ERROR] Could not extract id\nfrom path"{image_paths}"\nwith regex "{regex_images}"!'
-            )
+            ) from err
 
 
     def make_absolute(self, path):

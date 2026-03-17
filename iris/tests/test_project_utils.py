@@ -25,7 +25,7 @@ def test_check_band_expression_allows(expr):
     ],
 )
 def test_check_band_expression_forbids(bad):
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         project._check_band_expression(bad)
 
 

@@ -2,7 +2,7 @@ import json
 
 import flask
 
-from iris.project import project
+from iris.project import project  # noqa: F401
 
 help_app = flask.Blueprint(
     'help', __name__,

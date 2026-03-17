@@ -80,31 +80,30 @@ def test_segmentation_spa_route_no_image_id(mock_project):
     app = flask.Flask(__name__)
     app.register_blueprint(spa_bp)
 
-    with app.test_client() as client, app.app_context():
+    with app.test_client() as client, app.app_context(), patch('flask.render_template') as mock_render:
         # SETUP: Mock template rendering to avoid needing actual template files
         # This isolates the test to focus on the route logic, not template system
-        with patch('flask.render_template') as mock_render:
-            mock_render.return_value = '<html>React App</html>'
+        mock_render.return_value = '<html>React App</html>'
 
-            # ACTION: Make a GET request to /segmentation/ (no image_id parameter)
-            response = client.get('/segmentation/')
+        # ACTION: Make a GET request to /segmentation/ (no image_id parameter)
+        response = client.get('/segmentation/')
 
-            # VERIFICATION: Check that the response is successful
-            assert response.status_code == 200
+        # VERIFICATION: Check that the response is successful
+        assert response.status_code == 200
 
-            # VERIFICATION: Ensure the system asked for the default starting image
-            mock_project.get_start_image_id.assert_called_once()
+        # VERIFICATION: Ensure the system asked for the default starting image
+        mock_project.get_start_image_id.assert_called_once()
 
-            # VERIFICATION: Ensure metadata was retrieved for the default image
-            mock_project.get_metadata.assert_called_once_with('default_image')
+        # VERIFICATION: Ensure metadata was retrieved for the default image
+        mock_project.get_metadata.assert_called_once_with('default_image')
 
-            # VERIFICATION: Ensure React template was rendered with correct data
-            mock_render.assert_called_once_with(
-                'segmentation/react-app.html',  # React SPA template
-                image_id='default_image',       # The default image ID
-                image_location=[10, 20],        # Location coordinates from metadata
-                debug_mode=mock_project.debug   # Debug mode from project
-            )
+        # VERIFICATION: Ensure React template was rendered with correct data
+        mock_render.assert_called_once_with(
+            'segmentation/react-app.html',  # React SPA template
+            image_id='default_image',       # The default image ID
+            image_location=[10, 20],        # Location coordinates from metadata
+            debug_mode=mock_project.debug   # Debug mode from project
+        )
 
 
 @patch('iris.segmentation.spa.project')
@@ -138,28 +137,27 @@ def test_segmentation_spa_route_with_valid_image_id(mock_project):
     app = flask.Flask(__name__)
     app.register_blueprint(spa_bp)
 
-    with app.test_client() as client, app.app_context():
+    with app.test_client() as client, app.app_context(), patch('flask.render_template') as mock_render:
         # SETUP: Mock template rendering
-        with patch('flask.render_template') as mock_render:
-            mock_render.return_value = '<html>React App</html>'
+        mock_render.return_value = '<html>React App</html>'
 
-            # ACTION: Request a specific image via URL parameter
-            response = client.get('/segmentation/?image_id=test_image')
+        # ACTION: Request a specific image via URL parameter
+        response = client.get('/segmentation/?image_id=test_image')
 
-            # VERIFICATION: Response should be successful
-            assert response.status_code == 200
+        # VERIFICATION: Response should be successful
+        assert response.status_code == 200
 
-            # VERIFICATION: System should retrieve metadata for the requested image
-            # Note: get_start_image_id() should NOT be called since we provided an image_id
-            mock_project.get_metadata.assert_called_once_with('test_image')
+        # VERIFICATION: System should retrieve metadata for the requested image
+        # Note: get_start_image_id() should NOT be called since we provided an image_id
+        mock_project.get_metadata.assert_called_once_with('test_image')
 
-            # VERIFICATION: React template rendered with the requested image data
-            mock_render.assert_called_once_with(
-                'segmentation/react-app.html',  # React SPA template
-                image_id='test_image',          # The requested image ID
-                image_location=[30, 40],        # Location from image metadata
-                debug_mode=mock_project.debug   # Debug mode from project
-            )
+        # VERIFICATION: React template rendered with the requested image data
+        mock_render.assert_called_once_with(
+            'segmentation/react-app.html',  # React SPA template
+            image_id='test_image',          # The requested image ID
+            image_location=[30, 40],        # Location from image metadata
+            debug_mode=mock_project.debug   # Debug mode from project
+        )
 
 
 @patch('iris.segmentation.spa.project')
@@ -246,27 +244,26 @@ def test_segmentation_spa_route_with_user_session_and_last_mask(mock_action, moc
         with client.session_transaction() as sess:
             sess['user_id'] = 123  # User is logged in
 
-        with app.app_context():
+        with app.app_context(), patch('flask.render_template') as mock_render:
             # SETUP: Mock template rendering
-            with patch('flask.render_template') as mock_render:
-                mock_render.return_value = '<html>React App</html>'
+            mock_render.return_value = '<html>React App</html>'
 
-                # ACTION: User visits segmentation page (no specific image requested)
-                response = client.get('/segmentation/')
+            # ACTION: User visits segmentation page (no specific image requested)
+            response = client.get('/segmentation/')
 
-                # VERIFICATION: Response should be successful
-                assert response.status_code == 200
+            # VERIFICATION: Response should be successful
+            assert response.status_code == 200
 
-                # VERIFICATION: System should load user's last worked image, not default
-                mock_project.get_metadata.assert_called_once_with('last_worked_image')
+            # VERIFICATION: System should load user's last worked image, not default
+            mock_project.get_metadata.assert_called_once_with('last_worked_image')
 
-                # VERIFICATION: React template should render with user's last image
-                mock_render.assert_called_once_with(
-                    'segmentation/react-app.html',  # React SPA template
-                    image_id='last_worked_image',   # User's last work (not default)
-                    image_location=[50, 60],        # Metadata for that image
-                    debug_mode=mock_project.debug   # Debug mode from project
-                )
+            # VERIFICATION: React template should render with user's last image
+            mock_render.assert_called_once_with(
+                'segmentation/react-app.html',  # React SPA template
+                image_id='last_worked_image',   # User's last work (not default)
+                image_location=[50, 60],        # Metadata for that image
+                debug_mode=mock_project.debug   # Debug mode from project
+            )
 
 
 @patch('iris.segmentation.spa.project')
@@ -310,27 +307,26 @@ def test_segmentation_spa_route_with_user_session_no_last_mask(mock_action, mock
         with client.session_transaction() as sess:
             sess['user_id'] = 456  # Different user ID from previous test
 
-        with app.app_context():
+        with app.app_context(), patch('flask.render_template') as mock_render:
             # SETUP: Mock template rendering
-            with patch('flask.render_template') as mock_render:
-                mock_render.return_value = '<html>React App</html>'
+            mock_render.return_value = '<html>React App</html>'
 
-                # ACTION: User visits segmentation page
-                response = client.get('/segmentation/')
+            # ACTION: User visits segmentation page
+            response = client.get('/segmentation/')
 
-                # VERIFICATION: Response should be successful
-                assert response.status_code == 200
+            # VERIFICATION: Response should be successful
+            assert response.status_code == 200
 
-                # VERIFICATION: Since no history exists, should use project default
-                mock_project.get_metadata.assert_called_once_with('default_image')
+            # VERIFICATION: Since no history exists, should use project default
+            mock_project.get_metadata.assert_called_once_with('default_image')
 
-                # VERIFICATION: React template should render with default image
-                mock_render.assert_called_once_with(
-                    'segmentation/react-app.html',  # React SPA template
-                    image_id='default_image',       # Project default (no user history)
-                    image_location=[70, 80],        # Default image metadata
-                    debug_mode=mock_project.debug   # Debug mode from project
-                )
+            # VERIFICATION: React template should render with default image
+            mock_render.assert_called_once_with(
+                'segmentation/react-app.html',  # React SPA template
+                image_id='default_image',       # Project default (no user history)
+                image_location=[70, 80],        # Default image metadata
+                debug_mode=mock_project.debug   # Debug mode from project
+            )
 
 
 @patch('iris.segmentation.spa.project')
@@ -405,21 +401,20 @@ def test_segmentation_spa_route_metadata_without_location(mock_project):
     app = flask.Flask(__name__)
     app.register_blueprint(spa_bp)
 
-    with app.test_client() as client, app.app_context():
+    with app.test_client() as client, app.app_context(), patch('flask.render_template') as mock_render:
         # SETUP: Mock template rendering
-        with patch('flask.render_template') as mock_render:
-            mock_render.return_value = '<html>React App</html>'
+        mock_render.return_value = '<html>React App</html>'
 
-            # ACTION: Request segmentation page
-            response = client.get('/segmentation/')
+        # ACTION: Request segmentation page
+        response = client.get('/segmentation/')
 
-            # VERIFICATION: Should handle missing location gracefully
-            assert response.status_code == 200
+        # VERIFICATION: Should handle missing location gracefully
+        assert response.status_code == 200
 
-            # VERIFICATION: Should use default coordinates when location missing
-            mock_render.assert_called_once_with(
-                'segmentation/react-app.html',  # React SPA template
-                image_id='test_image',          # The image ID
-                image_location=[0, 0],          # Safe fallback coordinates
-                debug_mode=mock_project.debug   # Debug mode from project
-            )
+        # VERIFICATION: Should use default coordinates when location missing
+        mock_render.assert_called_once_with(
+            'segmentation/react-app.html',  # React SPA template
+            image_id='test_image',          # The image ID
+            image_location=[0, 0],          # Safe fallback coordinates
+            debug_mode=mock_project.debug   # Debug mode from project
+        )

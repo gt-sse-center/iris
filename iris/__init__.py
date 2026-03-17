@@ -1,16 +1,12 @@
 import json
 import os
 import shutil
-import sys
-import webbrowser
 from getpass import getpass
-from os.path import basename, dirname, exists, isabs, join
+from os.path import join
 from pathlib import Path
 from typing import Union
 
 import flask
-import numpy as np
-import yaml
 
 __version__ = "1.0.0"
 
@@ -97,8 +93,8 @@ def handle_launch_command(folder_name: str) -> Path:
 
         try:
             dconfig = json.loads(config_file.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            raise RuntimeError(f"Error: Invalid JSON in {config_file}")
+        except json.JSONDecodeError as err:
+            raise RuntimeError(f"Error: Invalid JSON in {config_file}") from err
         dconfig["name"] = folder_name
         with config_file.open("w", encoding="utf-8") as fp:
             json.dump(dconfig, fp, indent=4)
@@ -285,7 +281,7 @@ def register_extensions(app):
 # Decide whether to parse CLI args. If help is requested or the first token
 # Module-level initialization for when IRIS is imported (not run as CLI)
 # This is used by tests and when importing iris as a library
-from iris.models import Action, User
+from iris.models import Action, User  # noqa: E402, F401
 
 # Create default app for imports/tests
 _default_args = {

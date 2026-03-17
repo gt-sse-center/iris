@@ -1,18 +1,16 @@
 import json
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from glob import glob
-from os.path import basename, dirname, exists, join
-from pprint import pprint
+from os.path import basename, dirname, join
 
 import flask
 import lightgbm as lgb
 import numpy as np
-import yaml
-from scipy.ndimage import convolve, maximum_filter, minimum_filter
+from scipy.ndimage import convolve
 from skimage.filters import sobel
-from skimage.io import imread, imsave
+from skimage.io import imsave
 from skimage.segmentation import felzenszwalb
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score
 from sklearn.model_selection import train_test_split
@@ -28,8 +26,8 @@ segmentation_app = flask.Blueprint(
 )
 
 # Import SPA and API blueprints
-from .api import api_bp
-from .spa import spa_bp
+from .api import api_bp  # noqa: E402
+from .spa import spa_bp  # noqa: E402
 
 
 def register_segmentation_blueprints(app):
