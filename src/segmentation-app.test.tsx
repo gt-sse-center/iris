@@ -1,6 +1,26 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, act } from '@testing-library/react';
 import SegmentationApp from './segmentation-app';
+
+// Mock ThemeContext to avoid matchMedia issues in test environment
+vi.mock('./contexts/ThemeContext', () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useTheme: () => ({
+    theme: {
+      bgPrimary: '#fff', bgSecondary: '#f5f5f5', bgTertiary: '#e5e5e5',
+      gray100: '#f5f5f5', gray200: '#e5e5e5', gray300: '#d4d4d4', gray400: '#a3a3a3',
+      gray500: '#737373', gray600: '#525252', gray700: '#404040', gray800: '#262626', gray900: '#171717',
+      primary: '#007cba', primaryHover: '#006aa3', color: '#171717', colorPale: '#f5f5f5',
+      modalBg: '#fff', modalBorder: '#e5e5e5', modalOverlay: 'rgba(0,0,0,0.5)',
+      modalHeaderBg: '#f5f5f5', success: '#22c55e', successDark: '#16a34a', successLight: '#dcfce7',
+      error: '#ef4444', errorDark: '#dc2626', errorLight: '#fee2e2', warning: '#f59e0b',
+      warningDark: '#d97706', warningLight: '#fef3c7',
+    },
+    themeName: 'light' as const,
+    setThemeName: () => {},
+  }),
+}));
 
 /**
  * Mock the PreferencesModal component to avoid rendering the full modal in tests.

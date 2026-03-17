@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '../test/test-utils';
 import { UserProfileModal } from './UserProfileModal';
 import type { UserProfile } from '../types/iris';
 

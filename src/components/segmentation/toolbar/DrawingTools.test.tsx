@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '../../../test/test-utils';
 import DrawingTools from './DrawingTools';
 
 // Mock the segmentation store

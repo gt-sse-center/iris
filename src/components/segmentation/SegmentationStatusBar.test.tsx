@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '../../test/test-utils';
 import SegmentationStatusBar from './SegmentationStatusBar';
 
 describe('SegmentationStatusBar', () => {
@@ -25,7 +25,7 @@ describe('SegmentationStatusBar', () => {
     expect(container.querySelector('#image-info')).toBeInTheDocument();
     expect(container.querySelector('#different-classes')).toBeInTheDocument();
     expect(container.querySelector('#drawn-pixels')).toBeInTheDocument();
-    expect(container.querySelector('#ai-score')).toBeInTheDocument();
+    expect(screen.getByText('AI Score')).toBeInTheDocument();
     expect(container.querySelector('#ai-recommendation')).toBeInTheDocument();
   });
 });
