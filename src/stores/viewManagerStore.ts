@@ -571,23 +571,19 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   renderMask: (bbox) => {
-    console.log('[ViewManager] renderMask: Triggering mask render (ONE-WAY SYNC)', { bbox });
-    
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
     if (legacyViewManagerInstance && legacyViewManagerInstance.getLayers) {
       const layers = legacyViewManagerInstance.getLayers("mask");
-      layers.forEach((layer: any) => layer.render(bbox));
-    } else {
-      console.warn('[IRIS Migration] ⚠️ Using render_mask fallback - React store ViewManager not available');
-      const w = window as any;
-      if (w.render_mask) {
-        w.render_mask(bbox);
+      if (layers.length > 0) {
+        layers.forEach((layer: any) => layer.render(bbox));
       }
     }
     
-    // Notify React components
-    window.dispatchEvent(new CustomEvent('iris-mask-render-complete'));
+    // CRITICAL: Always dispatch react-mask-render so ReactMaskLayer re-renders.
+    // When the mock ViewManager returns empty layers (no legacy canvas),
+    // ReactMaskLayer is the only thing that can render the mask.
+    window.dispatchEvent(new CustomEvent('react-mask-render', { detail: { bbox } }));
   },
   
   renderPreview: () => {
@@ -653,7 +649,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     if (w.getCursorImageFromStore) {
       const cursorImage = w.getCursorImageFromStore();
       
-      for (let canvas of document.getElementsByClassName('view-canvas')) {
+      for (const canvas of document.getElementsByClassName('view-canvas')) {
         const ctx = (canvas as HTMLCanvasElement).getContext('2d') as any;
         if (ctx) {
           ctx.translate(...cursorImage);
@@ -682,7 +678,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     
     // Apply to legacy canvas
     const w = window as any;
-    for (let canvas of document.getElementsByClassName('view-canvas')) {
+    for (const canvas of document.getElementsByClassName('view-canvas')) {
       const ctx = (canvas as HTMLCanvasElement).getContext('2d') as any;
       if (ctx) {
         ctx.translate(dx, dy);

@@ -1714,7 +1714,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
 
   setMaskType: (type: 'final' | 'user' | 'errors') => {
     const { maskType: currentType } = get();
-    console.log('[Store] setMaskType called:', currentType, '->', type);
     set({ maskType: type });
     
     // Update legacy DOM elements
@@ -1730,8 +1729,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
     
     // Trigger legacy mask reload and render
-    // Call the functions if they exist - they will handle their own initialization checks
-    console.log('[Store] Calling legacy mask functions...');
     if (w.reload_hidden_mask) {
       try {
         w.reload_hidden_mask();
@@ -1909,52 +1906,17 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const { currentImageId, isLoading } = get();
     
     if (isLoading || !currentImageId) {
-      console.log('[IRIS] saveCurrentMask: Already loading or no current image');
       return;
     }
     
     set({ isLoading: true });
     
     try {
-      // Call legacy legacySaveMask function directly to avoid circular calls
       const w = window as any;
       if (w.legacySaveMask) {
-        // Create a promise wrapper around the legacy save function
-        await new Promise<void>((resolve, reject) => {
-          const originalCallback = w.save_mask_finished;
-          
-          // Temporarily override the callback to resolve our promise
-          w.save_mask_finished = async (response: Response, call_afterwards: any) => {
-            try {
-              // Call original callback
-              if (originalCallback) {
-                await originalCallback(response, call_afterwards);
-              }
-              
-              if (response.status === 200) {
-                // Update store state on successful save
-                set({ 
-                  maskChanged: false, 
-                  lastSaveTime: new Date(),
-                  isLoading: false 
-                });
-                resolve();
-              } else {
-                set({ isLoading: false });
-                reject(new Error(`Save failed with status ${response.status}`));
-              }
-            } catch (error) {
-              set({ isLoading: false });
-              reject(error);
-            } finally {
-              // Restore original callback
-              w.save_mask_finished = originalCallback;
-            }
-          };
-          
-          // Call legacy save function directly
-          w.legacySaveMask();
-        });
+        // legacySaveMask now returns a Promise
+        await w.legacySaveMask(null);
+        set({ maskChanged: false, lastSaveTime: new Date(), isLoading: false });
       } else {
         throw new Error('Legacy legacySaveMask function not available');
       }

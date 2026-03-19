@@ -118,10 +118,11 @@ export const createGetCanvasCoords = (transform: CoordinateTransform) => {
 export const addTrackTransforms = (ctx: CanvasRenderingContext2D) => {
   const w = window as any;
   
-  // Check if trackTransforms has already been applied to this context
-  if ((ctx as any).__trackTransformsApplied) {
-    return; // Already applied, skip to prevent recursive calls
-  }
+  // ALWAYS reset the flag before applying, because canvas.width = X resets
+  // the context state (transforms, clip, etc.) but the JS property persists.
+  // Without this reset, trackTransforms won't be re-applied after a canvas
+  // size change, leaving stale SVGMatrix state in the closures.
+  (ctx as any).__trackTransformsApplied = false;
   
   if (w.trackTransforms) {
     try {

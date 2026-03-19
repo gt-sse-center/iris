@@ -28,7 +28,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   disabled = false,
   label
 }) => {
-  const { theme } = useTheme();
+  const { theme, actualThemeName } = useTheme();
   
   const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
@@ -40,7 +40,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   const buttonClassName = `toolbutton icon_button ${className} ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}`.trim();
 
   // Determine if we're in dark theme
-  const isDarkTheme = theme.gray900 === '#E8EDF2';
+  const isDarkTheme = actualThemeName === 'dark';
   
   // Icon filter logic:
   // Light theme: checked = no filter (black), unchecked = invert (white)

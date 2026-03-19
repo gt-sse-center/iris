@@ -9,7 +9,7 @@ interface RightPanelProps {
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onToggleCollapse }) => {
-  const { theme } = useTheme();
+  const { theme, actualThemeName } = useTheme();
   
   const {
     showMask,
@@ -35,7 +35,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
     : 'No class';
   
   // Icon filter for dark theme - invert black icons to white
-  const iconFilter = theme.gray900 === '#E8EDF2' // Dark theme check
+  const iconFilter = actualThemeName === 'dark'
     ? 'invert(1) brightness(0.9)' 
     : 'none';
 

@@ -25,7 +25,7 @@ const HOTKEYS: Record<string, string> = {
 const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<'welcome' | 'faqs' | 'hotkeys' | 'about'>('welcome');
   const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set());
-  const { theme } = useTheme();
+  const { theme, actualThemeName } = useTheme();
 
   useEffect(() => {
     if (isOpen) {
@@ -56,8 +56,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  // Use same dark-mode detection as ToolButton
-  const isDarkTheme = theme.gray900 === '#E8EDF2';
+  // Use actualThemeName from ThemeContext for reliable dark mode detection
+  const isDarkTheme = actualThemeName === 'dark';
   const iconFilter = isDarkTheme ? 'invert(1) brightness(0.9)' : 'none';
   const inlineIcon = (src: string, alt: string) => (
     <img

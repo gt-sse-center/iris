@@ -261,14 +261,31 @@ function init_events(){
     };
 
     window.addEventListener('unload', (event) => {
-      // Cancel the event as stated by the standard.
-      event.preventDefault();
-
-      save_mask();
-
-      // Chrome requires returnValue to be set.
-      event.returnValue = '';
-      return '';
+      // Only save if there are unsaved changes
+      if (window.segmentationStore) {
+          const state = window.segmentationStore.getState();
+          if (state.maskChanged) {
+              // Use sendBeacon for reliable delivery during page unload
+              // fetch() is unreliable during unload as the browser may cancel it
+              const maskData = window.getMaskDataFromStore ? window.getMaskDataFromStore() : null;
+              const userMaskData = window.getUserMaskDataFromStore ? window.getUserMaskDataFromStore() : null;
+              const maskShape = window.getMaskShapeFromStore ? window.getMaskShapeFromStore() : null;
+              const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : null;
+              const currentImageId = window.getCurrentImageIdFromStore ? window.getCurrentImageIdFromStore() : null;
+              
+              if (maskData && userMaskData && maskShape && segmentationUrl && currentImageId) {
+                  const m_length = maskShape[0] * maskShape[1];
+                  const data = new Uint8Array(2 * m_length + 2);
+                  data.set(new Uint8Array([254]));
+                  data.set(maskData, 1);
+                  data.set(userMaskData, m_length + 1);
+                  data.set(new Uint8Array([254]), 2 * m_length + 1);
+                  
+                  const blob = new Blob([data], { type: 'application/octet-stream' });
+                  navigator.sendBeacon(segmentationUrl + "save_mask/" + currentImageId, blob);
+              }
+          }
+      }
     });
 }
 
@@ -2074,9 +2091,9 @@ async function legacyLoadMask(){
         return;
     }
 
-    var results = await download(
-        segmentationUrl + "load_mask/" + currentImageId
-    );
+    const maskUrl = segmentationUrl + "load_mask/" + currentImageId;
+
+    var results = await download(maskUrl, { cache: 'no-store' });
 
     if (results.response.status != 200 && results.response.status != 404) {
         hide_loader();
@@ -2117,12 +2134,6 @@ async function legacyLoadMask(){
     }
 
     // Store only - no vars assignment (React store is single source of truth)
-    console.log('[IRIS] ✅ Mask data loaded:', {
-        maskLength: maskData.length,
-        userMaskLength: userMaskData.length,
-        errorsMaskLength: errorsMaskData.length,
-        maskShape: maskShape
-    });
 
     // Update React store (ONLY source)
     if (!window.setMaskDataInStore || !window.setUserMaskDataInStore || !window.setErrorsMaskDataInStore) {
@@ -2135,12 +2146,11 @@ async function legacyLoadMask(){
             window.setMaskDataInStore(maskData, maskShape[0], maskShape[1]);
             window.setUserMaskDataInStore(userMaskData);
             window.setErrorsMaskDataInStore(errorsMaskData);
-            console.log('[IRIS Migration] ✅ React store mask data also updated');
         } catch (error) {
-            console.error('[IRIS Migration] ❌ React store mask loading failed (legacy vars still available):', error);
+            console.error('[IRIS] ❌ React store mask loading failed:', error);
         }
     } else {
-        console.warn('[IRIS Migration] ⚠️ React store not available, but legacy vars are set');
+        console.warn('[IRIS] ⚠️ React store not available for mask loading');
     }
 
     // Get mask type from React store (ONLY source)
@@ -2150,10 +2160,6 @@ async function legacyLoadMask(){
     }
     const maskType = window.getMaskTypeFromStore();
     set_mask_type(maskType);
-    
-    // CRITICAL: Render the loaded mask to the hidden canvas
-    // This was missing - the mask data was loaded but never drawn to the canvas!
-    render_mask_to_hidden_canvas();
     
     hide_loader();
     
@@ -2190,24 +2196,24 @@ async function download(url, init=null, html_object=null){
     let data;
     if (header == "application/octet-stream"){
         const reader = response.body.getReader();
-        let result = await reader.read();
         let received_bytes = 0;
         let chunks = [];
 
-        while (!result.done) {
-            const value = result.value;
+        while (true) {
+            const result = await reader.read();
 
-            received_bytes += value.length;
-            chunks.push(value);
+            if (result.value) {
+                received_bytes += result.value.length;
+                chunks.push(result.value);
+            }
 
-            // get the next result
-            result = await reader.read();
+            if (result.done) break;
         }
 
         data = new Uint8Array(received_bytes);
         let position = 0;
         for(let chunk of chunks) {
-          data.set(chunk, position); // (4.2)
+          data.set(chunk, position);
           position += chunk.length;
         }
     } else {
@@ -2360,12 +2366,12 @@ function legacySaveMask(call_afterwards=null){
     
     // Get mask data from React store (ONLY SOURCE)
     if (!window.getMaskDataFromStore || !window.getUserMaskDataFromStore) {
-        console.error('[IRIS Migration] ❌ CRITICAL: React store not available for saving');
+        console.error('[IRIS] ❌ React store not available for saving');
         show_dialogue("error", "Cannot save mask: React store not available");
         if (call_afterwards !== null) {
             call_afterwards();
         }
-        return;
+        return Promise.reject(new Error('React store not available'));
     }
     
     const maskData = window.getMaskDataFromStore();
@@ -2373,34 +2379,22 @@ function legacySaveMask(call_afterwards=null){
     
     // Do not save any masks if they have not been loaded yet
     if (maskData === null || userMaskData === null){
-        console.error('[IRIS Migration] ❌ Mask data is null, cannot save');
+        console.error('[IRIS] ❌ Mask data is null, cannot save');
         if(call_afterwards !== null){
           call_afterwards();
         }
-        return;
+        return Promise.resolve();
     }
 
-    // Debug: Count how many pixels are set
-    let userPixelCount = 0;
-    for (let i = 0; i < userMaskData.length; i++) {
-        if (userMaskData[i] === 1) {
-            userPixelCount++;
-        }
-    }
-    console.log(`[IRIS] Saving mask with ${userPixelCount} user-drawn pixels`);
-
-    // Allow saving even when n_user_pixels.total == 0 (empty masks should be saved)
-    // This ensures that cleared/reset masks are properly saved to the server
-
-    // Combine both masks together to one byte array only with padding magic
+    // Combine both masks together to one byte array with padding magic
     // numbers 254 to make sure the transaction was done successfully
     const maskShape = window.getMaskShapeFromStore();
     if (!maskShape) {
-        console.error('[IRIS Migration] No mask shape available for save operation');
+        console.error('[IRIS] No mask shape available for save operation');
         if (call_afterwards !== null) {
             call_afterwards();
         }
-        return;
+        return Promise.reject(new Error('No mask shape'));
     }
     
     var m_length = maskShape[0] * maskShape[1];
@@ -2411,34 +2405,36 @@ function legacySaveMask(call_afterwards=null){
     data.set(userMaskData, m_length+1);
     data.set(padding, 2*m_length+1);
 
-    // Use React store as primary source
     const segmentationUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('segmentation') : null;
     if (!segmentationUrl) {
-        console.error('[IRIS Migration] ❌ No segmentation URL available for legacySaveMask');
+        console.error('[IRIS] ❌ No segmentation URL available for legacySaveMask');
         if (call_afterwards !== null) {
             call_afterwards();
         }
-        return;
+        return Promise.reject(new Error('No segmentation URL'));
     }
 
     const currentImageId = window.getCurrentImageIdFromStore();
     if (!currentImageId) {
-        console.error('[IRIS Migration] ❌ No current image ID available for legacySaveMask');
+        console.error('[IRIS] ❌ No current image ID available for legacySaveMask');
         if (call_afterwards !== null) {
             call_afterwards();
         }
-        return;
+        return Promise.reject(new Error('No current image ID'));
     }
 
-    console.log(`[IRIS] Saving mask for image: ${currentImageId}`);
-
-    fetch(segmentationUrl + "save_mask/" + currentImageId, {
+    return fetch(segmentationUrl + "save_mask/" + currentImageId, {
         method: "POST",
         body: data,
         headers: {
             "Content-Type": "application/octet-stream"
         }
-    }).then((response) => {save_mask_finished(response, call_afterwards);});
+    }).then(async (response) => {
+        await save_mask_finished(response, call_afterwards);
+        if (response.status !== 200) {
+            throw new Error(`Save failed with status ${response.status}`);
+        }
+    });
 }
 
 async function save_mask_finished(response, call_afterwards){
