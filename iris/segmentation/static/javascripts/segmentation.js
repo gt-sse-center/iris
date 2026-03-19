@@ -1307,7 +1307,7 @@ function user_draws_on_mask(){
             const pixelUpdates = [];
             
             if (currentTool == "eraser"){
-                pixelUpdates.push({x, y, userMaskValue: 0});
+                pixelUpdates.push({x, y, maskValue: 0, userMaskValue: 0});
             } else {
                 // Get current class from React store (ONLY source)
                 if (!window.getCurrentClassFromStore) {
@@ -1345,7 +1345,7 @@ function user_draws_on_mask(){
                 // Check bounds
                 if (x >= x_start && x < x_end && y >= y_start && y < y_end) {
                     if (currentTool == "eraser"){
-                        pixelUpdates.push({x, y, userMaskValue: 0});
+                        pixelUpdates.push({x, y, maskValue: 0, userMaskValue: 0});
                     } else {
                         // Get current class from React store (ONLY source)
                         if (!window.getCurrentClassFromStore) {
@@ -1400,6 +1400,7 @@ function user_draws_on_mask(){
                     }
                     
                     if (currentTool == "eraser"){
+                        window.setMaskPixelInStore(x, y, 0);
                         window.setUserMaskPixelInStore(x, y, 0);
                     } else {
                         const currentClass = window.getCurrentClassFromStore ? window.getCurrentClassFromStore() : (() => {
@@ -1442,7 +1443,7 @@ function user_draws_on_mask(){
                     // Only draw if pixel is within the circle
                     if (distance <= radius) {
                         if (currentTool == "eraser"){
-                            pixelUpdates.push({x, y, userMaskValue: 0});
+                            pixelUpdates.push({x, y, maskValue: 0, userMaskValue: 0});
                         } else {
                             // Get current class from React store (ONLY source)
                             if (!window.getCurrentClassFromStore) {
@@ -1465,7 +1466,7 @@ function user_draws_on_mask(){
         for (let x = x_start; x < x_end; x++) {
             for (let y = y_start; y < y_end; y++) {
                 if (currentTool == "eraser"){
-                    pixelUpdates.push({x, y, userMaskValue: 0});
+                    pixelUpdates.push({x, y, maskValue: 0, userMaskValue: 0});
                 } else {
                     // Get current class from React store (ONLY source)
                     if (!window.getCurrentClassFromStore) {
