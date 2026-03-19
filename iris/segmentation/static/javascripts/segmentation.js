@@ -137,9 +137,6 @@ async function init_views(){
     const viewsContainer = get_object('views-container');
     const useLegacyViewManager = !!viewsContainer;
     
-    if (!useLegacyViewManager) {
-    }
-    
     // Use React store as primary source, fallback to legacy vars
     const mainUrl = window.getApiUrlFromStore ? window.getApiUrlFromStore('main') : '/';
 
@@ -2130,8 +2127,6 @@ async function legacyLoadMask(){
         maskData.fill(0);
         userMaskData.fill(0);
     }
-
-    // Store only - no vars assignment (React store is single source of truth)
 
     // Update React store (ONLY source)
     if (!window.setMaskDataInStore || !window.setUserMaskDataInStore || !window.setErrorsMaskDataInStore) {
