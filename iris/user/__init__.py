@@ -2,10 +2,9 @@ import json
 from functools import wraps
 
 import flask
-from sqlalchemy import func
 
 from iris import db
-from iris.models import Action, User
+from iris.models import User
 from iris.project import project
 
 user_app = flask.Blueprint("user", __name__, template_folder="templates", static_folder="static")
@@ -100,55 +99,6 @@ def set(user_id):
     db.session.commit()
 
     return flask.make_response("Saved new user info successfully")
-
-
-@user_app.route("/show/<user_id>", methods=["GET"])
-@requires_auth
-def show(user_id):
-    if user_id == "current":
-        user_id = flask.session["user_id"]
-
-    user = User.query.get(user_id)
-    if user is None:
-        return flask.make_response("Unknown user id!", 404)
-    user_json = user.to_json()
-
-    total_score = func.sum(Action.score).label("total_score")
-    top_users = (
-        db.session.query(User.name, total_score)
-        .join(User.actions)
-        .filter(Action.type == "segmentation")
-        .group_by(User.name)
-        .order_by(total_score.desc())
-    ).all()
-    if top_users:
-        usernames, scores = zip(*top_users)
-        user_json["segmentation"]["rank"] = usernames.index(user.name) + 1
-
-    user_json["segmentation"]["last_masks"] = (
-        Action.query.filter_by(user=user, type="segmentation").order_by(Action.last_modification.desc()).limit(10).all()
-    )
-
-    current_user_id = flask.session["user_id"]
-    if current_user_id == user_id:
-        return flask.render_template("user/show.html", user=user_json, current_user=user_json)
-    else:
-        current_user = User.query.get(current_user_id)
-
-        return flask.render_template("user/show.html", user=user_json, current_user=current_user.to_json())
-
-
-@user_app.route("/config", methods=["GET"])
-@requires_auth
-def config():
-    config = project.get_user_config(flask.session["user_id"])
-    all_bands = project.get_image_bands(project.image_ids[0])
-
-    # If no specific bands set for model, use all bands:
-    if config["segmentation"]["ai_model"]["bands"] is None:
-        config["segmentation"]["ai_model"]["bands"] = all_bands
-
-    return flask.render_template("user/config.html", config=config, all_bands=all_bands)
 
 
 @user_app.route("/save_config", methods=["POST"])

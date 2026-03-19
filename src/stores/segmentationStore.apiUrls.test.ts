@@ -12,8 +12,7 @@ describe('segmentationStore - apiUrls', () => {
       main: '/main/',
       segmentation: '/segmentation/',
       user: '/user/',
-      admin: '/admin/',
-      help: '/help/'
+      admin: '/admin/'
     };
     
     const { setApiUrls, getApiUrl } = useSegmentationStore.getState();
@@ -36,8 +35,7 @@ describe('segmentationStore - apiUrls', () => {
       main: '/main/',
       segmentation: '/segmentation/',
       user: '/user/',
-      admin: '/admin/',
-      help: '/help/'
+      admin: '/admin/'
     };
     setApiUrls(validUrls);
     expect(getApiUrl('invalid' as any)).toBeNull();
@@ -62,8 +60,7 @@ describe('segmentationStore - apiUrls', () => {
       main: '/main/',
       segmentation: '',
       user: '/user/',
-      admin: '/admin/',
-      help: '/help/'
+      admin: '/admin/'
     });
     expect(apiUrls).toBeNull();
   });
@@ -73,8 +70,7 @@ describe('segmentationStore - apiUrls', () => {
       main: 'http://localhost:5000/main/',
       segmentation: 'http://localhost:5000/segmentation/',
       user: 'http://localhost:5000/user/',
-      admin: 'http://localhost:5000/admin/',
-      help: 'http://localhost:5000/help/'
+      admin: 'http://localhost:5000/admin/'
     };
     
     const { setApiUrls, getApiUrl } = useSegmentationStore.getState();
@@ -89,8 +85,7 @@ describe('segmentationStore - apiUrls', () => {
       main: '/main/',
       segmentation: '/segmentation/',
       user: '/user/',
-      admin: '/admin/',
-      help: '/help/'
+      admin: '/admin/'
     };
     
     const { setApiUrls, getDebugInfo } = useSegmentationStore.getState();
@@ -114,8 +109,7 @@ describe('segmentationStore - apiUrls legacy bridge', () => {
       main: '/main/',
       segmentation: '/segmentation/',
       user: '/user/',
-      admin: '/admin/',
-      help: '/help/'
+      admin: '/admin/'
     };
     
     // Test function existence

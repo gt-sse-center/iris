@@ -40,7 +40,6 @@ interface ApiUrls {
   segmentation: string;
   user: string;
   admin: string;
-  help: string;
 }
 
 interface SegmentationDebugInfo {
@@ -864,7 +863,7 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
 
     // Validate required endpoints
-    const requiredEndpoints: (keyof ApiUrls)[] = ['main', 'segmentation', 'user', 'admin', 'help'];
+    const requiredEndpoints: (keyof ApiUrls)[] = ['main', 'segmentation', 'user', 'admin'];
     const missingEndpoints = requiredEndpoints.filter(endpoint => !urls[endpoint] || typeof urls[endpoint] !== 'string' || urls[endpoint].trim() === '');
     
     if (missingEndpoints.length > 0) {

@@ -18,7 +18,7 @@ class TestCore:
             'admin/users', 'admin/images', 'admin/actions/segmentation',
             'admin/actions/detection',
             # user
-            'user/get/current', 'user/show/current', 'user/config',
+            'user/get/current',
             'user/save_config',
             # segmentation
             'segmentation/load_mask/1', 'segmentation/save_mask/1',
