@@ -138,7 +138,6 @@ async function init_views(){
     const useLegacyViewManager = !!viewsContainer;
     
     if (!useLegacyViewManager) {
-        console.log('[IRIS Migration] 🔧 Legacy ViewManager disabled - using React ViewManager only');
     }
     
     // Use React store as primary source, fallback to legacy vars
@@ -181,7 +180,6 @@ async function init_views(){
             updateSize: () => {},
             render: () => {
                 // Mock render - React ViewManager handles rendering
-                console.log('[IRIS Migration] Mock ViewManager render called - React handles rendering');
             },
             // Add filters property to match real ViewManager
             filters: {
@@ -914,7 +912,6 @@ function update_drawn_pixels(){
     
     // Let React store calculate and update pixel counts
     const pixelCounts = window.updateUserPixelCountsInStore();
-    console.log('[IRIS] ✅ Using React store for pixel counting:', pixelCounts);
 }
 
 function discard_future(){
@@ -2479,15 +2476,12 @@ async function legacyPredictMask(){
     if (window.validateAITrainingDataFromStore) {
         try {
             validationResult = window.validateAITrainingDataFromStore();
-            console.log('[IRIS Migration] ✅ Using React store for AI validation:', validationResult);
             
             if (!validationResult.isValid) {
-                console.log('[IRIS Migration] AI validation failed - insufficient training data');
                 return; // React store handles error display
             }
         } catch (error) {
             console.error('[IRIS Migration] ❌ React store AI validation failed:', error);
-            console.warn('[IRIS Migration] Falling back to legacy validation');
         }
     } else {
         console.warn('[IRIS Migration] ⚠️ React store AI validation not available, using legacy fallback');
@@ -2521,8 +2515,6 @@ async function legacyPredictMask(){
             .map(key => parseInt(key))
             .filter(classId => validationResult.classPixelCounts[classId] > 10);
     } else {
-        console.log('[IRIS Migration] Using AI validation fallback');
-        
         user_classes = [];
         
         for (var i=0; i < classCount; i++){
@@ -2777,8 +2769,6 @@ async function legacyPredictMask(){
         
         // Set in React store (primary source)
         window.setConfusionMatrixInStore(confusionMatrixObj);
-        
-        console.log('[IRIS Migration] ✅ Confusion matrix set through React store');
     } else {
         console.error('[IRIS] ❌ Confusion matrix store not available - cannot save confusion matrix');
     }

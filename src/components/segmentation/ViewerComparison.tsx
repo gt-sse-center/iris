@@ -23,8 +23,6 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
   // Initialize React ViewManager from React config (not legacy vars)
   useEffect(() => {
     if (!isInitialized && config) {
-      console.log('🔧 ViewerComparison: Attempting to initialize ViewManager from React config...');
-      
       const viewManagerStore = useViewManagerStore.getState();
       
       try {
@@ -50,13 +48,11 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
             });
           }
           
-          console.log('🔧 ViewerComparison: Setting views from React config:', Object.keys(views));
           viewManagerStore.setViews(views);
         }
 
         // Initialize view groups from React config
         if (config.view_groups) {
-          console.log('🔧 ViewerComparison: Setting view groups from React config:', config.view_groups);
           // Handle different view_groups formats
           if (Array.isArray(config.view_groups)) {
             // If it's an array of arrays, convert to object format
@@ -88,7 +84,6 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
           if (Array.isArray(shape) && shape.length >= 2) {
             const [width, height] = shape;
             viewManagerStore.setImageDimensions(width, height);
-            console.log('🔧 ViewerComparison: Setting image dimensions:', width, 'x', height);
           }
         }
 
@@ -97,12 +92,10 @@ const ViewerComparison: React.FC<ViewerComparisonProps> = () => {
         if (currentImageId) {
           const imageLocation = viewManagerStore.imageLocation || [0, 0];
           viewManagerStore.setImage(currentImageId, imageLocation);
-          console.log('🔧 ViewerComparison: Setting image:', currentImageId, 'at', imageLocation);
         }
 
         // Mark as initialized
         viewManagerStore.setInitialized(true);
-        console.log('✅ ViewerComparison: ViewManager initialized successfully from React config');
         
       } catch (error) {
         console.error('❌ ViewerComparison: Failed to initialize ViewManager from React config:', error);

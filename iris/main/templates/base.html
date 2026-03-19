@@ -27,7 +27,6 @@
             if (window.setApiUrlsInStore && vars.url) {
                 try {
                     window.setApiUrlsInStore(vars.url);
-                    console.log('[IRIS Migration] ✅ API URLs initialized in React store');
                 } catch (error) {
                     console.error('[IRIS Migration] ❌ Failed to initialize API URLs in React store:', error);
                 }

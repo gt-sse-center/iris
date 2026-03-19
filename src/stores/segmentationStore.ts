@@ -873,8 +873,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
 
     set({ apiUrls: urls });
-
-    console.log('[IRIS] API URLs initialized:', urls);
   },
 
   getApiUrl: (endpoint: keyof ApiUrls) => {
@@ -1547,7 +1545,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
       // Set the canvas in the store
       get().setHiddenMaskCanvas(canvas);
       
-      console.log(`[IRIS] Created hidden mask canvas: ${width}x${height}`);
       return canvas;
     } catch (error) {
       console.error('[IRIS] createHiddenMaskCanvas failed:', error);
@@ -1617,8 +1614,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
     if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
-    } else {
-      console.log('[IRIS] setCurrentTool: Skipping render_preview, ViewManager not initialized yet');
     }
   },
 
@@ -1631,8 +1626,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
     if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
-    } else {
-      console.log('[IRIS] setToolSize: Skipping render_preview, ViewManager not initialized yet');
     }
     
     // Trigger React preview layer re-render
@@ -1658,8 +1651,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     const viewManager = w.getViewManagerFromStore ? w.getViewManagerFromStore() : null;
     if (viewManager?.getLayers && w.render_preview) {
       w.render_preview();
-    } else {
-      console.log('[IRIS] setToolShape: Skipping render_preview, ViewManager not initialized yet');
     }
     
     // Trigger React preview layer re-render
@@ -2155,8 +2146,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     if (w.setMaskAreaInStore && config.segmentation?.mask_area) {
       w.setMaskAreaInStore(config.segmentation.mask_area);
     }
-    
-    console.log('[IRIS] Project config updated:', config.name);
   },
 
   setUser: (user: UserInfo) => {
@@ -2172,8 +2161,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     }
     
     set({ user });
-    
-    console.log('[IRIS] User updated:', user.name, `(${user.segmentation.n_masks} masks)`);
   },
 
   setMaskChanged: (changed: boolean) => {
@@ -2441,8 +2428,6 @@ export const useSegmentationStore = create<SegmentationState>((set, get) => ({
     
     // Update store state
     set({ currentImageId: imageId, currentImageIndex: index });
-
-    console.log('[IRIS] Current image set:', imageId, 'index:', index);
   },
 
   navigateNext: () => {
