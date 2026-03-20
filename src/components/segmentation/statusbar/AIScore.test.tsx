@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '../../../test/test-utils';
 import AIScore from './AIScore';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
 
@@ -16,11 +16,10 @@ describe('AIScore', () => {
   it('renders AI score with default value when no confusion matrix', () => {
     mockUseSegmentationStore.mockReturnValue(null);
     
-    const { container } = render(<AIScore onOpenConfusionMatrix={vi.fn()} />);
+    render(<AIScore onOpenConfusionMatrix={vi.fn()} />);
     
-    const aiScore = container.querySelector('#ai-score');
-    expect(aiScore).toBeInTheDocument();
-    expect(aiScore?.textContent).toBe('0');
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('AI Score')).toBeInTheDocument();
   });
 
   it('renders AI score from confusion matrix when available', () => {
@@ -41,23 +40,18 @@ describe('AIScore', () => {
     
     mockUseSegmentationStore.mockReturnValue(mockConfusionMatrix);
     
-    const { container } = render(<AIScore onOpenConfusionMatrix={vi.fn()} />);
+    render(<AIScore onOpenConfusionMatrix={vi.fn()} />);
     
-    const aiScore = container.querySelector('#ai-score');
-    expect(aiScore).toBeInTheDocument();
-    expect(aiScore?.textContent).toBe('89'); // Math.round(0.89 * 100)
+    expect(screen.getByText('89%')).toBeInTheDocument();
   });
 
   it('calls onOpenConfusionMatrix when clicked', () => {
     mockUseSegmentationStore.mockReturnValue(null);
     const handleOpenMatrix = vi.fn();
     
-    const { container } = render(<AIScore onOpenConfusionMatrix={handleOpenMatrix} />);
+    render(<AIScore onOpenConfusionMatrix={handleOpenMatrix} />);
     
-    const statusButton = container.querySelector('.statusbutton');
-    if (statusButton) {
-      fireEvent.click(statusButton);
-      expect(handleOpenMatrix).toHaveBeenCalledTimes(1);
-    }
+    fireEvent.click(screen.getByTitle('View confusion matrix and accuracy statistics'));
+    expect(handleOpenMatrix).toHaveBeenCalledTimes(1);
   });
 });

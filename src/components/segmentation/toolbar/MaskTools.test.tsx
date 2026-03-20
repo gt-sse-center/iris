@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, fireEvent, act } from '@testing-library/react';
+import { render, fireEvent, act } from '../../../test/test-utils';
 import MaskTools from './MaskTools';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
 

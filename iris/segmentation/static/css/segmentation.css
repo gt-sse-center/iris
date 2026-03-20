@@ -14,90 +14,30 @@ body {
   overflow: visible !important;
 }
 
+/* Dropdown menu styles are now handled inline with theme colors */
 .image-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
-  background: white;
-  border: 2px solid black;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  min-width: 350px;
-  max-height: 400px;
-  display: flex;
-  flex-direction: column;
   line-height: normal !important;
-}
-
-.image-dropdown-loading {
-  padding: 20px;
-  text-align: center;
-  color: #666;
-}
-
-.image-dropdown-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-  font-weight: bold;
-  font-size: 12px;
-  color: #333;
 }
 
 .image-dropdown-list {
   overflow-y: auto;
-  max-height: 350px;
 }
 
+/* Image item styles are now handled inline with theme colors */
 .image-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.15s;
-  background: white;
   line-height: 1.5 !important;
 }
 
-.image-dropdown-item:hover {
-  background: #f9f9f9;
-}
-
-.image-dropdown-item.current {
-  background: #e3f2fd;
-  font-weight: bold;
-}
-
-.image-dropdown-item.current:hover {
-  background: #bbdefb;
-}
-
 .image-thumbnail {
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid #ddd;
   flex-shrink: 0;
 }
 
 .image-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 14px !important;
-  color: #000 !important;
-  font-weight: normal !important;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+}
 }
 
 .image-status {
@@ -286,10 +226,10 @@ body {
 
 .paintbrush-dropdown {
   position: fixed;
-  background: white;
-  border: 2px solid black;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   z-index: 9999;
   min-width: 320px;
   padding: 8px;
@@ -297,13 +237,13 @@ body {
 
 .paintbrush-dropdown-header {
   padding: 8px 12px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-  font-weight: bold;
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-panel-border);
+  font-weight: 600;
   font-size: 12px;
-  color: #333;
+  color: var(--color-gray900);
   margin: -8px -8px 8px -8px;
-  border-radius: 2px 2px 0 0;
+  border-radius: 8px 8px 0 0;
 }
 
 .brush-row {
@@ -316,8 +256,8 @@ body {
 
 .brush-row-label {
   font-size: 11px;
-  font-weight: bold;
-  color: #666;
+  font-weight: 600;
+  color: var(--color-gray500);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -335,26 +275,26 @@ body {
   align-items: center;
   gap: 2px;
   padding: 6px;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  background: white;
+  border: 1px solid var(--color-panel-border);
+  border-radius: 6px;
+  background: var(--color-bg-tertiary);
   cursor: pointer;
   transition: all 0.15s;
   min-width: 40px;
 }
 
 .brush-option:hover {
-  border-color: #999;
-  background: #f9f9f9;
+  border-color: var(--color-gray500);
+  background: var(--color-panel-header-bg);
 }
 
 .brush-option.selected {
-  border-color: #007cba;
-  background: #e3f2fd;
+  border-color: var(--color-primary);
+  background: var(--color-primary-pale);
 }
 
 .brush-preview {
-  background: #666;
+  background: var(--color-gray500);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -370,40 +310,19 @@ body {
 
 .brush-size-label {
   font-size: 10px;
-  color: #666;
-  font-weight: bold;
+  color: var(--color-gray600);
+  font-weight: 600;
 }
 
 .brush-option.selected .brush-size-label {
-  color: #007cba;
-}
+  color: var(--color-primary);
 }
 
 /* Left Toolbar Button Overrides */
-/* Reduce button width to fit within expanded toolbar */
-#tb_tool_move,
-#tb_tool_draw,
-#tb_tool_eraser,
-#tb_undo,
-#tb_redo,
-#tb_predict_mask,
-#tb_reset_mask,
-#tb_tool_reset_views {
-  margin: 2px 0 !important; /* Remove horizontal margins */
-  width: auto !important;
-  max-width: calc(100% - 4px) !important; /* Account for border */
-}
-
-/* Ensure paintbrush selector containers also respect width */
-.paintbrush-selector-container {
-  margin: 2px 0 !important;
-  max-width: 100% !important;
-}
-
+/* Left Toolbar Button Overrides */
 .paintbrush-selector-container .toolbutton {
-  max-width: calc(100% - 4px) !important;
+  box-sizing: border-box;
 }
-
 /* Modern Range Slider Styling */
 input[type="range"] {
   -webkit-appearance: none;

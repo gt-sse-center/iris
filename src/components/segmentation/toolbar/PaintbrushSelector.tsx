@@ -97,7 +97,7 @@ const PaintbrushSelector: React.FC<PaintbrushSelectorProps> = ({
   const dropdownPosition = getDropdownPosition();
 
   return (
-    <div className="paintbrush-selector-container" ref={buttonRef} style={style}>
+    <div className="paintbrush-selector-container" ref={buttonRef}>
       <ToolButton
         id={id}
         icon={icon}
@@ -107,6 +107,7 @@ const PaintbrushSelector: React.FC<PaintbrushSelectorProps> = ({
         title={title}
         className={showDropdown ? 'dropdown-open' : ''}
         label={label}
+        style={style}
       />
       
       {showDropdown && (

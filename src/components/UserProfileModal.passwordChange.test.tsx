@@ -1,7 +1,14 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { UserProfileModal } from './UserProfileModal';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import type { UserProfile } from '../types/iris';
+
+/** Helper to render with ThemeProvider */
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>);
+}
 
 describe('UserProfileModal - Password Change', () => {
   const mockProfile: UserProfile = {
@@ -32,7 +39,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => mockProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -46,7 +53,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => otherUserProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} userId="2" />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} userId="2" />);
 
     await waitFor(() => {
       expect(screen.queryByText('Change Password')).not.toBeInTheDocument();
@@ -59,7 +66,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => mockProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -81,7 +88,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => mockProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -108,7 +115,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => mockProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -142,7 +149,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => mockProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -181,7 +188,7 @@ describe('UserProfileModal - Password Change', () => {
         json: async () => ({ message: 'Password changed successfully' })
       });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -236,7 +243,7 @@ describe('UserProfileModal - Password Change', () => {
         json: async () => ({ error: 'Current password is incorrect' })
       });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();
@@ -270,7 +277,7 @@ describe('UserProfileModal - Password Change', () => {
       json: async () => mockProfile
     });
 
-    render(<UserProfileModal isOpen={true} onClose={() => {}} />);
+    renderWithTheme(<UserProfileModal isOpen={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('Change Password')).toBeInTheDocument();

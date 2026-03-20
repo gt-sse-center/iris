@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent } from '../../../test/test-utils';
 import NavigationTools from './NavigationTools';
 
 describe('NavigationTools', () => {

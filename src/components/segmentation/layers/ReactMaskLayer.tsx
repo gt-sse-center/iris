@@ -3,15 +3,18 @@
  * 
  * This component replaces the legacy MaskLayer class.
  * It handles mask rendering and visibility.
+ * 
+ * This layer uses trackTransforms (like all legacy CanvasLayer subclasses)
+ * so that zoom/pan applied to all view-canvas elements keeps the mask
+ * aligned with the RGB image underneath.
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
-import ReactBaseLayer, { ReactBaseLayerProps } from './ReactBaseLayer';
 import { addTrackTransforms } from '../../../utils/coordinateTransform';
+import ReactBaseLayer, { ReactBaseLayerProps } from './ReactBaseLayer';
 
 interface ReactMaskLayerProps extends Omit<ReactBaseLayerProps, 'children'> {
-  // Additional props specific to mask layer
   zoomLevel?: number;
   panOffset?: { x: number; y: number };
 }
@@ -28,86 +31,69 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Get mask visibility from store
   const { showMask } = useSegmentationStore();
+  const currentImageId = useSegmentationStore((state) => state.currentImageId);
   
+  /**
+   * Set up canvas with trackTransforms and base scale.
+   * trackTransforms is required so the zoom/move loops in viewManagerStore
+   * can apply ctx.translate/ctx.scale and constrain_view works (needs getCanvasCoords).
+   */
+  const setupCanvas = useCallback((canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, imageShape: [number, number]) => {
+    ctx.imageSmoothingEnabled = false;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = '';
+    
+    // Apply trackTransforms so zoom/pan works on this canvas
+    addTrackTransforms(ctx);
+    
+    // Set initial scale: canvas pixels → image pixels
+    const scaleX = canvas.width / imageShape[1];  // canvas width / image width
+    const scaleY = canvas.height / imageShape[0]; // canvas height / image height
+    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+  }, []);
+
   // Render mask function - matches legacy MaskLayer exactly
   const renderMask = useCallback((bbox?: [number, number, number, number]) => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.warn('[ReactMaskLayer] renderMask: No canvas available');
-      return;
-    }
+    if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.warn('[ReactMaskLayer] renderMask: No canvas context available');
-      return;
-    }
+    if (!ctx) return;
     
-    // Get mask data from store via bridge functions
     const w = window as any;
     const hiddenMask = w.getHiddenMaskCanvasFromStore ? w.getHiddenMaskCanvasFromStore() : null;
-    
-    if (!hiddenMask) {
-      console.warn('[ReactMaskLayer] renderMask: No hidden_mask available from store');
-      return;
-    }
+    if (!hiddenMask) return;
     
     const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
-    if (!maskArea) {
-      console.warn('[ReactMaskLayer] renderMask: No mask_area available from store');
-      return;
-    }
+    if (!maskArea) return;
     
     const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
-    if (!imageShape) {
-      console.warn('[ReactMaskLayer] renderMask: No image_shape available from store');
-      return;
-    }
+    if (!imageShape) return;
     
     if ((window as any).IRIS_DEBUG) {
-      console.log('[ReactMaskLayer] renderMask: Rendering mask', {
+      console.log('[ReactMaskLayer] renderMask:', {
         bbox,
         hiddenMaskSize: [hiddenMask.width, hiddenMask.height],
-        maskArea: maskArea,
-        imageShape: imageShape,
+        maskArea,
+        imageShape,
         canvasSize: [canvas.width, canvas.height]
       });
     }
     
-    // Use image coordinates exactly like legacy - let canvas transform handle scaling
-    if (bbox === undefined) {
-      // No specific coordinates given, redraw the whole mask
-      
-      // CRITICAL FIX: Save current transformation before clearing
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity for clearing
-      
-      if (imageShape) {
-        // Clear using canvas dimensions to respect zoom/pan
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      } else {
-        console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available from store');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      
-      ctx.restore(); // Restore the zoom/pan transformation
-      
-      // Draw mask at mask_area position in image coordinates (like legacy)
-      ctx.drawImage(
-        hiddenMask,
-        maskArea[0], maskArea[1]
-      );
+    if (!bbox) {
+      // Full redraw: clear in image coords then draw hidden mask
+      ctx.clearRect(0, 0, imageShape[0], imageShape[1]);
+      ctx.drawImage(hiddenMask, maskArea[0], maskArea[1]);
     } else {
-      // Redraw specific area - use image coordinates (like legacy)
+      // Partial redraw
       ctx.clearRect(
         bbox[0] + maskArea[0],
         bbox[1] + maskArea[1],
         bbox[2], bbox[3]
       );
-      
-      // Draw specific area of mask (like legacy)
       ctx.drawImage(
         hiddenMask,
         bbox[0], bbox[1], bbox[2], bbox[3],
@@ -117,204 +103,204 @@ const ReactMaskLayer: React.FC<ReactMaskLayerProps> = ({
     }
   }, []);
   
+  // CRITICAL: Clear visible canvas when image changes to prevent stale mask display
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    
+    if ((window as any).IRIS_DEBUG) {
+      console.log('[ReactMaskLayer] Canvas cleared for image change:', currentImageId);
+    }
+  }, [currentImageId]);
+
+  // Handle browser bfcache restoration
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+          }
+        }
+        renderMask();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [renderMask]);
+
   // Handle canvas size changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
     const updateCanvasSize = () => {
-      // Get actual container dimensions instead of using fixed width/height props
       const container = canvas.parentElement;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        const containerWidth = rect.width;
-        const containerHeight = rect.height;
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const containerWidth = rect.width;
+      const containerHeight = rect.height;
+      
+      const w = window as any;
+      const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : w.vars?.image_shape;
+      
+      let actualWidth = containerWidth;
+      let actualHeight = containerHeight;
+      
+      if (imageShape) {
+        const imageWidth = imageShape[1];
+        const imageHeight = imageShape[0];
+        const imageAspectRatio = imageWidth / imageHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
         
-        // Get image shape to maintain aspect ratio
-        const w = window as any;
-        const imageShape = (window as any).getImageShapeFromStore ? 
-          (window as any).getImageShapeFromStore() : w.vars?.image_shape;
-        
-        let actualWidth = containerWidth;
-        let actualHeight = containerHeight;
-        
-        // Maintain aspect ratio based on image dimensions
-        if (imageShape) {
-          const imageWidth = imageShape[1];
-          const imageHeight = imageShape[0];
-          const imageAspectRatio = imageWidth / imageHeight;
-          const containerAspectRatio = containerWidth / containerHeight;
-          
-          if (containerAspectRatio > imageAspectRatio) {
-            // Container is wider than image - fit to height
-            actualWidth = containerHeight * imageAspectRatio;
-            actualHeight = containerHeight;
-          } else {
-            // Container is taller than image - fit to width
-            actualWidth = containerWidth;
-            actualHeight = containerWidth / imageAspectRatio;
-          }
+        if (containerAspectRatio > imageAspectRatio) {
+          actualWidth = containerHeight * imageAspectRatio;
+          actualHeight = containerHeight;
+        } else {
+          actualWidth = containerWidth;
+          actualHeight = containerWidth / imageAspectRatio;
         }
-        
-        // Set canvas internal dimensions to maintain aspect ratio
-        canvas.width = actualWidth;
-        canvas.height = actualHeight;
-        
-        // Center the canvas in the container
-        canvas.style.left = `${(containerWidth - actualWidth) / 2}px`;
-        canvas.style.top = `${(containerHeight - actualHeight) / 2}px`;
-        canvas.style.width = `${actualWidth}px`;
-        canvas.style.height = `${actualHeight}px`;
-        
-        // Disable image smoothing for pixel-perfect rendering
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.imageSmoothingEnabled = false;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          ctx.shadowBlur = 0;
-          ctx.shadowColor = '';
-          
-          // Add full canvas transformation tracking (enables zoom/pan)
-          // This creates getWorldCoords and getCanvasCoords that handle zoom/pan properly
-          addTrackTransforms(ctx);
-          
-          // CRITICAL: Always reset transformation when canvas size changes
-          // This ensures the mask fits properly after resize
-          if (imageShape) {
-            const scaleX = actualWidth / imageShape[1];  // canvas width / image width
-            const scaleY = actualHeight / imageShape[0]; // canvas height / image height
-            ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
-          } else {
-            console.warn('⚠️ [IRIS Migration] ReactMaskLayer: No image shape available for canvas transformation - using identity transform');
-          }
-        }
-        
-        // Re-render after size change
-        renderMask();
       }
+      
+      canvas.width = actualWidth;
+      canvas.height = actualHeight;
+      canvas.style.left = `${(containerWidth - actualWidth) / 2}px`;
+      canvas.style.top = `${(containerHeight - actualHeight) / 2}px`;
+      canvas.style.width = `${actualWidth}px`;
+      canvas.style.height = `${actualHeight}px`;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx && imageShape) {
+        setupCanvas(canvas, ctx, imageShape);
+      }
+      
+      renderMask();
     };
     
-    // Initial size update
     updateCanvasSize();
     
-    // Watch for container size changes using ResizeObserver
     const container = canvas.parentElement;
     if (container) {
-      const resizeObserver = new ResizeObserver(() => {
-        updateCanvasSize();
-      });
-      
+      const resizeObserver = new ResizeObserver(() => updateCanvasSize());
       resizeObserver.observe(container);
-      
-      return () => {
-        resizeObserver.disconnect();
-      };
+      return () => resizeObserver.disconnect();
     }
-  }, [width, height, renderMask]);
+  }, [width, height, renderMask, setupCanvas]);
   
   // Handle mask visibility changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      const shouldShow = showMask;
-      canvas.style.display = shouldShow ? 'block' : 'none';
-      if ((window as any).IRIS_DEBUG) console.log('[ReactMaskLayer] Mask visibility changed:', shouldShow);
-      
-      // If mask is now visible, trigger a render
-      if (shouldShow) {
-        renderMask();
-      }
+      canvas.style.display = showMask ? 'block' : 'none';
+      if (showMask) renderMask();
     }
   }, [showMask, renderMask]);
   
   // Expose render function for legacy compatibility
   useEffect(() => {
     const w = window as any;
-    if (!w.reactMaskLayers) {
-      w.reactMaskLayers = [];
-    }
+    if (!w.reactMaskLayers) w.reactMaskLayers = [];
     
     const layerInterface = {
       render: renderMask,
-      view: view,
+      view,
       type: 'mask',
       container: canvasRef.current,
     };
-    
     w.reactMaskLayers.push(layerInterface);
     
     return () => {
       const index = w.reactMaskLayers.indexOf(layerInterface);
-      if (index > -1) {
-        w.reactMaskLayers.splice(index, 1);
-      }
+      if (index > -1) w.reactMaskLayers.splice(index, 1);
     };
   }, [renderMask, view]);
   
   // Listen for zoom/transform changes and re-render
   useEffect(() => {
-    const handleTransformChange = () => {
-      renderMask();
-    };
-    
-    // Listen for legacy zoom/transform events
+    const handleTransformChange = () => renderMask();
     window.addEventListener('iris-transform-change', handleTransformChange);
-    
-    return () => {
-      window.removeEventListener('iris-transform-change', handleTransformChange);
-    };
+    return () => window.removeEventListener('iris-transform-change', handleTransformChange);
   }, [renderMask]);
   
   // Listen for legacy mask render calls
   useEffect(() => {
     const handleLegacyRender = (event: CustomEvent) => {
-      const bbox = event.detail?.bbox;
-      renderMask(bbox);
+      renderMask(event.detail?.bbox);
     };
-    
     window.addEventListener('react-mask-render', handleLegacyRender as EventListener);
-    
-    return () => {
-      window.removeEventListener('react-mask-render', handleLegacyRender as EventListener);
-    };
+    return () => window.removeEventListener('react-mask-render', handleLegacyRender as EventListener);
   }, [renderMask]);
   
-  // Initial render when component mounts and when mask data becomes available
+  // Initial render when mask data is available
   useEffect(() => {
-    // Only render if we have mask data from store
     const w = window as any;
     const hiddenMask = w.getHiddenMaskCanvasFromStore ? w.getHiddenMaskCanvasFromStore() : null;
     const maskArea = window.getMaskAreaFromStore ? window.getMaskAreaFromStore() : null;
     const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
     
-    if (hiddenMask && maskArea && imageShape) {
-      if ((window as any).IRIS_DEBUG) console.log('[ReactMaskLayer] Initial render with mask data available');
-      renderMask();
-    } else {
-      if ((window as any).IRIS_DEBUG) {
-        console.log('[ReactMaskLayer] Waiting for mask data to become available', {
-          hasHiddenMask: !!hiddenMask,
-          hasMaskArea: !!maskArea,
-          hasImageShape: !!imageShape
-        });
-      }
-    }
+    if (hiddenMask && maskArea && imageShape) renderMask();
   }, [renderMask]);
   
   // Listen for mask data loading events
   useEffect(() => {
     const handleMaskLoaded = () => {
-      if ((window as any).IRIS_DEBUG) console.log('[ReactMaskLayer] Mask data loaded event received');
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      
+      const container = canvas.parentElement;
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const containerWidth = rect.width;
+      const containerHeight = rect.height;
+      const w = window as any;
+      const imageShape = w.getImageShapeFromStore ? w.getImageShapeFromStore() : null;
+      
+      if (imageShape) {
+        const imageWidth = imageShape[1];
+        const imageHeight = imageShape[0];
+        const imageAspectRatio = imageWidth / imageHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+        
+        let actualWidth: number, actualHeight: number;
+        if (containerAspectRatio > imageAspectRatio) {
+          actualWidth = containerHeight * imageAspectRatio;
+          actualHeight = containerHeight;
+        } else {
+          actualWidth = containerWidth;
+          actualHeight = containerWidth / imageAspectRatio;
+        }
+        
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+        canvas.style.left = `${(containerWidth - actualWidth) / 2}px`;
+        canvas.style.top = `${(containerHeight - actualHeight) / 2}px`;
+        canvas.style.width = `${actualWidth}px`;
+        canvas.style.height = `${actualHeight}px`;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) setupCanvas(canvas, ctx, imageShape);
+      }
+      
       renderMask();
     };
     
     window.addEventListener('iris-mask-loaded', handleMaskLoaded);
-    
-    return () => {
-      window.removeEventListener('iris-mask-loaded', handleMaskLoaded);
-    };
-  }, [renderMask]);
+    return () => window.removeEventListener('iris-mask-loaded', handleMaskLoaded);
+  }, [renderMask, setupCanvas]);
   
   const canvasStyle: React.CSSProperties = {
     position: 'absolute',

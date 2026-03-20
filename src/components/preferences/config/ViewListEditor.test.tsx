@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '../../../test/test-utils';
 import React from 'react';
 import ViewListEditor from './ViewListEditor';
 
@@ -54,8 +54,8 @@ describe('ViewListEditor', () => {
       fireEvent.change(typeSelect, { target: { value: 'RGB' } });
       
       const redInput = screen.getByPlaceholderText('e.g., $Sentinel2.B5');
-      const greenInput = screen.getByPlaceholderText('e.g., $Sentinel2.B3');
-      const blueInput = screen.getByPlaceholderText('e.g., $Sentinel2.B2');
+      const greenInput = screen.getByPlaceholderText('e.g., $Sentinel2.B4');
+      const blueInput = screen.getByPlaceholderText('e.g., $Sentinel2.B3');
       
       fireEvent.change(redInput, { target: { value: '$B4' } });
       fireEvent.change(greenInput, { target: { value: '$B3' } });
@@ -264,8 +264,8 @@ describe('ViewListEditor', () => {
       fireEvent.change(typeSelect, { target: { value: 'RGB' } });
       
       expect(screen.getByPlaceholderText('e.g., $Sentinel2.B5')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('e.g., $Sentinel2.B4')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('e.g., $Sentinel2.B3')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('e.g., $Sentinel2.B2')).toBeInTheDocument();
     });
 
     it('shows info message for Bing Map type', () => {

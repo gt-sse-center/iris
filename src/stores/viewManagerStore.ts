@@ -549,21 +549,11 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // Rendering methods (ONE-WAY SYNC: React store -> Legacy)
   render: () => {
-    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] render: Triggering render (ONE-WAY SYNC)');
-    
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
-    console.log('[ViewManager] render: Debug info', {
-      hasLegacyInstance: !!legacyViewManagerInstance,
-      hasRenderMethod: !!(legacyViewManagerInstance && legacyViewManagerInstance.render),
-      instanceType: typeof legacyViewManagerInstance
-    });
     
     if (legacyViewManagerInstance && legacyViewManagerInstance.render) {
-      console.log('[ViewManager] render: Using legacy ViewManager instance');
       legacyViewManagerInstance.render();
-    } else {
-      console.warn('[IRIS Migration] ⚠️ Using render_views fallback - React store ViewManager not available');
     }
     
     // Notify React components
@@ -571,39 +561,27 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   renderMask: (bbox) => {
-    console.log('[ViewManager] renderMask: Triggering mask render (ONE-WAY SYNC)', { bbox });
-    
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
     if (legacyViewManagerInstance && legacyViewManagerInstance.getLayers) {
       const layers = legacyViewManagerInstance.getLayers("mask");
-      layers.forEach((layer: any) => layer.render(bbox));
-    } else {
-      console.warn('[IRIS Migration] ⚠️ Using render_mask fallback - React store ViewManager not available');
-      const w = window as any;
-      if (w.render_mask) {
-        w.render_mask(bbox);
+      if (layers.length > 0) {
+        layers.forEach((layer: any) => layer.render(bbox));
       }
     }
     
-    // Notify React components
-    window.dispatchEvent(new CustomEvent('iris-mask-render-complete'));
+    // CRITICAL: Always dispatch react-mask-render so ReactMaskLayer re-renders.
+    // When the mock ViewManager returns empty layers (no legacy canvas),
+    // ReactMaskLayer is the only thing that can render the mask.
+    window.dispatchEvent(new CustomEvent('react-mask-render', { detail: { bbox } }));
   },
   
   renderPreview: () => {
-    // console.log('[ViewManager] renderPreview: Triggering preview render (ONE-WAY SYNC)');
-    
     // PRIMARY: Use React store as source of truth
     const { legacyViewManagerInstance } = get();
     if (legacyViewManagerInstance && legacyViewManagerInstance.getLayers) {
       const layers = legacyViewManagerInstance.getLayers("preview");
       layers.forEach((layer: any) => layer.render());
-    } else {
-      console.warn('[IRIS Migration] ⚠️ Using render_preview fallback - React store ViewManager not available');
-      const w = window as any;
-      if (w.render_preview) {
-        w.render_preview();
-      }
     }
     
     // Notify React components
@@ -611,8 +589,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   updateViews: () => {
-    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] updateViews: Triggering view update (ONE-WAY SYNC)');
-    
     // Update canvas coordinates and trigger render
     const w = window as any;
     const oneCanvas = document.getElementsByClassName("view-canvas")[0] as HTMLCanvasElement;
@@ -639,8 +615,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // Canvas operations (ONE-WAY SYNC: React store -> Legacy)
   zoomCanvas: (delta) => {
-    console.log('[ViewManager] zoomCanvas: Triggering zoom (ONE-WAY SYNC)', { delta });
-    
     const factor = Math.pow(1.1, delta);
     const { zoomLevel } = get();
     const newZoom = Math.max(0.1, Math.min(10.0, zoomLevel * factor));
@@ -653,7 +627,7 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
     if (w.getCursorImageFromStore) {
       const cursorImage = w.getCursorImageFromStore();
       
-      for (let canvas of document.getElementsByClassName('view-canvas')) {
+      for (const canvas of document.getElementsByClassName('view-canvas')) {
         const ctx = (canvas as HTMLCanvasElement).getContext('2d') as any;
         if (ctx) {
           ctx.translate(...cursorImage);
@@ -674,15 +648,13 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   moveCanvas: (dx, dy) => {
     if (dx === 0 && dy === 0) return;
     
-    console.log('[ViewManager] moveCanvas: Triggering move (ONE-WAY SYNC)', { dx, dy });
-    
     // Update React store first (source of truth)
     const { panOffset } = get();
     get().setPanOffset({ x: panOffset.x + dx, y: panOffset.y + dy });
     
     // Apply to legacy canvas
     const w = window as any;
-    for (let canvas of document.getElementsByClassName('view-canvas')) {
+    for (const canvas of document.getElementsByClassName('view-canvas')) {
       const ctx = (canvas as HTMLCanvasElement).getContext('2d') as any;
       if (ctx) {
         ctx.translate(dx, dy);
@@ -697,8 +669,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   },
   
   resetCanvas: () => {
-    if ((window as any).IRIS_DEBUG) console.log('[ViewManager] resetCanvas: Triggering reset (ONE-WAY SYNC)');
-    
     // Update React store first (source of truth)
     get().resetView();
     
@@ -714,30 +684,15 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
   
   // ViewManager instance management (ONE-WAY SYNC: React store -> Legacy)
   setLegacyViewManagerInstance: (instance) => {
-    console.log('[ViewManager] setLegacyViewManagerInstance: Setting legacy instance (ONE-WAY SYNC)', {
-      hasInstance: !!instance,
-      hasRender: !!(instance && instance.render),
-      hasGetLayers: !!(instance && instance.getLayers),
-      instanceType: typeof instance
-    });
     set({ legacyViewManagerInstance: instance });
-    
-    // ONE-WAY: React store manages the legacy instance
-    // No bidirectional sync - React store is source of truth
     get().syncToLegacyViewManager();
   },
   
   syncToLegacyViewManager: () => {
     const { legacyViewManagerInstance, zoomLevel, panOffset, currentView, filters } = get();
     
-    if (!legacyViewManagerInstance) {
-      console.warn('[ViewManager] syncToLegacyViewManager: No legacy instance to sync to');
-      return;
-    }
+    if (!legacyViewManagerInstance) return;
     
-    console.log('[ViewManager] syncToLegacyViewManager: Syncing React store -> Legacy (ONE-WAY)');
-    
-    // ONE-WAY SYNC: React store -> Legacy ViewManager
     try {
       if (typeof legacyViewManagerInstance.zoom_level !== 'undefined') {
         legacyViewManagerInstance.zoom_level = zoomLevel;
@@ -755,23 +710,17 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       if (typeof legacyViewManagerInstance.filters !== 'undefined') {
         legacyViewManagerInstance.filters = { ...filters };
       }
-      
-      // React store is the only source of truth - no vars.vm sync needed
-      
-      console.log('[ViewManager] syncToLegacyViewManager: Sync complete');
     } catch (error) {
-      console.error('[ViewManager] syncToLegacyViewManager: Sync failed:', error);
+      console.error('[ViewManager] syncToLegacyViewManager failed:', error);
     }
   },
   
   // Legacy compatibility methods (deprecated - use setLegacyViewManagerInstance)
   setViewManagerInstance: (instance) => {
-    console.warn('[ViewManager] setViewManagerInstance: DEPRECATED - Use setLegacyViewManagerInstance instead');
     get().setLegacyViewManagerInstance(instance);
   },
   
   getViewManagerInstance: () => {
-    console.warn('[ViewManager] getViewManagerInstance: DEPRECATED - Use legacyViewManagerInstance state instead');
     return get().legacyViewManagerInstance;
   },
   
@@ -882,16 +831,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
         throw new Error('Legacy vars not available');
       }
       
-      console.log('🔧 ViewManager: Initializing from legacy vars...', {
-        hasVars: !!w.vars,
-        hasConfig: !!w.vars?.config,
-        hasViews: !!w.vars?.config?.views,
-        viewsType: typeof w.vars?.config?.views,
-        viewsKeys: w.vars?.config?.views ? Object.keys(w.vars.config.views) : [],
-        hasViewGroups: !!w.vars?.config?.view_groups,
-        imageId: w.vars?.image_id,
-      });
-      
       const store = get();
       
       // Initialize from legacy vars
@@ -900,8 +839,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
         
         // Handle both array and object formats
         if (Array.isArray(w.vars.config.views)) {
-          // Array format (legacy)
-          console.log('🔧 ViewManager: Processing views as array format');
           w.vars.config.views.forEach((view: any) => {
             views[view.name] = {
               name: view.name,
@@ -910,8 +847,6 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
             };
           });
         } else if (typeof w.vars.config.views === 'object') {
-          // Object format (current)
-          console.log('🔧 ViewManager: Processing views as object format');
           Object.entries(w.vars.config.views).forEach(([name, view]: [string, any]) => {
             views[name] = {
               name: name,
@@ -921,17 +856,12 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
           });
         }
         
-        console.log('🔧 ViewManager: Setting views:', Object.keys(views));
         store.setViews(views);
-      } else {
-        console.warn('⚠️ ViewManager: No views found in legacy config');
       }
       
       if (w.vars.config?.view_groups) {
-        console.log('🔧 ViewManager: Setting view groups:', w.vars.config.view_groups);
         store.setViewGroups(w.vars.config.view_groups);
       } else {
-        console.warn('⚠️ ViewManager: No view groups found, using default');
         // Ensure we have at least a default group with some views
         const currentViews = Object.keys(get().views);
         if (currentViews.length > 0) {
@@ -940,48 +870,39 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
       }
       
       if (w.vars.image_id) {
-        console.log('🔧 ViewManager: Setting image:', w.vars.image_id);
         store.setImage(w.vars.image_id, w.vars.image_location || [0, 0]);
-      } else {
-        console.warn('⚠️ ViewManager: No image ID found in legacy vars');
       }
       
       // Set image aspect ratio from legacy vars
       if (w.vars.image_shape && w.vars.image_shape.length >= 2) {
         const [width, height] = w.vars.image_shape;
-        console.log('🔧 ViewManager: Setting image dimensions:', width, 'x', height);
         store.setImageDimensions(width, height);
       } else {
         console.warn('⚠️ ViewManager: No image shape found in legacy vars');
       }
       
-      // PHASE 3A: Initialize zoom/pan/canvas state from legacy ViewManager instance
+      // Initialize zoom/pan/canvas state from legacy ViewManager instance
       const { legacyViewManagerInstance } = get();
       if (legacyViewManagerInstance) {
         if (typeof legacyViewManagerInstance.zoom_level === 'number') {
-          console.log('🔧 ViewManager: Setting zoom level:', legacyViewManagerInstance.zoom_level);
           store.setZoomLevel(legacyViewManagerInstance.zoom_level);
         }
         
         if (legacyViewManagerInstance.pan_offset) {
-          console.log('🔧 ViewManager: Setting pan offset:', legacyViewManagerInstance.pan_offset);
           store.setPanOffset(legacyViewManagerInstance.pan_offset);
         }
         
         if (legacyViewManagerInstance.current_view) {
-          console.log('🔧 ViewManager: Setting current view:', legacyViewManagerInstance.current_view);
           store.setCurrentView(legacyViewManagerInstance.current_view);
         }
         
         if (legacyViewManagerInstance.filters) {
-          console.log('🔧 ViewManager: Syncing filters:', legacyViewManagerInstance.filters);
           store.setFilters(legacyViewManagerInstance.filters);
         }
       }
       
       // Initialize canvas dimensions from legacy vars
       if (w.vars.canvas_width && w.vars.canvas_height) {
-        console.log('🔧 ViewManager: Setting canvas dimensions:', w.vars.canvas_width, 'x', w.vars.canvas_height);
         store.updateCanvasDimensions({
           width: w.vars.canvas_width,
           height: w.vars.canvas_height
@@ -998,12 +919,10 @@ export const useViewManagerStore = create<ViewManagerState>((set, get) => ({
 
       // Initialize canvas mouse position from legacy vars
       if (w.vars.cursor_canvas && Array.isArray(w.vars.cursor_canvas) && w.vars.cursor_canvas.length === 2) {
-        console.log('🔧 ViewManager: Setting canvas mouse position:', w.vars.cursor_canvas);
         store.setCanvasMousePosition(w.vars.cursor_canvas);
       }
       
       set({ isInitialized: true });
-      console.log('✅ ViewManager: Initialization complete');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ ViewManager: Initialization failed:', errorMessage);
@@ -1140,7 +1059,6 @@ if (typeof window !== 'undefined') {
   // Auto-initialize when legacy vars become available
   const checkForLegacyVars = () => {
     if (w.vars && w.vars.config && w.vars.config.views && !useViewManagerStore.getState().isInitialized) {
-      console.log('🔧 ViewManager: Auto-initializing from detected legacy vars');
       useViewManagerStore.getState().initializeFromLegacy().catch(console.error);
     }
   };

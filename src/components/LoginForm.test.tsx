@@ -1,6 +1,12 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LoginForm } from './LoginForm';
+import { ThemeProvider } from '../contexts/ThemeContext';
+
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>);
+}
 
 describe('LoginForm', () => {
   beforeEach(() => {
@@ -8,14 +14,14 @@ describe('LoginForm', () => {
   });
 
   it('renders login form by default', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     expect(screen.getByText('Username:')).toBeInTheDocument();
     expect(screen.getByText('Password:')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
   });
 
   it('switches to register mode', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     const registerButton = screen.getByText('I have no account yet');
     fireEvent.click(registerButton);
@@ -26,7 +32,7 @@ describe('LoginForm', () => {
   });
 
   it('switches back to login mode', () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     // Switch to register
     fireEvent.click(screen.getByText('I have no account yet'));
@@ -38,7 +44,7 @@ describe('LoginForm', () => {
   });
 
   it('shows error for empty username', async () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     const submitButton = screen.getByRole('button', { name: 'Login' });
     fireEvent.click(submitButton);
@@ -49,7 +55,7 @@ describe('LoginForm', () => {
   });
 
   it('shows error for empty password', async () => {
-    render(<LoginForm />);
+    renderWithTheme(<LoginForm />);
     
     const usernameInput = screen.getByRole('textbox');
     fireEvent.change(usernameInput, { target: { value: 'testuser' } });
@@ -74,7 +80,7 @@ describe('LoginForm', () => {
       text: async () => 'Successful login!'
     });
 
-    const { container } = render(<LoginForm />);
+    const { container } = renderWithTheme(<LoginForm />);
     
     const usernameInput = container.querySelector('#login-username') as HTMLInputElement;
     const passwordInput = container.querySelector('#login-password') as HTMLInputElement;
@@ -100,7 +106,7 @@ describe('LoginForm', () => {
       text: async () => 'Invalid credentials'
     });
 
-    const { container } = render(<LoginForm />);
+    const { container } = renderWithTheme(<LoginForm />);
     
     const usernameInput = container.querySelector('#login-username') as HTMLInputElement;
     const passwordInput = container.querySelector('#login-password') as HTMLInputElement;
@@ -124,7 +130,7 @@ describe('LoginForm', () => {
       text: async () => 'Successful login!'
     });
 
-    const { container } = render(<LoginForm onSuccess={onSuccess} />);
+    const { container } = renderWithTheme(<LoginForm onSuccess={onSuccess} />);
     
     const usernameInput = container.querySelector('#login-username') as HTMLInputElement;
     const passwordInput = container.querySelector('#login-password') as HTMLInputElement;
@@ -141,7 +147,7 @@ describe('LoginForm', () => {
   });
 
   it('validates username length', async () => {
-    const { container } = render(<LoginForm />);
+    const { container } = renderWithTheme(<LoginForm />);
     
     const usernameInput = container.querySelector('#login-username') as HTMLInputElement;
     const passwordInput = container.querySelector('#login-password') as HTMLInputElement;
@@ -160,7 +166,7 @@ describe('LoginForm', () => {
   });
 
   it('validates password length', async () => {
-    const { container } = render(<LoginForm />);
+    const { container } = renderWithTheme(<LoginForm />);
     
     const usernameInput = container.querySelector('#login-username') as HTMLInputElement;
     const passwordInput = container.querySelector('#login-password') as HTMLInputElement;
@@ -179,7 +185,7 @@ describe('LoginForm', () => {
   });
 
   it('validates password match in register mode', async () => {
-    const { container } = render(<LoginForm />);
+    const { container } = renderWithTheme(<LoginForm />);
     
     // Switch to register mode
     fireEvent.click(screen.getByText('I have no account yet'));

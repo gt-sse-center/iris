@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '../../test/test-utils';
 import ProjectConfigTab from './ProjectConfigTab';
 import * as configService from '../../services/config';
 
@@ -281,9 +281,10 @@ describe('ProjectConfigTab', () => {
       render(<ProjectConfigTab />);
       
       await waitFor(() => {
-        // Check that data was populated in sections
+        // GeneralSection starts open, so name should be visible
         expect(screen.getByDisplayValue('test-project')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('Cloud')).toBeInTheDocument();
+        // Port should also be populated
+        expect(screen.getByDisplayValue('5000')).toBeInTheDocument();
       });
     });
   });

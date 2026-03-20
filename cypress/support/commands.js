@@ -76,8 +76,15 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
       cy.get('#register-password').should('be.visible').should('not.be.disabled').clear().type(password);
       cy.get('#register-password-again').should('be.visible').should('not.be.disabled').clear().type(password);
       
-      // Click register and wait for page reload
-      cy.get('.dialogue').contains('button', 'Register').click();
+      // Fill email if the field exists (required by themed LoginForm)
+      cy.get('body').then($body => {
+        if ($body.find('#register-email').length > 0) {
+          cy.get('#register-email').should('be.visible').clear().type(`${username}@test.com`);
+        }
+      });
+      
+      // Click register button (works with both legacy .dialogue and themed LoginForm)
+      cy.contains('button', 'Register').click();
       
       // Wait for the page to reload (LoginForm calls window.location.reload())
       cy.url().should('include', '/segmentation');
@@ -99,18 +106,17 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
       cy.get('#login-username').should('be.visible').should('not.be.disabled').clear().type(username);
       cy.get('#login-password').should('be.visible').should('not.be.disabled').clear().type(password);
       
-      // Click login and wait for page reload
-      cy.get('.dialogue').contains('button', 'Login').click();
+      // Click login button (works with both legacy .dialogue and themed LoginForm)
+      cy.contains('button', 'Login').click();
       
       // Wait for the page to reload (LoginForm calls window.location.reload())
       cy.wait(TIMEOUTS.PAGE_LOAD * 3); // Extra time for reload
       
       // Debug: Check if we're still seeing a login dialog
       cy.get('body').then($body => {
-        const $dialogue = $body.find('.dialogue');
-        if ($dialogue.length > 0 && $dialogue.css('display') !== 'none') {
-          cy.log('⚠️ Login dialog still visible after reload - login may have failed');
-          // Take a screenshot for debugging
+        const $loginForm = $body.find('#login-username:visible');
+        if ($loginForm.length > 0) {
+          cy.log('⚠️ Login form still visible after reload - login may have failed');
           cy.screenshot('login-failed-dialog-still-visible');
         }
       });
@@ -147,12 +153,21 @@ Cypress.Commands.add('login', (username = 'admin', password = '123') => {
  */
 Cypress.Commands.add('closeHelpDialogue', () => {
   cy.get('body').then($body => {
+    // Check for themed HelpModal (data-testid="help-modal")
+    const $helpModal = $body.find('[data-testid="help-modal"]');
+    if ($helpModal.length > 0 && $helpModal.is(':visible')) {
+      cy.log('Closing themed help modal...');
+      cy.get('[data-testid="close-help-button"]').click({ force: true });
+      cy.wait(500);
+      cy.get('[data-testid="help-modal"]').should('not.exist');
+      return;
+    }
+    // Fallback: check for legacy #dialogue
     const $dialogue = $body.find('#dialogue');
     if ($dialogue.length > 0 && $dialogue.css('display') !== 'none' && $dialogue.is(':visible')) {
-      cy.log('Closing dialogue...');
-      // Try to find and click the close button
+      cy.log('Closing legacy dialogue...');
       cy.get('#dialogue-close').click({ force: true });
-      cy.wait(500); // Wait for dialogue to close
+      cy.wait(500);
       cy.get('#dialogue').should('not.be.visible');
     }
   });

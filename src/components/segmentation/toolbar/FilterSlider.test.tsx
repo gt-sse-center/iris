@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen } from '../../../test/test-utils';
 import FilterSlider from './FilterSlider';
 import { useSegmentationStore } from '../../../stores/segmentationStore';
 

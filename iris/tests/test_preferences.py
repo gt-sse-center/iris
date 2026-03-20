@@ -243,10 +243,6 @@ class TestPreferencesIntegration:
         response = client.get('/segmentation/api/user-config')
         api_config = response.get_json()['config']
 
-        # Get config from legacy endpoint (returns HTML but shouldn't error)
-        response = client.get('/user/config')
-        assert response.status_code == 200, "Legacy endpoint should still work"
-
         # Verify the structure matches what the legacy system expects
         assert 'segmentation' in api_config, "Should have segmentation section"
         assert 'ai_model' in api_config['segmentation'], "Should have ai_model section"

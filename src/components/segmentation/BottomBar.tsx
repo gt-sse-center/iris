@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ImageIcon, BarChartIcon, ShieldIcon } from '../icons/ToolbarIcons';
 import AIScore from './statusbar/AIScore';
 import AIRecommendation from './statusbar/AIRecommendation';
 
@@ -11,6 +13,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
   onOpenImageInfo, 
   onOpenConfusionMatrix 
 }) => {
+  const { theme } = useTheme();
   const w = window as any;
   const isAdmin = w.vars?.is_admin || false;
   const currentImageId = w.vars?.image_id || 'No image';
@@ -23,7 +26,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
         left: 0,
         right: 0,
         height: '60px',
-        backgroundColor: '#34495e',
+        backgroundColor: theme.toolbarBgLight,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -33,37 +36,51 @@ const BottomBar: React.FC<BottomBarProps> = ({
       }}
     >
       {/* Left: Image Info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', color: 'white', fontSize: '13px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <button
           onClick={onOpenImageInfo}
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
+            border: `1px solid ${theme.toolbarBorder}`,
+            color: theme.toolbarText,
             cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
+            padding: '6px 12px',
+            borderRadius: '6px',
             fontSize: '13px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="Image information"
         >
-          📷 {currentImageId}
+          <ImageIcon size={16} color={theme.toolbarText} />
+          {currentImageId}
         </button>
         
         <button
           onClick={onOpenConfusionMatrix}
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
+            border: `1px solid ${theme.toolbarBorder}`,
+            color: theme.toolbarText,
             cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: '4px',
+            padding: '6px 12px',
+            borderRadius: '6px',
             fontSize: '13px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.toolbarHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title="View confusion matrix"
         >
-          📊 Stats
+          <BarChartIcon size={16} color={theme.toolbarText} />
+          Stats
         </button>
       </div>
 
@@ -81,18 +98,24 @@ const BottomBar: React.FC<BottomBarProps> = ({
               window.location.href = '/admin/';
             }}
             style={{
-              background: '#e74c3c',
+              background: theme.buttonDangerBg,
               border: 'none',
-              color: 'white',
+              color: theme.toolbarText,
               cursor: 'pointer',
               padding: '8px 15px',
-              borderRadius: '4px',
+              borderRadius: '6px',
               fontSize: '13px',
-              fontWeight: 'bold',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.buttonDangerHover)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = theme.buttonDangerBg)}
             title="Admin panel"
           >
-            🔧 Admin
+            <ShieldIcon size={16} color={theme.toolbarText} />
+            Admin
           </button>
         </div>
       )}

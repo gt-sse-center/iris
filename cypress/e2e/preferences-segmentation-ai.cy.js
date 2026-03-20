@@ -32,7 +32,7 @@ describe('Preferences Modal - Segmentation AI Tab', () => {
     
     // Verify modal is open
     cy.get('[data-testid="preferences-modal"]').should('be.visible');
-    cy.contains('h2', 'Preferences').should('be.visible');
+    cy.get('[data-testid="preferences-modal"]').contains('Preferences').should('be.visible');
     
     // Close preferences and verify
     cy.closePreferences();

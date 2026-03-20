@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSegmentationStore } from '../../stores/segmentationStore';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface RightPanelProps {
   onSelectClass: () => void;
@@ -8,6 +9,7 @@ interface RightPanelProps {
 }
 
 const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onToggleCollapse }) => {
+  const { theme, actualThemeName } = useTheme();
   
   const {
     showMask,
@@ -23,7 +25,19 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
     setContrast,
     setInvert,
     resetFilters,
+    currentClass,
+    classes,
   } = useSegmentationStore();
+  
+  // Get current class name
+  const currentClassName = currentClass >= 0 && currentClass < classes.length 
+    ? classes[currentClass].name 
+    : 'No class';
+  
+  // Icon filter for dark theme - invert black icons to white
+  const iconFilter = actualThemeName === 'dark'
+    ? 'invert(1) brightness(0.9)' 
+    : 'none';
 
   // Watch for showMask changes and trigger canvas update
   // Note: maskType changes are handled in the store's setMaskType function
@@ -57,7 +71,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
     <div style={{
       paddingBottom: '20px',
       marginBottom: '20px',
-      borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+      borderBottom: `1px solid ${theme.panelBorder}`,
       ...style
     }}>
       {children}
@@ -70,7 +84,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
       margin: '0 0 12px 0',
       fontSize: '11px',
       fontWeight: '600',
-      color: '#6b7280',
+      color: theme.gray600,
       letterSpacing: '0.5px',
       textTransform: 'uppercase',
     }}>
@@ -90,7 +104,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
       <div style={{ position: 'relative' }}>
         <div style={{
           display: 'flex',
-          backgroundColor: '#f3f4f6',
+          backgroundColor: theme.segmentedBg,
           borderRadius: '6px',
           padding: '2px',
           gap: '2px',
@@ -105,7 +119,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               style={{
                 flex: 1,
                 padding: '8px',
-                backgroundColor: value === option.value ? 'white' : 'transparent',
+                backgroundColor: value === option.value ? theme.segmentedActive : 'transparent',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
@@ -123,6 +137,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                   width: '18px',
                   height: '18px',
                   opacity: value === option.value ? 1 : 0.6,
+                  filter: iconFilter,
                 }}
                 alt={option.title}
               />
@@ -136,8 +151,8 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                   transform: 'translateX(-50%)',
                   marginBottom: '8px',
                   padding: '6px 10px',
-                  backgroundColor: '#1f2937',
-                  color: 'white',
+                  backgroundColor: theme.tooltipBg,
+                  color: theme.tooltipText,
                   fontSize: '11px',
                   fontWeight: '500',
                   borderRadius: '4px',
@@ -158,7 +173,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                     height: 0,
                     borderLeft: '4px solid transparent',
                     borderRight: '4px solid transparent',
-                    borderTop: '4px solid #1f2937',
+                    borderTop: `4px solid ${theme.tooltipBg}`,
                   }} />
                 </div>
               )}
@@ -179,7 +194,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 flex: 1,
                 textAlign: 'center',
                 fontSize: '10px',
-                color: value === option.value ? '#374151' : '#9ca3af',
+                color: value === option.value ? theme.gray900 : theme.gray500,
                 fontWeight: value === option.value ? '600' : '500',
                 transition: 'color 0.15s ease',
               }}
@@ -202,7 +217,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
           top: '50px',
           bottom: '60px',
           width: '256px',
-          backgroundColor: '#f7f9fb',
+          backgroundColor: theme.panelBg,
           padding: '16px',
           paddingTop: '52px',
           zIndex: 900,
@@ -224,10 +239,10 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
             top: '16px',
             width: '36px',
             height: '36px',
-            backgroundColor: 'white',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
+            backgroundColor: theme.buttonSecondaryBg,
+            border: `1px solid ${theme.buttonSecondaryBorder}`,
             borderRadius: '8px',
-            color: '#4a5568',
+            color: theme.buttonSecondaryText,
             cursor: 'pointer',
             zIndex: 901,
             display: 'flex',
@@ -238,13 +253,11 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f7fafc';
-            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
+            e.currentTarget.style.backgroundColor = theme.buttonSecondaryHover;
             e.currentTarget.style.transform = 'scale(1.05)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
+            e.currentTarget.style.backgroundColor = theme.buttonSecondaryBg;
             e.currentTarget.style.transform = 'scale(1)';
           }}
           title={isCollapsed ? 'Show panel' : 'Hide panel'}
@@ -264,11 +277,11 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               top: '50px',
               width: '36px',
               height: '56px',
-              backgroundColor: 'white',
-              border: '1px solid rgba(0, 0, 0, 0.08)',
+              backgroundColor: theme.buttonSecondaryBg,
+              border: `1px solid ${theme.buttonSecondaryBorder}`,
               borderRight: 'none',
               borderRadius: '8px 0 0 8px',
-              color: '#4a5568',
+              color: theme.buttonSecondaryText,
               cursor: 'pointer',
               zIndex: 901,
               display: 'flex',
@@ -282,10 +295,10 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               padding: '8px 0',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f7fafc';
+              e.currentTarget.style.backgroundColor = theme.buttonSecondaryHover;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.backgroundColor = theme.buttonSecondaryBg;
             }}
             title="Show panel"
           >
@@ -301,32 +314,35 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
           style={{
             width: '100%',
             padding: '10px 12px',
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
+            backgroundColor: theme.buttonSecondaryBg,
+            border: `1px solid ${theme.buttonSecondaryBorder}`,
             borderRadius: '6px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
             fontSize: '13px',
-            color: '#374151',
+            color: theme.buttonSecondaryText,
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f9fafb';
-            e.currentTarget.style.borderColor = '#d1d5db';
+            e.currentTarget.style.backgroundColor = theme.buttonSecondaryHover;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.borderColor = '#e5e7eb';
+            e.currentTarget.style.backgroundColor = theme.buttonSecondaryBg;
           }}
         >
           <img
             src="/segmentation/static/icons/class.png"
-            style={{ width: '18px', height: '18px', opacity: 0.7 }}
+            style={{ 
+              width: '18px', 
+              height: '18px', 
+              opacity: 0.7,
+              filter: iconFilter,
+            }}
             alt="Class"
           />
-          <span id="tb_current_class" style={{ flex: 1, textAlign: 'left', fontWeight: '500' }}>No class</span>
+          <span style={{ flex: 1, textAlign: 'left', fontWeight: '500' }}>{currentClassName}</span>
         </button>
       </SectionCard>
 
@@ -342,13 +358,13 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
           marginBottom: '12px',
           padding: '8px 0',
         }}>
-          <span style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Show Mask</span>
+          <span style={{ fontSize: '13px', fontWeight: '500', color: theme.gray900 }}>Show Mask</span>
           <button
             onClick={toggleMask}
             style={{
               width: '44px',
               height: '24px',
-              backgroundColor: showMask ? '#3b82f6' : '#e5e7eb',
+              backgroundColor: showMask ? theme.toggleOn : theme.toggleOff,
               border: 'none',
               borderRadius: '12px',
               cursor: 'pointer',
@@ -363,7 +379,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               left: showMask ? '22px' : '2px',
               width: '20px',
               height: '20px',
-              backgroundColor: 'white',
+              backgroundColor: theme.toggleThumb,
               borderRadius: '50%',
               transition: 'left 0.2s ease',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
@@ -373,7 +389,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
         
         {/* Mask Type Selector */}
         <div style={{ marginBottom: '8px' }}>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Type</div>
+          <div style={{ fontSize: '12px', color: theme.gray600, marginBottom: '8px' }}>Type</div>
           <SegmentedControl
             options={[
               { value: 'final', icon: '/segmentation/static/icons/mask_final.png', title: 'Final mask', label: 'Final' },
@@ -400,14 +416,14 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
             }}>
               <label style={{ 
                 fontSize: '12px', 
-                color: '#6b7280',
+                color: theme.gray600,
                 fontWeight: '500',
               }}>
                 Brightness
               </label>
               <span style={{
                 fontSize: '11px',
-                color: '#9ca3af',
+                color: theme.gray500,
                 fontWeight: '600',
               }}>
                 {brightness}%
@@ -425,7 +441,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 height: '4px',
                 borderRadius: '2px',
                 outline: 'none',
-                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(brightness / 800) * 100}%, #e5e7eb ${(brightness / 800) * 100}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, ${theme.sliderTrackFilled} 0%, ${theme.sliderTrackFilled} ${(brightness / 800) * 100}%, ${theme.sliderTrack} ${(brightness / 800) * 100}%, ${theme.sliderTrack} 100%)`,
                 WebkitAppearance: 'none',
                 appearance: 'none',
                 cursor: 'pointer',
@@ -434,7 +450,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 const target = e.target as HTMLInputElement;
                 const value = Number(target.value);
                 const percentage = (value / 800) * 100;
-                target.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
+                target.style.background = `linear-gradient(to right, ${theme.sliderTrackFilled} 0%, ${theme.sliderTrackFilled} ${percentage}%, ${theme.sliderTrack} ${percentage}%, ${theme.sliderTrack} 100%)`;
               }}
             />
           </div>
@@ -449,14 +465,14 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
             }}>
               <label style={{ 
                 fontSize: '12px', 
-                color: '#6b7280',
+                color: theme.gray600,
                 fontWeight: '500',
               }}>
                 Saturation
               </label>
               <span style={{
                 fontSize: '11px',
-                color: '#9ca3af',
+                color: theme.gray500,
                 fontWeight: '600',
               }}>
                 {saturation}%
@@ -474,7 +490,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 height: '4px',
                 borderRadius: '2px',
                 outline: 'none',
-                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(saturation / 800) * 100}%, #e5e7eb ${(saturation / 800) * 100}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, ${theme.sliderTrackFilled} 0%, ${theme.sliderTrackFilled} ${(saturation / 800) * 100}%, ${theme.sliderTrack} ${(saturation / 800) * 100}%, ${theme.sliderTrack} 100%)`,
                 WebkitAppearance: 'none',
                 appearance: 'none',
                 cursor: 'pointer',
@@ -483,7 +499,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
                 const target = e.target as HTMLInputElement;
                 const value = Number(target.value);
                 const percentage = (value / 800) * 100;
-                target.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`;
+                target.style.background = `linear-gradient(to right, ${theme.sliderTrackFilled} 0%, ${theme.sliderTrackFilled} ${percentage}%, ${theme.sliderTrack} ${percentage}%, ${theme.sliderTrack} 100%)`;
               }}
             />
           </div>
@@ -495,9 +511,9 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               style={{
                 flex: 1,
                 padding: '8px',
-                backgroundColor: contrast ? '#3b82f6' : 'white',
-                color: contrast ? 'white' : '#374151',
-                border: contrast ? 'none' : '1px solid #e5e7eb',
+                backgroundColor: contrast ? theme.buttonPrimaryBg : theme.buttonSecondaryBg,
+                color: contrast ? theme.buttonPrimaryText : theme.buttonSecondaryText,
+                border: contrast ? 'none' : `1px solid ${theme.buttonSecondaryBorder}`,
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '12px',
@@ -506,12 +522,12 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               }}
               onMouseEnter={(e) => {
                 if (!contrast) {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.backgroundColor = theme.buttonSecondaryHover;
                 }
               }}
               onMouseLeave={(e) => {
                 if (!contrast) {
-                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.backgroundColor = theme.buttonSecondaryBg;
                 }
               }}
               title="Toggle contrast"
@@ -524,9 +540,9 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               style={{
                 flex: 1,
                 padding: '8px',
-                backgroundColor: invert ? '#3b82f6' : 'white',
-                color: invert ? 'white' : '#374151',
-                border: invert ? 'none' : '1px solid #e5e7eb',
+                backgroundColor: invert ? theme.buttonPrimaryBg : theme.buttonSecondaryBg,
+                color: invert ? theme.buttonPrimaryText : theme.buttonSecondaryText,
+                border: invert ? 'none' : `1px solid ${theme.buttonSecondaryBorder}`,
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '12px',
@@ -535,12 +551,12 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               }}
               onMouseEnter={(e) => {
                 if (!invert) {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.backgroundColor = theme.buttonSecondaryHover;
                 }
               }}
               onMouseLeave={(e) => {
                 if (!invert) {
-                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.backgroundColor = theme.buttonSecondaryBg;
                 }
               }}
               title="Toggle invert"
@@ -556,8 +572,8 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               width: '100%',
               padding: '8px',
               backgroundColor: 'transparent',
-              color: '#6b7280',
-              border: '1px solid #e5e7eb',
+              color: theme.gray600,
+              border: `1px solid ${theme.buttonSecondaryBorder}`,
               borderRadius: '6px',
               cursor: 'pointer',
               fontSize: '12px',
@@ -565,12 +581,12 @@ const RightPanel: React.FC<RightPanelProps> = ({ onSelectClass, isCollapsed, onT
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f9fafb';
-              e.currentTarget.style.color = '#374151';
+              e.currentTarget.style.backgroundColor = theme.buttonSecondaryHover;
+              e.currentTarget.style.color = theme.gray900;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#6b7280';
+              e.currentTarget.style.color = theme.gray600;
             }}
           >
             Reset

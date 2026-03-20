@@ -1,22 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 import ViewsTab from './ViewsTab';
+import { ThemeProvider } from '../../contexts/ThemeContext';
 
-/**
- * ViewsTab Tests
- * 
- * This component is currently a placeholder (not yet implemented).
- * Tests are minimal until the component is fully implemented.
- * 
- * TODO: When ViewsTab is implemented, add tests for:
- * - View layout configuration
- * - Custom view group management
- * - View-specific settings
- * - User interactions and callbacks
- */
+const renderWithTheme = (ui: React.ReactElement) => render(<ThemeProvider>{ui}</ThemeProvider>);
+
 describe('ViewsTab', () => {
   it('renders without crashing', () => {
-    render(<ViewsTab />);
+    renderWithTheme(<ViewsTab />);
     expect(screen.getByText('Not yet implemented.')).toBeInTheDocument();
   });
 });

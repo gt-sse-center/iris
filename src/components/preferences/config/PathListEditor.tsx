@@ -1,4 +1,5 @@
 import { useState, useImperativeHandle, forwardRef } from 'react';
+import { useConfigStyles } from './useConfigStyles';
 
 interface PathEntry {
   id: number;
@@ -6,71 +7,32 @@ interface PathEntry {
   value: string;
 }
 
-/**
- * PathListEditor Component
- * 
- * Allows users to configure image paths for the IRIS project.
- * Paths can be either:
- * - A single string: "images/{id}.tif"
- * - An object with named paths: { "Sentinel1": "images/{id}/s1.tif", "Sentinel2": "..." }
- * 
- * Uses forwardRef to expose a getData() method to parent components.
- */
 const PathListEditor = forwardRef<any, {}>((_props, ref) => {
-  const [paths, setPaths] = useState<PathEntry[]>([
-    { id: 1, key: '', value: 'images/{id}.tif' },
-  ]);
+  const [paths, setPaths] = useState<PathEntry[]>([{ id: 1, key: '', value: 'images/{id}.tif' }]);
   const [nextId, setNextId] = useState(2);
+  const s = useConfigStyles();
 
-  /**
-   * getData - Exposes path data to parent component
-   * 
-   * Returns either:
-   * - String: if single path with no key (e.g., "images/{id}.tif")
-   * - Object: if multiple paths or single path with key (e.g., {"Sentinel1": "...", "Sentinel2": "..."})
-   */
   const getData = () => {
-    // Case 1: Single path with no key → return as simple string
-    if (paths.length === 1 && !paths[0].key.trim()) {
-      return paths[0].value;
-    }
-    
-    // Case 2: Multiple paths OR single path with key → return as object
+    if (paths.length === 1 && !paths[0].key.trim()) return paths[0].value;
     return paths.reduce((acc, path) => {
-      // Use provided key, or generate one if empty
       const key = path.key.trim() || `path${path.id}`;
       acc[key] = path.value;
       return acc;
     }, {} as Record<string, string>);
   };
 
-  /**
-   * setData - Populates the editor with loaded path data
-   * 
-   * Accepts either:
-   * - String: "images/{id}.tif" → creates single path entry
-   * - Object: {"Sentinel1": "...", "Sentinel2": "..."} → creates multiple path entries
-   */
   const setData = (data: string | Record<string, string>) => {
     if (typeof data === 'string') {
       setPaths([{ id: 1, key: '', value: data }]);
       setNextId(2);
     } else if (typeof data === 'object' && data !== null) {
-      const entries = Object.entries(data).map(([key, value], index) => ({
-        id: index + 1,
-        key,
-        value,
-      }));
+      const entries = Object.entries(data).map(([key, value], index) => ({ id: index + 1, key, value }));
       setPaths(entries);
       setNextId(entries.length + 1);
     }
   };
 
-  // Expose getData and setData methods to parent via ref
-  useImperativeHandle(ref, () => ({
-    getData,
-    setData,
-  }));
+  useImperativeHandle(ref, () => ({ getData, setData }));
 
   const addPath = () => {
     setPaths([...paths, { id: nextId, key: '', value: '' }]);
@@ -78,9 +40,7 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
   };
 
   const removePath = (id: number) => {
-    if (paths.length > 1) {
-      setPaths(paths.filter((p) => p.id !== id));
-    }
+    if (paths.length > 1) setPaths(paths.filter((p) => p.id !== id));
   };
 
   const updatePath = (id: number, field: 'key' | 'value', value: string) => {
@@ -92,61 +52,26 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
       {paths.map((path, index) => (
         <div key={path.id} style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-            <strong>Path-{index + 1} *</strong>
+            <span style={{ fontWeight: 600, color: s.theme.gray900, fontSize: '14px' }}>Path-{index + 1} *</span>
             {paths.length > 1 && (
-              <button
-                onClick={() => removePath(path.id)}
-                style={{
-                  marginLeft: 'auto',
-                  padding: '4px 12px',
-                  border: '1px solid #dc3545',
-                  background: 'white',
-                  color: '#dc3545',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                Remove
-              </button>
+              <button onClick={() => removePath(path.id)} style={s.buttonDanger}>Remove</button>
             )}
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-            <input
-              type="text"
-              placeholder="optional key (e.g. Sentinel2)"
-              value={path.key}
+            <input type="text" placeholder="optional key (e.g. Sentinel2)" value={path.key}
               onChange={(e) => updatePath(path.id, 'key', e.target.value)}
-              style={{ flex: '0 0 300px', padding: '6px' }}
-            />
-            <input
-              type="text"
-              placeholder="images/{id}.tif"
-              value={path.value}
+              style={{ ...s.inputStyle, flex: '0 0 300px' }} />
+            <input type="text" placeholder="images/{id}.tif" value={path.value}
               onChange={(e) => updatePath(path.id, 'value', e.target.value)}
-              style={{ flex: 1, padding: '6px' }}
-            />
+              style={{ ...s.inputStyle, flex: 1 }} />
           </div>
-          <small style={{ display: 'block', color: '#666', marginLeft: '308px' }}>
+          <small style={{ display: 'block', color: s.theme.gray600, marginLeft: '308px', fontSize: '12px' }}>
             Full or relative path to set of image files. Must use "{'{id}'}" placeholder.
           </small>
         </div>
       ))}
-      <button
-        onClick={addPath}
-        style={{
-          width: '100%',
-          padding: '10px',
-          border: '2px dashed #007bff',
-          background: 'white',
-          color: '#007bff',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-        }}
-      >
-        + Add path
-      </button>
-      <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
+      <button onClick={addPath} style={s.buttonDashed}>+ Add path</button>
+      <small style={{ display: 'block', marginTop: '8px', color: s.theme.gray600, fontSize: '12px' }}>
         Use {'{id}'} as placeholder for image identifiers
       </small>
     </div>
@@ -154,5 +79,4 @@ const PathListEditor = forwardRef<any, {}>((_props, ref) => {
 });
 
 PathListEditor.displayName = 'PathListEditor';
-
 export default PathListEditor;

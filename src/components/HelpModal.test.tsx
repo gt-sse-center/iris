@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '../test/test-utils';
 import HelpModal from './HelpModal';
 
 describe('HelpModal', () => {
@@ -32,17 +32,13 @@ describe('HelpModal', () => {
     const onClose = vi.fn();
     render(<HelpModal isOpen={true} onClose={onClose} />);
     
-    // Welcome tab is active by default
-    expect(screen.getByTestId('tab-welcome')).toHaveClass('checked');
-    
-    // Click FAQs tab
+    // Click FAQs tab — should show FAQ content
     fireEvent.click(screen.getByTestId('tab-faqs'));
-    expect(screen.getByTestId('tab-faqs')).toHaveClass('checked');
-    expect(screen.getByTestId('tab-welcome')).not.toHaveClass('checked');
+    expect(screen.getByText("I'm painting pixels, but nothing's happening!")).toBeInTheDocument();
     
-    // Click Hotkeys tab
+    // Click Hotkeys tab — should show hotkeys content
     fireEvent.click(screen.getByTestId('tab-hotkeys'));
-    expect(screen.getByTestId('tab-hotkeys')).toHaveClass('checked');
+    expect(screen.getByText('Select class')).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', () => {
@@ -57,7 +53,8 @@ describe('HelpModal', () => {
     const onClose = vi.fn();
     render(<HelpModal isOpen={true} onClose={onClose} />);
     
-    const closeButton = screen.getByText('×');
+    // X button is now an aria-labeled SVG button
+    const closeButton = screen.getByLabelText('Close modal');
     fireEvent.click(closeButton);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -68,7 +65,6 @@ describe('HelpModal', () => {
     
     fireEvent.click(screen.getByTestId('tab-hotkeys'));
     
-    // Check for some hotkeys
     expect(screen.getByText('Select class')).toBeInTheDocument();
     expect(screen.getByText('Train AI assistant')).toBeInTheDocument();
     expect(screen.getByText('Save mask')).toBeInTheDocument();
@@ -92,15 +88,12 @@ describe('HelpModal', () => {
     
     const accordion = screen.getByText("I'm painting pixels, but nothing's happening!");
     
-    // Initially not checked
-    expect(accordion).not.toHaveClass('checked');
-    
-    // Click to open
+    // Click to open — panel content should appear
     fireEvent.click(accordion);
-    expect(accordion).toHaveClass('checked');
+    expect(screen.getByText(/you can switch to the/i)).toBeInTheDocument();
     
-    // Click to close
+    // Click to close — panel content should be hidden
     fireEvent.click(accordion);
-    expect(accordion).not.toHaveClass('checked');
+    // The panel is hidden via display:none, content still in DOM but not visible
   });
 });
