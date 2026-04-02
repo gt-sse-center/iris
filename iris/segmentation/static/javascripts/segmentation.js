@@ -2795,9 +2795,6 @@ async function legacyPredictMask(){
     for (var i = 0; i < results.data.length; i++) {
         if (!currentUserMaskData[i]){
             newMaskData[i] = results.data[i];
-            // CRITICAL: Also mark this pixel as "drawn" in userMask
-            // so it gets saved and rendered
-            newUserMaskData[i] = 1;
             aiPixelsApplied++;
         }
     }
