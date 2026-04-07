@@ -2788,37 +2788,20 @@ async function legacyPredictMask(){
     }
     
     const newMaskData = new Uint8Array(currentMaskData);
-    const newUserMaskData = new Uint8Array(currentUserMaskData);
-    
+
     // Only update the mask where the user did not draw to
     let aiPixelsApplied = 0;
     for (var i = 0; i < results.data.length; i++) {
         if (!currentUserMaskData[i]){
             newMaskData[i] = results.data[i];
-            // CRITICAL: Also mark this pixel as "drawn" in userMask
-            // so it gets saved and rendered
-            newUserMaskData[i] = 1;
             aiPixelsApplied++;
         }
     }
-    
+
     console.log(`[IRIS] AI Prediction: Applied ${aiPixelsApplied} AI-predicted pixels`);
-    
-    // Update store with prediction results (ONLY SOURCE)
+
+    // Update store with prediction results
     window.setMaskDataInStore(newMaskData, maskShape[0], maskShape[1]);
-    window.setUserMaskDataInStore(newUserMaskData);
-    console.log('[IRIS Migration] ✅ Applied prediction results using React store');
-    
-    // Verify the store was updated
-    const verifyMaskData = window.getMaskDataFromStore();
-    const verifyUserMaskData = window.getUserMaskDataFromStore();
-    let verifyAiPixels = 0;
-    for (var i = 0; i < verifyMaskData.length; i++) {
-        if (verifyUserMaskData[i] === 1 && verifyMaskData[i] !== 0){
-            verifyAiPixels++;
-        }
-    }
-    console.log(`[IRIS] AI Prediction: Verified ${verifyAiPixels} total pixels in store after update`);
     
     reload_hidden_mask();
     render_mask();
