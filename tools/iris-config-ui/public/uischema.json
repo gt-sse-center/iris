@@ -1,0 +1,145 @@
+{
+  "ui:submitButtonOptions": {
+    "submitText": "Save Configuration",
+    "norender": false,
+    "props": {
+      "className": "iris-button-primary"
+    }
+  },
+  "name": {
+    "ui:help": "This will be used as the project identifier"
+  },
+  "port": {
+    "ui:widget": "updown"
+  },
+  "images": {
+    "ui:order": [
+      "path",
+      "shape",
+      "thumbnails",
+      "metadata"
+    ],
+    "path": {
+      "ui:help": "Use {id} as placeholder for image identifiers",
+      "ui:options": { "addButtonText": "➕ Add path", "removable": true },
+      "items": {
+        "ui:field": "KeyValue",
+        "key": { "ui:placeholder": "optional key (e.g. Sentinel2)" },
+        "value": {
+          "ui:placeholder": "images/{id}.tif",
+          "ui:help": "Full or relative path to set of image files. Must use \"{id}\" placeholder."
+        }
+      }
+    },
+    "shape": {
+      "ui:options": {
+        "orderable": false
+      }
+    },
+  "thumbnails": { "ui:widget": "OptionalPath", "ui:placeholder": "thumbnails/{id}.png", "ui:help": "Provide a thumbnail path containing {id} or disable." },
+  "metadata": { "ui:widget": "OptionalPath", "ui:placeholder": "metadata/{id}.json", "ui:help": "Optional metadata file (json/yaml)." }
+  },
+  "classes": {
+    "ui:options": {
+      "addable": true,
+      "orderable": true,
+      "removable": true
+    },
+    "items": {
+      "colour": {
+        "ui:help": "RGBA values: Red, Green, Blue, Alpha (0-255)"
+      },
+      "user_colour": {
+        "ui:help": "Alternative color for user mask overlay"
+      }
+    }
+  },
+  "views": {
+    "ui:options": {
+      "addable": true,
+      "removable": true
+    },
+    "additionalProperties": {
+      "type": {
+        "ui:widget": "radio",
+        "ui:options": {
+          "inline": true
+        }
+      },
+      "data": {
+        "ui:help": "Use band expressions like $B1, $B2 or $Sentinel2.B1"
+      },
+      "cmap": {
+        "ui:widget": "select"
+      }
+    }
+  },
+  "view_groups": {
+    "ui:help": "The 'default' group is required and will be shown first"
+  },
+  "segmentation": {
+    "ui:order": [
+      "path",
+      "mask_encoding",
+      "mask_area",
+      "score",
+      "prioritise_unmarked_images",
+      "unverified_threshold",
+      "test_images",
+      "ai_model"
+    ],
+    "mask_encoding": {
+      "ui:widget": "radio"
+    },
+    "score": {
+      "ui:widget": "radio"
+    },
+    "ai_model": {
+      "ui:order": [
+        "bands",
+        "train_ratio",
+        "max_train_pixels",
+        "n_estimators",
+        "max_depth",
+        "n_leaves",
+        "suppression_threshold",
+        "suppression_filter_size",
+        "suppression_default_class",
+        "use_edge_filter",
+        "use_superpixels",
+        "use_meshgrid",
+        "meshgrid_cells"
+      ],
+      "train_ratio": {
+        "ui:widget": "range",
+        "ui:options": {
+          "step": 0.1
+        }
+      },
+      "max_train_pixels": {
+        "ui:widget": "range",
+        "ui:options": {
+          "step": 1000
+        }
+      },
+      "n_estimators": {
+        "ui:widget": "range"
+      },
+      "max_depth": {
+        "ui:widget": "range"
+      },
+      "n_leaves": {
+        "ui:widget": "range"
+      },
+      "suppression_threshold": {
+        "ui:widget": "range"
+      },
+      "suppression_filter_size": {
+        "ui:widget": "select"
+      },
+      "meshgrid_cells": {
+        "ui:widget": "select"
+      }
+    }
+  }
+}
